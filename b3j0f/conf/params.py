@@ -243,10 +243,10 @@ class Category(object):
 
         self.name = name
         # set param by names.
-        self.params = {
-            param.name: param
-            for param in params
-        }
+        self.params = {}
+
+        for param in params:
+            self.params[param.name] = param
 
     def __iter__(self):
 
