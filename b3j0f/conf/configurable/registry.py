@@ -24,6 +24,9 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+__all__ = ['Configurables', 'ConfigurableTypes', 'ConfigurableRegistry']
+
+
 from b3j0f.utils.version import basestring
 from b3j0f.utils.path import lookup
 

@@ -24,6 +24,9 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+__all__ = ['conf_paths', 'add_category']
+
+
 from b3j0f.conf.configurable.core import Configurable
 from b3j0f.conf.params import Category, ParamList
 

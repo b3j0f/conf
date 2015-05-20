@@ -24,6 +24,9 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+__all__ = ['INIConfDriver']
+
+
 from os.path import join
 
 from sys import prefix as sys_prefix

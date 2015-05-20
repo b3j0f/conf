@@ -24,6 +24,9 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+__all__ = ['Configuration', 'Category', 'Parameter']
+
+
 from collections import OrderedDict, Iterable
 
 from b3j0f.utils.version import basestring

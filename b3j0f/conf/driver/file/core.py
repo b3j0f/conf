@@ -24,6 +24,9 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+__all__ = ['FileConfDriver']
+
+
 from stat import ST_SIZE
 
 from os import stat

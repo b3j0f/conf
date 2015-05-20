@@ -24,6 +24,9 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+__all__ = ['JSONConfDriver']
+
+
 try:
     from json import loads, dump
 except ImportError:

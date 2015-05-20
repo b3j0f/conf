@@ -24,6 +24,14 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+__all__ = [
+    'add_configurable', 'remove_configurable',
+    'on_update_conf_file',
+    'Watcher',
+    'get_watcher', 'start_watch', 'stop_watch', 'change_sleeping_time'
+]
+
+
 try:
     from threading import Timer
 except ImportError:

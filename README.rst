@@ -114,13 +114,13 @@ With inheritance
 .. code-block:: python
 
     from b3j0f.conf.configurable.core import Configurable
-    from b3j0f.conf.configurable.decorator import conf_paths, add_categories
+    from b3j0f.conf.configurable.decorator import conf_paths, add_category
 
     MYCATEGORY = 'MYCLASS'  # MyClass configuration category
     MYCONF = 'myclass.conf'  # MyClass configuration file
 
     # define the configurable business class
-    @add_categories(MYCATEGORY)  # set configuration file category
+    @add_category(MYCATEGORY)  # set configuration file category
     @conf_paths(MYCONF)  # set conf path
     class MyClass(Configurable): pass
 

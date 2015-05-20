@@ -24,6 +24,9 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+__all__ = ['MetaConfigurable', 'Configurable', 'ConfigurableError']
+
+
 from logging import Formatter, getLogger, FileHandler, Filter
 
 from os.path import join, sep
