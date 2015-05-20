@@ -12,4 +12,4 @@ ChangeLog
 
 - add __all__ in modules and packages
 - add base classes in packages
-- fix UTs in all python versions
+- fix UTs in all python versions but 2.6
