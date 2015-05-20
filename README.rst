@@ -1,7 +1,7 @@
 Description
 -----------
 
-Common tools useful to python projects.
+This project provides a set of tools which aims to ease python class configuration management in a reflexive concern.
 
 .. image:: https://pypip.in/license/b3j0f.conf/badge.svg
    :target: https://pypi.python.org/pypi/b3j0f.conf/
@@ -94,6 +94,65 @@ A Configurable registry is provided in the b3j0f.conf.configurable.registry. It 
 
 Examples
 --------
+
+Bind the configuration file ``myclass.conf`` to a business class ``MyClass``.
+
+Configuration file
+##################
+
+The configuration file contains a category named ``MYCLASS`` containing the parameter ``myattr`` equals ``myvalue``.
+
+.. code-block:: ini
+
+    [MYCLASS]
+    myattr=myvalue
+
+
+With inheritance
+################
+
+.. code-block:: python
+
+    from b3j0f.conf.configurable.core import Configurable
+    from b3j0f.conf.configurable.decorator import conf_paths, add_categories
+
+    MYCATEGORY = 'MYCLASS'  # MyClass configuration category
+    MYCONF = 'myclass.conf'  # MyClass configuration file
+
+    # define the configurable business class
+    @add_categories(MYCATEGORY)  # set configuration file category
+    @conf_paths(MYCONF)  # set conf path
+    class MyClass(Configurable): pass
+
+    # instantiate the business class
+    myclass = MyClass()
+
+    # check if myattr equals 'myvalue'
+    assert myclass.myattr == 'myvalue'
+
+Without inheritance
+###################
+
+.. code-block:: python
+
+    from b3j0f.conf.configurable.core import Configurable
+
+    MYCATEGORY = 'MYCLASS'  # MyClass configuration category
+    MYCONF = 'myclass.conf'  # MyClass configuration file
+
+    # instantiate a business class
+    class MyClass(object): pass
+    myclass = MyClass()
+
+    # apply configuration to the business class
+    Configurable(
+        to_configure=myclass,
+        conf_paths=MYCONF,
+        unified_category=MYCATEGORY
+    )
+
+    # check if myattr equals 'myvalue'
+    assert myclass.myattr == 'myvalue'
 
 Perspectives
 ------------

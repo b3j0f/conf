@@ -8,6 +8,13 @@ b3j0f.conf: Python class configuration tools
 ============================================
 
 .. toctree::
+   :caption: Table of Contents
+   :maxdepth: 1
+
+   index
+   changelog
+
+.. toctree::
    :hidden:
 
    sources/modules
@@ -20,5 +27,3 @@ Indices and tables
 * :ref:`search`
 
 .. include:: ../README.rst
-
-.. include:: ../changelog.rst
