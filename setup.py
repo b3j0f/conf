@@ -41,14 +41,17 @@ keywords = [
     'tools', 'property', 'dynamic', 'reflection', 'reflect', 'runtime'
 ]
 
+dependencies = ['b3j0f.utils']
+
 description = 'python class configuration tools useful in python projects.'
 
 setup(
     name='b3j0f.conf',
-    version='0.1.2',
+    version='0.1.3',
     packages=find_packages(exclude=['test.*', '*.test.*']),
     author='b3j0f',
     author_email='jlabejof@yahoo.fr',
+    install_requires=dependencies,
     description=description,
     long_description=desc,
     include_package_data=True,
@@ -63,8 +66,9 @@ setup(
         'Topic :: Software Development',
         'Intended Audience :: Developers',
         'Programming Language :: Python',
-        #'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.0',
         'Programming Language :: Python :: 3.1',
         'Programming Language :: Python :: 3.2',

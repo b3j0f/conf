@@ -27,9 +27,9 @@
 __all__ = ['Configuration', 'Category', 'Parameter']
 
 
-from collections import OrderedDict, Iterable
+from collections import Iterable
 
-from b3j0f.utils.version import basestring
+from b3j0f.utils.version import basestring, OrderedDict
 from b3j0f.utils.path import lookup
 
 
