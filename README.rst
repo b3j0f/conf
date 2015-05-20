@@ -113,7 +113,7 @@ With inheritance
 
 .. code-block:: python
 
-    from b3j0f.conf.configurable.core import Configurable
+    from b3j0f.conf.configurable import Configurable
     from b3j0f.conf.configurable.decorator import conf_paths, add_category
 
     MYCATEGORY = 'MYCLASS'  # MyClass configuration category
@@ -135,7 +135,7 @@ Without inheritance
 
 .. code-block:: python
 
-    from b3j0f.conf.configurable.core import Configurable
+    from b3j0f.conf.configurable import Configurable
 
     MYCATEGORY = 'MYCLASS'  # MyClass configuration category
     MYCONF = 'myclass.conf'  # MyClass configuration file
