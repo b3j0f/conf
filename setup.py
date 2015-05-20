@@ -41,7 +41,7 @@ keywords = [
     'tools', 'property', 'dynamic', 'reflection', 'reflect', 'runtime'
 ]
 
-description = 'pyton class configuration tools useful in python projects.'
+description = 'python class configuration tools useful in python projects.'
 
 setup(
     name='b3j0f.conf',
@@ -63,7 +63,7 @@ setup(
         'Topic :: Software Development',
         'Intended Audience :: Developers',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2.6',
+        #'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.0',
         'Programming Language :: Python :: 3.1',
