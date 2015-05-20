@@ -443,14 +443,14 @@ class Configurable(object):
         :param to_configure: object to configure. self by default.
         """
 
-        conf = self.get_configuration(
+        conf = self.get_conf(
             conf=conf, conf_paths=conf_paths, logger=logger,
             drivers=drivers, override=override
         )
 
         self.configure(conf=conf, to_configure=to_configure)
 
-    def get_configuration(
+    def get_conf(
         self,
         conf=None, conf_paths=None, drivers=None, logger=None,
         override=True
@@ -495,7 +495,7 @@ class Configurable(object):
             # if a config_resource is not None
             if conf_driver is not None:
 
-                conf = conf_driver.get_configuration(
+                conf = conf_driver.get_conf(
                     conf=conf, logger=logger,
                     conf_path=conf_path, override=override
                 )
@@ -510,7 +510,7 @@ class Configurable(object):
 
         return conf
 
-    def set_configuration(self, conf_path, conf, driver=None, logger=None):
+    def set_conf(self, conf_path, conf, driver=None, logger=None):
         """Set params on input conf_path.
 
         :param str conf_paths: conf_path to udate with params
@@ -531,7 +531,7 @@ class Configurable(object):
         )
 
         if prev_driver is not None:
-            prev_conf = prev_driver.get_configuration(
+            prev_conf = prev_driver.get_conf(
                 conf_path=conf_path, logger=logger
             )
 
@@ -560,7 +560,7 @@ class Configurable(object):
             conf = prev_conf
 
         if driver is not None:
-            driver.set_configuration(
+            driver.set_conf(
                 conf_path=conf_path,
                 conf=conf,
                 logger=logger

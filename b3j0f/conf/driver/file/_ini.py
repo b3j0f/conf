@@ -31,8 +31,16 @@ from os.path import join
 
 from sys import prefix as sys_prefix
 
-from ConfigParser import RawConfigParser, DuplicateSectionError,\
-    MissingSectionHeaderError
+from b3j0f.utils.version import PY2
+
+if PY2:
+    from ConfigParser import (
+        RawConfigParser, DuplicateSectionError, MissingSectionHeaderError
+    )
+else:
+    from configparser import (
+        RawConfigParser, DuplicateSectionError, MissingSectionHeaderError
+    )
 
 from b3j0f.conf.driver.file.core import FileConfDriver
 

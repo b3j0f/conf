@@ -85,7 +85,7 @@ class ConfDriver(object):
 
         raise NotImplementedError()
 
-    def get_configuration(
+    def get_conf(
         self, conf_path, logger, conf=None, override=True
     ):
         """Parse a configuration_files with input conf and returns
@@ -103,7 +103,6 @@ class ConfDriver(object):
         conf_resource = None
 
         result = None
-
         # ensure conf_path exists and is not empty.
         if self.exists(conf_path):
             try:
@@ -206,7 +205,7 @@ class ConfDriver(object):
 
         return result
 
-    def set_configuration(self, conf_path, conf, logger):
+    def set_conf(self, conf_path, conf, logger):
         """Set input conf in input conf_path.
 
         :param str conf_path: conf file to parse and from get parameters.
@@ -231,7 +230,6 @@ class ConfDriver(object):
 
         # if conf_path can not be loaded, get default config conf_resource
         if conf_resource is None:
-
             conf_resource = self._get_conf_resource(logger=logger)
 
         # iterate on all conf items

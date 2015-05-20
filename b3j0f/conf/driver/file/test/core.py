@@ -41,8 +41,7 @@ from os import remove
 
 
 class TestConfDriver(FileConfDriver):
-    """
-    Configuration Manager for test.
+    """Configuration Manager for test.
     """
 
     __register__ = True
@@ -76,7 +75,7 @@ class TestConfDriver(FileConfDriver):
 
         if conf_path is not None:
 
-            with open(conf_path, 'r') as handle:
+            with open(conf_path, 'rb') as handle:
 
                 try:
                     result = loads(handle.read())
@@ -109,7 +108,7 @@ class TestConfDriver(FileConfDriver):
         self, conf_resource, conf_path, *args, **kwargs
     ):
 
-        with open(conf_path, 'w') as handle:
+        with open(conf_path, 'wb') as handle:
 
             try:
                 dump(conf_resource, handle)
@@ -118,7 +117,7 @@ class TestConfDriver(FileConfDriver):
                 pass
 
 
-class ConfDriverTest(UTCase):
+class FileConfDriverTest(UTCase):
     """Configuration Manager unittest class.
     """
 
@@ -127,7 +126,7 @@ class ConfDriverTest(UTCase):
     def setUp(self):
         self.logger = getLogger()
 
-        self.manager = self._get_configuration_manager()
+        self.manager = self._get_conf_manager()
 
         self.conf = Configuration(
             Category(
@@ -138,11 +137,13 @@ class ConfDriverTest(UTCase):
             Category(
                 'B',
                 Parameter('b', value=1, parser=int),  # b is 1
-                Parameter('c', value='er', parser=int)))  # error
+                Parameter('c', value='er', parser=int)   # error
+            )
+        )
 
-        self.conf_path = self.get_configuration_file()
+        self.conf_path = self.get_conf_file()
 
-    def get_configuration_file(self):
+    def get_conf_file(self):
 
         return '/tmp/b3j0f.conf'
 
@@ -155,7 +156,7 @@ class ConfDriverTest(UTCase):
     def _open(self):
 
         try:
-            open(self.conf_path, 'w').close()
+            open(self.conf_path, 'wb').close()
         except OSError:
             pass
 
@@ -164,33 +165,37 @@ class ConfDriverTest(UTCase):
         # try to get conf from not existing file
         self._remove()
 
-        conf = self.manager.get_configuration(
+        conf = self.manager.get_conf(
             conf_path=self.conf_path,
-            logger=self.logger)
+            logger=self.logger
+        )
 
-        self.assertEqual(conf, None)
+        self.assertIsNone(conf)
 
         # get conf from an empty media
         self._open()
 
-        conf = self.manager.get_configuration(
+        conf = self.manager.get_conf(
             conf_path=self.conf_path,
-            logger=self.logger)
+            logger=self.logger
+        )
 
-        self.assertTrue(conf is None)
+        self.assertIsNone(conf)
 
         # get full conf
-        self.manager.set_configuration(
+        self.manager.set_conf(
             conf_path=self.conf_path,
             conf=self.conf,
-            logger=self.logger)
+            logger=self.logger
+        )
 
-        conf = self.manager.get_configuration(
+        conf = self.manager.get_conf(
             conf_path=self.conf_path,
             conf=self.conf,
-            logger=self.logger)
+            logger=self.logger
+        )
 
-        self.assertFalse(conf is None)
+        self.assertIsNotNone(conf)
         self.assertEqual(len(conf), 2)
 
         unified_conf = conf.unify()
@@ -198,38 +203,46 @@ class ConfDriverTest(UTCase):
         parameters = unified_conf[Configuration.VALUES]
         errors = unified_conf[Configuration.ERRORS]
 
-        self.assertTrue('a' in parameters and 'a' not in errors)
+        self.assertIn('a', parameters)
+        self.assertNotIn('a', errors)
         self.assertEqual(parameters['a'].value, 0)
-        self.assertTrue('b' in parameters and 'b' not in errors)
+        self.assertIn('b', parameters)
+        self.assertNotIn('b', errors)
         self.assertEqual(parameters['b'].value, 1)
-        self.assertTrue('c' in errors and 'c' not in parameters)
+        #print(parameters['c'])
+        self.assertIn('c', errors)
+        self.assertNotIn('c', parameters)
 
         # get some conf
         conf = Configuration(self.conf['B'])
 
-        conf = self.manager.get_configuration(
+        conf = self.manager.get_conf(
             conf_path=self.conf_path,
             conf=conf,
-            logger=self.logger)
+            logger=self.logger
+        )
 
         unified_conf = conf.unify()
 
         parameters = unified_conf[Configuration.VALUES]
         errors = unified_conf[Configuration.ERRORS]
 
-        self.assertTrue('a' not in parameters and 'a' not in errors)
-        self.assertTrue('b' in parameters and 'b' not in errors)
+        self.assertNotIn('a', parameters)
+        self.assertNotIn('a', errors)
+        self.assertIn('b', parameters)
+        self.assertNotIn('b', errors)
         self.assertEqual(parameters['b'].value, 1)
-        self.assertTrue('c' in errors and 'c' not in parameters)
+        self.assertNotIn('c', parameters)
+        self.assertIn('c', errors)
 
-    def _get_configuration_manager(self):
+    def _get_conf_manager(self):
         """Only one method to override by sub tests
         """
         return TestConfDriver()
 
     def _get_manager_path(self):
 
-        return 'test.manager.file.TestConfDriver'
+        return 'b3j0f.conf.driver.file.test.TestConfDriver'
 
     def _get_manager(self):
 

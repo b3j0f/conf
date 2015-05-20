@@ -103,7 +103,7 @@ class ConfigurableTest(TestCase):
         # test to get from no file
         configurable = Configurable()
 
-        conf = configurable.get_configuration()
+        conf = configurable.get_conf()
 
         self.assertEqual(len(conf), len(self.conf))
 
@@ -116,7 +116,7 @@ class ConfigurableTest(TestCase):
             except OSError:
                 pass
 
-        conf = configurable.get_configuration()
+        conf = configurable.get_conf()
 
         self.assertEqual(len(conf), len(self.conf))
 
@@ -125,13 +125,13 @@ class ConfigurableTest(TestCase):
             with open(conf_path, 'w') as _file:
                 _file.write('\n')
 
-        conf = configurable.get_configuration()
+        conf = configurable.get_conf()
 
         self.assertEqual(len(conf), len(self.conf))
 
         # get parameters from empty files and empty parsing_rules
         conf = Configuration()
-        configurable.get_configuration(conf=conf)
+        configurable.get_conf(conf=conf)
 
         self.assertEqual(len(conf), 0)
 
@@ -140,18 +140,18 @@ class ConfigurableTest(TestCase):
             conf_paths=self.conf_paths)
 
         # add first category in conf file[0]
-        configurable.set_configuration(
+        configurable.set_conf(
             conf_path=self.conf_paths[0],
             conf=Configuration(self.conf['A']),
             driver=configurable._drivers.split(',')[0])
 
         # add second category in conf file[1]
-        configurable.set_configuration(
+        configurable.set_conf(
             conf_path=self.conf_paths[1],
             conf=Configuration(self.conf['B']),
             driver=configurable._drivers.split(',')[1])
 
-        conf = configurable.get_configuration(conf=self.conf)
+        conf = configurable.get_conf(conf=self.conf)
 
         unified_configuration = conf.unify()
         parameters = unified_configuration[Configuration.VALUES]
