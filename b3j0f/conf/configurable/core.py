@@ -28,14 +28,12 @@ from logging import Formatter, getLogger, FileHandler, Filter
 
 from os.path import join, sep
 
-from sys import prefix as sys_prefix
-
 from inspect import isclass
 
 from b3j0f.utils.version import basestring
 
 from b3j0f.conf.params import Configuration, Category, Parameter
-from b3j0f.conf.driver.core import ConfigurationDriver
+from b3j0f.conf.driver.core import ConfDriver
 
 
 class MetaConfigurable(type):
@@ -78,8 +76,8 @@ class Configurable(object):
     __metaclass__ = MetaConfigurable
 
     DEFAULT_DRIVERS = '{0},{1}'.format(
-        'b3j0f.conf.driver.file.json.JSONConfigurationDriver',
-        'b3j0f.conf.driver.file.ini.INIConfigurationDriver'
+        'b3j0f.conf.driver.file._json.JSONConfDriver',
+        'b3j0f.conf.driver.file._ini.INIConfDriver'
     )
 
     INIT_CAT = 'init_cat'  #: initialization category
@@ -94,13 +92,14 @@ class Configurable(object):
     CONF_PATHS = 'conf_paths'
     DRIVERS = 'drivers'
 
-    LOG_NAME = 'log_name'
-    LOG_LVL = 'log_lvl'
-    LOG_DEBUG_FORMAT = 'log_debug_format'
-    LOG_INFO_FORMAT = 'log_info_format'
-    LOG_WARNING_FORMAT = 'log_warning_format'
-    LOG_ERROR_FORMAT = 'log_error_format'
-    LOG_CRITICAL_FORMAT = 'log_critical_format'
+    LOG_NAME = 'log_name'  #: logger name property name
+    LOG_LVL = 'log_lvl'  #: logging level property name
+    LOG_PATH = 'log_path'  #: logging path property name
+    LOG_DEBUG_FORMAT = 'log_debug_format'  #: debug log format property name
+    LOG_INFO_FORMAT = 'log_info_format'  #: info log format property name
+    LOG_WARNING_FORMAT = 'log_warning_format'  #: warn log format property name
+    LOG_ERROR_FORMAT = 'log_error_format'  #: error log format property name
+    LOG_CRITICAL_FORMAT = 'log_critical_format'  #: crit log format property
 
     DEBUG_FORMAT = "[%(asctime)s] [%(levelname)s] [%(name)s] \
 [%(process)d] [%(thread)d] [%(pathname)s] [%(lineno)d] %(message)s"
@@ -115,21 +114,31 @@ class Configurable(object):
         to_configure=None,
         conf_paths=None, drivers=DEFAULT_DRIVERS,
         auto_conf=True, reconf_once=False,
-        log_lvl='INFO', log_name=None, log_info_format=INFO_FORMAT,
+        log_lvl='INFO', log_name=None, log_path='.',
+        log_info_format=INFO_FORMAT,
         log_debug_format=DEBUG_FORMAT, log_warning_format=WARNING_FORMAT,
         log_error_format=ERROR_FORMAT, log_critical_format=CRITICAL_FORMAT
     ):
         """
         :param str unified_category: if not None, used such as a unified
             category.
-        :param object to_configure: object to reconfigure. Such object may
-            implements the methods configure apply_configuration and configure.
+        :param to_configure: object to reconfigure. Such object may
+            implement the methods configure apply_configuration and configure.
         :param conf_paths: conf_paths to parse.
         :type conf_paths: Iterable or str
-        :param bool auto_conf: true force auto conf as soon as param change.
-        :param bool reconf_once: true force auto conf reconf_once as soon as
-            param change.
-        :param str log_lvl: logging level.
+        :param bool auto_conf: True (default) force auto conf as soon as param
+            change.
+        :param bool reconf_once: True (default) force auto conf reconf_once as
+            soon as param change.
+        :param str log_lvl: logging level. Default is INFO.
+        :param str log_name: logger name. Default is configurable class lower
+            name.
+        :param str log_path: logging file path. Default is current directory.
+        :param str log_info_format: info logging level format.
+        :param str log_debug_format: debug logging level format.
+        :param str log_warning_format: warning logging level format.
+        :param str log_error_format: error logging level format.
+        :param str log_critical_format: critical logging level format.
         """
 
         super(Configurable, self).__init__()
@@ -149,6 +158,7 @@ class Configurable(object):
 
         # set logging properties
         self._log_lvl = log_lvl
+        self._log_path = log_path
         self._log_name = log_name if log_name is not None else \
             type(self).__name__.lower()
         self._log_debug_format = log_debug_format
@@ -205,7 +215,7 @@ class Configurable(object):
             setattr(logger, lvl, handler)
 
         filename = self.log_name.replace('.', sep)
-        path = join(sys_prefix, 'var', 'log', '{0}.log'.format(filename))
+        path = join(self.log_path, '{0}.log'.format(filename))
 
         setHandler(result, 'DEBUG', path, self.log_debug_format)
         setHandler(result, 'INFO', path, self.log_info_format)
@@ -243,6 +253,7 @@ class Configurable(object):
             Category(
                 Configurable.LOG,
                 Parameter(Configurable.LOG_NAME, critical=True),
+                Parameter(Configurable.LOG_PATH, critical=True),
                 Parameter(Configurable.LOG_LVL, critical=True),
                 Parameter(Configurable.LOG_DEBUG_FORMAT, critical=True),
                 Parameter(Configurable.LOG_INFO_FORMAT, critical=True),
@@ -318,6 +329,17 @@ class Configurable(object):
     def log_name(self, value):
 
         self._log_name = value
+        self._logger = self.newLogger()
+
+    @property
+    def log_path(self):
+
+        return self._log_path
+
+    @log_path.setter
+    def log_path(self, value):
+
+        self._log_path = value
         self._logger = self.newLogger()
 
     @property
@@ -438,7 +460,7 @@ class Configurable(object):
         :type conf_paths: list of str
         :param Logger logger: logger to use for logging info/error messages.
             If None, use self.logger
-        :param list drivers: ConfigurationDriver to use. If None, use self
+        :param list drivers: ConfDriver to use. If None, use self
             drivers.
         :param bool override: if True (by default), override self configuration
         :param to_configure: object to configure. self by default.
@@ -543,7 +565,7 @@ class Configurable(object):
 
         else:
             self.logger.error(
-                'No ConfigurationDriver found for conf resource {0}'.format(
+                'No ConfDriver found for conf resource {0}'.format(
                     conf_path
                 )
             )
@@ -709,14 +731,14 @@ class Configurable(object):
         """Get the first driver able to handle input conf_path.
         None if no driver is able to handle input conf_path.
 
-        :return: first ConfigurationDriver able to handle conf_path.
-        :rtype: ConfigurationDriver
+        :return: first ConfDriver able to handle conf_path.
+        :rtype: ConfDriver
         """
 
         result = None
 
         for driver in drivers.split(','):
-            driver = ConfigurationDriver.get_driver(driver)
+            driver = ConfDriver.get_driver(driver)
             driver = driver()
 
             handle = conf_path is None \

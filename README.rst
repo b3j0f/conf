@@ -54,27 +54,43 @@ pip install b3j0f.conf
 Features
 --------
 
-This library provides a set of class configuration tools in order to ease development of systems based on configuration resources such as files, DB documents, etc.
+This library provides a set of class configuration tools in order to ease development of systems based on configuration resources such as files, DB documents, etc. in a reflexive context.
 
-The main class is b3j0f.conf.configurable
+Configuration process is in 2 steps:
 
-Configurable classes are provided in order to be synced with configuration resources which respect two levels and are agnostic from configuration languages.
+- inject configuration resources (file, DB documents, etc.) in a Configurable class (with specific drivers which allows the Configurable class to be agnostic from configuration languages such as ini, json, xml, etc.),
+- let the configurable class read properties from such configuration resources and apply values on a dedicated class which may be a associated to a business code. This last process can be automatically or manually thanks to the the apply_reconfiguration method.
 
-Both levels respect the first known configuration format which is ini.
+Configuration
+#############
 
-Therefore, you may define a category which is associated to options.
+The sub-module b3j0f.conf.params provides Configuration class in order to inject configuration resources in a Configurable class.
 
-A configurable can be bound to a several categories, which contain several options such as couple of property name and value.
+Configuration resources respect two levels of configuration such as the ini configuration model. Both levels are respectively:
 
-- chaining: chain object methods calls in a dedicated Chaining object. Such method calls return the Chaining object itself, allowing multiple calls to object methods to be invoked in a concise statement.
-- iterable: tools in order to manage iterable elements.
-- path: python object path resolver, from object to absolute/relative path or the inverse.
-- property: (un)bind/find properties in reflective and oop concerns.
-- reflect: tools which ease development with reflective concerns.
-- runtime: ease runtime execution.
-- proxy: create proxy (from design pattern) objects from a routine or an object which respects the signature and description of the proxified element.
-- ut: improve unit tests.
-- version: ease compatibility between python version (from 2.x to 3.x).
+- Category: permits to define a set of parameters unique by name.
+- Parameter: couple of property name and value.
+
+And all categories/options are embedded in a Configuration class.
+
+Configuration and Categories are like dictionaries where key values are inner element names. Therefore, Parameter names are unique per Categories, and Category/Parameter names are unique per Configuration.
+
+Parameter Overriding
+####################
+
+In a dynamic and complex way, one Configurable class can be bound to several Categories and Parameters. The choice is predetermined by the class itself. That means that one Configurable class can use several configuration resources and all/some/none Categories/Parameters in those resources. In such a way, the order is important because it permits to keep only last parameter values when parameters have the same name.
+
+This overriding is respected by default with Configurable class inheritance. That means a sub class which adds a resource after its parent class resources indicates than all parameters in the final resources will override parameters in the parent class resources where names are the sames.
+
+Configurable
+############
+
+A Configurable class is provided in the b3j0f.conf.configurable.core module. It permits to get parameters from a configuration resources.
+
+Configurable Registry
+#####################
+
+A Configurable registry is provided in the b3j0f.conf.configurable.registry. It allows to use several Configurable classes once at a time.
 
 Examples
 --------
@@ -84,9 +100,6 @@ Perspectives
 
 - wait feedbacks during 6 months before passing it to a stable version.
 - Cython implementation.
-
-ChangeLog
----------
 
 Donation
 --------

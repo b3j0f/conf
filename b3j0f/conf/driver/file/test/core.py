@@ -33,14 +33,14 @@ from b3j0f.utils.ut import UTCase
 from unittest import main
 
 from b3j0f.conf.params import Configuration, Category, Parameter
-from b3j0f.conf.driver.file.core import FileConfigurationDriver
+from b3j0f.conf.driver.file.core import FileConfDriver
 
 from pickle import loads, dump
 
 from os import remove
 
 
-class TestConfigurationDriver(FileConfigurationDriver):
+class TestConfDriver(FileConfDriver):
     """
     Configuration Manager for test.
     """
@@ -118,7 +118,7 @@ class TestConfigurationDriver(FileConfigurationDriver):
                 pass
 
 
-class ConfigurationDriverTest(UTCase):
+class ConfDriverTest(UTCase):
     """Configuration Manager unittest class.
     """
 
@@ -225,15 +225,15 @@ class ConfigurationDriverTest(UTCase):
     def _get_configuration_manager(self):
         """Only one method to override by sub tests
         """
-        return TestConfigurationDriver()
+        return TestConfDriver()
 
     def _get_manager_path(self):
 
-        return 'test.manager.file.TestConfigurationDriver'
+        return 'test.manager.file.TestConfDriver'
 
     def _get_manager(self):
 
-        return TestConfigurationDriver
+        return TestConfDriver
 
 if __name__ == '__main__':
     main()

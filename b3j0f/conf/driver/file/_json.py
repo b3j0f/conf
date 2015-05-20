@@ -24,15 +24,15 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-from b3j0f.conf.file.driver.core import FileConfigurationDriver
-
 try:
     from json import loads, dump
 except ImportError:
     from simplejson import loads, dump
 
+from b3j0f.conf.driver.file.core import FileConfDriver
 
-class JSONConfigurationDriver(FileConfigurationDriver):
+
+class JSONConfDriver(FileConfDriver):
     """Manage json configuration.
     """
 
@@ -57,7 +57,7 @@ class JSONConfigurationDriver(FileConfigurationDriver):
         if conf_path is not None:
             result = None
 
-            path = FileConfigurationDriver.get_path(conf_path)
+            path = FileConfDriver.get_path(conf_path)
 
             try:
                 with open(path, 'r') as handle:
@@ -97,7 +97,7 @@ class JSONConfigurationDriver(FileConfigurationDriver):
         self, conf_resource, conf_path, *args, **kwargs
     ):
 
-        path = FileConfigurationDriver.get_path(conf_path)
+        path = FileConfDriver.get_path(conf_path)
 
         try:
             with open(path, 'w') as handle:

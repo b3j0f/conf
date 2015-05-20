@@ -31,10 +31,10 @@ from sys import prefix as sys_prefix
 from ConfigParser import RawConfigParser, DuplicateSectionError,\
     MissingSectionHeaderError
 
-from b3j0f.conf.file.driver.core import FileConfigurationDriver
+from b3j0f.conf.driver.file.core import FileConfDriver
 
 
-class INIConfigurationDriver(FileConfigurationDriver):
+class INIConfDriver(FileConfDriver):
     """Manage ini configuration.
     """
 
@@ -60,7 +60,7 @@ class INIConfigurationDriver(FileConfigurationDriver):
 
             files = []
 
-            path = FileConfigurationDriver.get_path(conf_path)
+            path = FileConfDriver.get_path(conf_path)
 
             try:
                 files = result.read(path)

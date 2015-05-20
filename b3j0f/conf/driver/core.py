@@ -29,29 +29,29 @@ from b3j0f.utils.path import lookup, getpath
 from b3j0f.conf.params import Configuration, Parameter, Category, ParamList
 
 
-class MetaConfigurationDriver(type):
-    """ConfigurationDriver meta class which register all driver in a global
+class MetaConfDriver(type):
+    """ConfDriver meta class which register all driver in a global
     set of drivers.
     """
 
     def __init__(self, name, bases, attrs):
 
-        super(MetaConfigurationDriver, self).__init__(name, bases, attrs)
+        super(MetaConfDriver, self).__init__(name, bases, attrs)
 
         # if the class claims to be registered
         if self.__register__:
             # add it among drivers
-            ConfigurationDriver._MANAGERS[getpath(self)] = self
+            ConfDriver._MANAGERS[getpath(self)] = self
 
 
-class ConfigurationDriver(object):
+class ConfDriver(object):
     """Base class for managing conf.
     """
 
     """Apply meta class for registering automatically it among global drivers
     if __register__ is True
     """
-    __metaclass__ = MetaConfigurationDriver
+    __metaclass__ = MetaConfDriver
 
     """Static param which allows this class to be automatically registered
     among drivers.
@@ -260,7 +260,7 @@ class ConfigurationDriver(object):
         """Get global defined drivers.
         """
 
-        return set(ConfigurationDriver._MANAGERS.values())
+        return set(ConfDriver._MANAGERS.values())
 
     @staticmethod
     def get_driver(path):
@@ -271,13 +271,13 @@ class ConfigurationDriver(object):
         """
 
         # try to get if from global definition
-        result = ConfigurationDriver._MANAGERS.get(path)
+        result = ConfDriver._MANAGERS.get(path)
 
         # if not already added
         if result is None:
             # resolve it and add it in global definition
             result = lookup(path)
-            ConfigurationDriver._MANAGERS[path] = result
+            ConfDriver._MANAGERS[path] = result
 
         return result
 

@@ -28,24 +28,24 @@
 
 from unittest import main
 
-from b3j0f.conf.driver.file.test.core import ConfigurationDriverTest
+from b3j0f.conf.driver.file.test.core import ConfDriverTest
 
-from b3j0f.conf.driver.file.ini import JSONConfigurationDriver
+from b3j0f.conf.driver.file._json import JSONConfDriver
 
 
-class ConfigurationDriverTest(ConfigurationDriverTest):
+class ConfDriverTest(ConfDriverTest):
 
     def _get_configuration_manager(self):
 
-        return JSONConfigurationDriver()
+        return JSONConfDriver()
 
     def _get_manager_path(self):
 
-        return 'b3j0f.conf.driver.file.json.JSONConfigurationDriver'
+        return 'b3j0f.conf.driver.file.json.JSONConfDriver'
 
     def _get_manager(self):
 
-        return JSONConfigurationDriver
+        return JSONConfDriver
 
 if __name__ == '__main__':
     main()

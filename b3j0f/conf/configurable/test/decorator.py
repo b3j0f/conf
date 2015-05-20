@@ -28,9 +28,9 @@
 
 from unittest import main, TestCase
 
-from ..params import Parameter, Category
-from ..configurable import Configurable
-from ..configurable.decorator import conf_paths, add_category
+from b3j0f.conf.params import Parameter, Category
+from b3j0f.conf.configurable.core import Configurable
+from b3j0f.conf.configurable.decorator import conf_paths, add_category
 
 
 class DecoratorTest(TestCase):

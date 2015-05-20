@@ -37,8 +37,8 @@ with open(join(_path, 'README.rst')) as f:
     desc = f.read()
 
 keywords = [
-    'configuration', 'configurable', 'class', 'ini', 'json', 'xml', 'tools',
-    'property', 'dynamic', 'reflection', 'reflect', 'runtime'
+    'conf', 'configuration', 'configurable', 'class', 'ini', 'json', 'xml',
+    'tools', 'property', 'dynamic', 'reflection', 'reflect', 'runtime'
 ]
 
 description = "pyton class configuration tools useful in python projects."

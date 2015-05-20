@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # b3j0f.conf documentation build configuration file, created by
-# sphinx-quickstart on Tue Oct 14 12:26:12 2014.
+# sphinx-quickstart on Tue Oct 14 12:35:12 2014.
 #
 # This file is execfile()d with the current directory set to its
 # containing dir.
@@ -19,10 +19,8 @@ import os
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('..'))
-
-from b3j0f.conf import __version__
-
 sys.path.append('../../utils')
+from b3j0f.conf import __version__
 
 # -- General configuration ------------------------------------------------
 
@@ -186,7 +184,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'b3j0futilsdoc'
+htmlhelp_basename = 'b3j0fconfdoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -206,7 +204,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'b3j0futils.tex', u'b3j0f.conf Documentation',
+  ('index', 'b3j0fconf.tex', u'b3j0f.conf Documentation',
    u'b3j0f', 'manual'),
 ]
 
@@ -236,7 +234,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'b3j0futils', u'b3j0f.conf Documentation',
+    ('index', 'b3j0fconf', u'b3j0f.conf Documentation',
      [u'b3j0f'], 1)
 ]
 
@@ -250,8 +248,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'b3j0futils', u'b3j0f.conf Documentation',
-   u'b3j0f', 'b3j0futils', 'One line description of project.',
+  ('index', 'b3j0fconf', u'b3j0f.conf Documentation',
+   u'b3j0f', 'b3j0fconf', 'One line description of project.',
    'Miscellaneous'),
 ]
 

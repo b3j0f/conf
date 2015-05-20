@@ -25,16 +25,17 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-from b3j0f.utils.ut import UTCase
 from unittest import main
-
-from ..configurable import Configurable
-from ..configurable.registry import ConfigurableRegistry
-from ..driver.file import FileConfigurationDriver
 
 from tempfile import NamedTemporaryFile
 
 from os import remove
+
+from b3j0f.utils.ut import UTCase
+
+from b3j0f.conf.configurable.core import Configurable
+from b3j0f.conf.configurable.registry import ConfigurableRegistry
+from b3j0f.conf.driver.file.core import FileConfDriver
 
 
 class TestConfigurable(Configurable):
@@ -59,7 +60,7 @@ class ManagerTest(UTCase):
 
         driver = TestRegistry()
 
-        conf_path = FileConfigurationDriver.get_path(driver.conf_paths[-1])
+        conf_path = FileConfDriver.get_path(driver.conf_paths[-1])
 
         configurable_name = 'test'
         full_configurable_name = '{0}{1}'.format(
@@ -76,7 +77,7 @@ class ManagerTest(UTCase):
 
         self.assertTrue(driver[configurable_name].auto_conf)
 
-        configurable_path = "b3j0f.conf.configurable.Configurable"
+        configurable_path = "b3j0f.conf.configurable.core.Configurable"
 
         with open(conf_path, 'w+') as conf_file:
             conf_file.write("[MANAGER]")

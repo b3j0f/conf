@@ -32,18 +32,18 @@ from os.path import exists, join
 
 from sys import prefix
 
-from b3j0f.conf.driver.core import ConfigurationDriver
+from b3j0f.conf.driver.core import ConfDriver
 
 
-class FileConfigurationDriver(ConfigurationDriver):
-    """Configuration Manager dedicated to files.
+class FileConfDriver(ConfDriver):
+    """Conf Manager dedicated to files.
     """
 
     CONF_DIR = join(prefix, 'etc')
 
     def exists(self, conf_path, *args, **kwargs):
 
-        path = FileConfigurationDriver.get_path(conf_path)
+        path = FileConfDriver.get_path(conf_path)
 
         result = exists(path) and stat(path)[ST_SIZE]
 
@@ -52,6 +52,6 @@ class FileConfigurationDriver(ConfigurationDriver):
     @staticmethod
     def get_path(conf_path):
 
-        result = join(FileConfigurationDriver.CONF_DIR, conf_path)
+        result = join(FileConfDriver.CONF_DIR, conf_path)
 
         return result

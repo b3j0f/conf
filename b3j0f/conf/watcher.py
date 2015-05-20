@@ -35,7 +35,7 @@ from os import stat
 from os.path import exists, expanduser
 
 from b3j0f.conf.params import Configuration, Parameter, Category
-from b3j0f.conf.configurable import Configurable
+from b3j0f.conf.configurable.core import Configurable
 
 #: Dictionary of (mtime, configurables) by configuration file.
 _CONFIGURABLES_BY_CONF_FILES = {}

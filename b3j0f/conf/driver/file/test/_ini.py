@@ -28,24 +28,24 @@
 
 from unittest import main
 
-from b3j0f.conf.driver.file.test.core import ConfigurationDriverTest
+from b3j0f.conf.driver.file.test.core import ConfDriverTest
 
-from b3j0f.conf.driver.file.ini import INIConfigurationDriver
+from b3j0f.conf.driver.file._ini import INIConfDriver
 
 
-class INIConfigurationDriverTest(ConfigurationDriverTest):
+class INIConfDriverTest(ConfDriverTest):
 
     def _get_configuration_manager(self):
 
-        return INIConfigurationDriver()
+        return INIConfDriver()
 
     def _get_manager_path(self):
 
-        return 'b3j0f.conf.driver.file.ini.INIConfigurationDriver'
+        return 'b3j0f.conf.driver.file.ini.INIConfDriver'
 
     def _get_manager(self):
 
-        return INIConfigurationDriver
+        return INIConfDriver
 
 if __name__ == '__main__':
     main()
