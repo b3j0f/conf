@@ -26,14 +26,17 @@
 
 __all__ = ['FileConfDriver']
 
+"""This module specifies file drivers.
+
+They work relatively to a conf directory which is given by the environment
+variable ``B3J0F_CONF_DIR`` or if not present, by the relative path ``~/etc``.
+"""
 
 from stat import ST_SIZE
 
-from os import stat
+from os import stat, environ
 
-from os.path import exists, join
-
-from sys import prefix
+from os.path import exists, join, expanduser
 
 from b3j0f.conf.driver.core import ConfDriver
 
@@ -42,7 +45,11 @@ class FileConfDriver(ConfDriver):
     """Conf Manager dedicated to files.
     """
 
-    CONF_DIR = join(prefix, 'etc')
+    CONF_DIR_VAR = 'B3J0F_CONF_DIR'  #: conf dir environment variable
+    #: final conf dir, given by CONF_DIR_VAR environment variable or '~/etc'
+    CONF_DIR = environ.get(
+        CONF_DIR_VAR, join(expanduser('~'), 'etc')
+    )
 
     def exists(self, conf_path, *args, **kwargs):
 

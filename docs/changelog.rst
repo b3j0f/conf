@@ -1,6 +1,11 @@
 ChangeLog
 =========
 
+0.1.4 (02/06/2015)
+------------------
+
+- use B3J0F_CONF_DIR environment variable in order to get default FileConfDriver default path for given conf files. Otherwise, use '~/etc' path.
+
 0.1.2 (20/05/15)
 ----------------
 
