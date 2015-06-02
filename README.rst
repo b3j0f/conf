@@ -87,6 +87,12 @@ Configurable
 
 A Configurable class is provided in the b3j0f.conf.configurable.core module. It permits to get parameters from a configuration resources.
 
+Driver
+######
+
+Drivers are the mean to parse configuration resources, such as files, etc. By
+default, conf drivers are able to parse json/ini files. Those last use a relative path given by the environment variable ``B3J0F_CONF_DIR`` or ``~/etc`` if not given.
+
 Configurable Registry
 #####################
 
@@ -95,7 +101,7 @@ A Configurable registry is provided in the b3j0f.conf.configurable.registry. It 
 Examples
 --------
 
-Bind the configuration file ``myclass.conf`` to a business class ``MyClass``.
+Bind the configuration file ``~/etc/myclass.conf`` to a business class ``MyClass`` (the relative path ``~/etc`` can be change thanks to the environment variable ``B3J0F_CONF_DIR``).
 
 Configuration file
 ##################
