@@ -3,31 +3,27 @@ Description
 
 This project provides a set of tools which aims to ease python class configuration management in a reflexive concern.
 
-.. image:: https://pypip.in/license/b3j0f.conf/badge.svg
+.. image:: https://img.shields.io/pypi/l/b3j0f.conf.svg
    :target: https://pypi.python.org/pypi/b3j0f.conf/
    :alt: License
 
-.. image:: https://pypip.in/status/b3j0f.conf/badge.svg
+.. image:: https://img.shields.io/pypi/status/b3j0f.conf.svg
    :target: https://pypi.python.org/pypi/b3j0f.conf/
    :alt: Development Status
 
-.. image:: https://pypip.in/version/b3j0f.conf/badge.svg?text=version
+.. image:: https://img.shields.io/pypi/v/b3j0f.conf.svg
    :target: https://pypi.python.org/pypi/b3j0f.conf/
    :alt: Latest release
 
-.. image:: https://pypip.in/py_versions/b3j0f.conf/badge.svg
+.. image:: https://img.shields.io/pypi/pyversions/b3j0f.conf.svg
    :target: https://pypi.python.org/pypi/b3j0f.conf/
    :alt: Supported Python versions
 
-.. image:: https://pypip.in/implementation/b3j0f.conf/badge.svg
+.. image:: https://img.shields.io/pypi/implementation/b3j0f.conf.svg
    :target: https://pypi.python.org/pypi/b3j0f.conf/
    :alt: Supported Python implementations
 
-.. image:: https://pypip.in/format/b3j0f.conf/badge.svg
-   :target: https://pypi.python.org/pypi/b3j0f.conf/
-   :alt: Download format
-
-.. image:: https://travis-ci.org/b3j0f/conf.svg?branch=master
+.. image:: https://img.shields.io/pypi/wheel/b3j0f.conf.svg
    :target: https://travis-ci.org/b3j0f/conf
    :alt: Build status
 
@@ -35,7 +31,7 @@ This project provides a set of tools which aims to ease python class configurati
    :target: https://coveralls.io/r/b3j0f/conf
    :alt: Code test coverage
 
-.. image:: https://pypip.in/download/b3j0f.conf/badge.svg?period=month
+.. image:: https://img.shields.io/pypi/dm/b3j0f.conf.svg
    :target: https://pypi.python.org/pypi/b3j0f.conf/
    :alt: Downloads
 
