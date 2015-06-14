@@ -1,7 +1,7 @@
 Description
 -----------
 
-This project provides a set of tools which aims to ease python class configuration management in a reflexive concern.
+Python class configuration tools in reflective and distributed concerns.
 
 .. image:: https://img.shields.io/pypi/l/b3j0f.conf.svg
    :target: https://pypi.python.org/pypi/b3j0f.conf/
@@ -25,6 +25,10 @@ This project provides a set of tools which aims to ease python class configurati
 
 .. image:: https://img.shields.io/pypi/wheel/b3j0f.conf.svg
    :target: https://travis-ci.org/b3j0f/conf
+   :alt: Download format
+
+.. image:: https://travis-ci.org/b3j0f/conf.svg?branch=master
+   :target: https://travis-ci.org/b3j0f/conf
    :alt: Build status
 
 .. image:: https://coveralls.io/repos/b3j0f/conf/badge.png
@@ -34,6 +38,10 @@ This project provides a set of tools which aims to ease python class configurati
 .. image:: https://img.shields.io/pypi/dm/b3j0f.conf.svg
    :target: https://pypi.python.org/pypi/b3j0f.conf/
    :alt: Downloads
+
+.. image:: https://readthedocs.org/projects/b3j0fconf/badge/?version=master
+   :target: https://readthedocs.org/projects/b3j0fconf/?badge=master
+   :alt: Documentation Status
 
 Links
 -----
@@ -170,5 +178,5 @@ Donation
    :alt: I'm grateful for gifts, but don't have a specific funding goal.
 
 .. _Homepage: https://github.com/b3j0f/conf
-.. _Documentation: http://pythonhosted.org/b3j0f.conf
+.. _Documentation: http://b3j0fconf.readthedocs.org/en/master/
 .. _PyPI: https://pypi.python.org/pypi/b3j0f.conf/

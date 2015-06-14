@@ -1,6 +1,11 @@
 ChangeLog
 =========
 
+0.1.6 (13/06/2015)
+------------------
+
+- use the docs directory related to readthedocs requirements.
+
 0.1.5 (13/06/2015)
 ------------------
 

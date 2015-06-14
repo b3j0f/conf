@@ -38,7 +38,8 @@ with open(join(_path, 'README.rst')) as f:
 
 keywords = [
     'conf', 'configuration', 'configurable', 'class', 'ini', 'json', 'xml',
-    'tools', 'property', 'dynamic', 'reflection', 'reflect', 'runtime'
+    'tools', 'property', 'dynamic', 'reflection', 'reflect', 'runtime',
+    'reflectivity'
 ]
 
 dependencies = ['b3j0f.utils']
@@ -47,7 +48,7 @@ description = 'python class configuration tools useful in python projects.'
 
 setup(
     name='b3j0f.conf',
-    version='0.1.5',
+    version='0.1.6',
     packages=find_packages(exclude=['test.*', '*.test.*']),
     author='b3j0f',
     author_email='jlabejof@yahoo.fr',
