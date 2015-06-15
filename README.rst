@@ -43,8 +43,8 @@ Python class configuration tools in reflective and distributed concerns.
    :target: https://readthedocs.org/projects/b3j0fconf/?badge=master
    :alt: Documentation Status
 
-.. image:: https://landscape.io/github/b3j0f/cond/master/landscape.svg?style=flat
-   :target: https://landscape.io/github/b3j0f/cond/master
+.. image:: https://landscape.io/github/b3j0f/conf/master/landscape.svg?style=flat
+   :target: https://landscape.io/github/b3j0f/conf/master
    :alt: Code Health
 
 Links
