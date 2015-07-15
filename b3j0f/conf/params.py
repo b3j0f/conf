@@ -293,9 +293,12 @@ class Category(object):
             self.put(value)
 
         else:
-            raise Exception('Wrong type to add {0} to {1}. \
-Must be a Category, a Parameter or a list of {Parameter, Category}'.format(
-                value, self))
+            raise Exception(
+                'Wrong value {0} to add. \{Parameter, Category\}+ expected.'
+                .format(
+                    value
+                )
+            )
 
         return self
 
