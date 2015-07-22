@@ -1,6 +1,12 @@
 ChangeLog
 =========
 
+0.1.7 (22/07/2015)
+------------------
+
+- fix bug about to_configure parameter.
+- update README in fixing the example.
+
 0.1.6 (13/06/2015)
 ------------------
 

@@ -148,7 +148,7 @@ class Configurable(object):
 
         self.unified_category = unified_category
 
-        self._to_configure = self if to_configure is None else to_configure
+        self.to_configure = to_configure
 
         self.auto_conf = auto_conf
         self.reconf_once = reconf_once
@@ -267,6 +267,23 @@ class Configurable(object):
         )
 
         return result
+
+    @property
+    def to_configure(self):
+        """Get resource to configure.
+        """
+        return self._to_configure
+
+    @to_configure.setter
+    def to_configure(self, value):
+        """Change of resource to configure.
+
+        :param value: new object to configure by default.
+        """
+
+        if value is None:
+            value = self
+        self._to_configure = value
 
     @property
     def log_debug_format(self):
@@ -608,7 +625,10 @@ class Configurable(object):
             self.auto_conf = auto_conf_parameter.value
 
         if self.reconf_once or self.auto_conf:
-            self._configure(unified_conf=unified_conf, logger=logger)
+            self._configure(
+                unified_conf=unified_conf, logger=logger,
+                to_configure=to_configure
+            )
             # when conf succeed, deactive reconf_once
             self.reconf_once = False
 
@@ -631,7 +651,7 @@ class Configurable(object):
         """
 
         if to_configure is None:
-            to_configure = self
+            to_configure = self._to_configure
 
         values = [p for p in unified_conf[Configuration.VALUES]]
         foreigns = [p for p in unified_conf[Configuration.FOREIGNS]]
@@ -661,7 +681,8 @@ class Configurable(object):
                                 if hasattr(to_configure, privname):
                                     # change of value of private name
                                     setattr(
-                                        to_configure, privname, param_value)
+                                        to_configure, privname, param_value
+                                    )
 
                                 else:  # update public value
                                     setattr(to_configure, name, param_value)
@@ -695,7 +716,7 @@ class Configurable(object):
         """
 
         if to_configure is None:
-            to_configure = self
+            to_configure = self._to_configure
 
         if self._is_critical_category(Configurable.LOG, criticals):
             self._logger = self.newLogger()

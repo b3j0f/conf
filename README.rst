@@ -136,7 +136,10 @@ With inheritance
     # define the configurable business class
     @add_category(MYCATEGORY)  # set configuration file category
     @conf_paths(MYCONF)  # set conf path
-    class MyClass(Configurable): pass
+    class MyClass(Configurable):
+        def __init__(self, *args, **kwargs):
+            super(MyClass, self).__init__(*args, **kwargs)
+            self.myattr = None
 
     # instantiate the business class
     myclass = MyClass()
@@ -155,7 +158,11 @@ Without inheritance
     MYCONF = 'myclass.conf'  # MyClass configuration file
 
     # instantiate a business class
-    class MyClass(object): pass
+    class MyClass(object):
+        def __init__(self):
+            super(MyClass, self).__init__()
+            self.myattr = None
+
     myclass = MyClass()
 
     # apply configuration to the business class
