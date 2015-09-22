@@ -24,6 +24,9 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+"""Configuration definition objects.
+"""
+
 __all__ = ['Configuration', 'Category', 'Parameter']
 
 
@@ -32,8 +35,10 @@ from collections import Iterable
 from b3j0f.utils.version import basestring, OrderedDict
 from b3j0f.utils.path import lookup
 
+from json import loads as jsonloads
 
-class Configuration(object):
+
+class Configuration(OrderedDict):
     """Manage conf such as a list of Categories.
 
     The order of categories permit to ensure param overriding.
@@ -51,29 +56,12 @@ class Configuration(object):
         super(Configuration, self).__init__()
 
         # set categories
-        self.categories = OrderedDict()
         for category in categories:
-            self.categories[category.name] = category
+            self[category.name] = category
 
     def __iter__(self):
 
-        return iter(self.categories.values())
-
-    def __delitem__(self, category_name):
-
-        del self.categories[category_name]
-
-    def __getitem__(self, category_name):
-
-        return self.categories[category_name]
-
-    def __contains__(self, category_name):
-
-        return category_name in self.categories
-
-    def __len__(self):
-
-        return len(self.categories)
+        return iter(self.values())
 
     def __iadd__(self, other):
         """Add categories or conf categories in self.
@@ -98,15 +86,7 @@ class Configuration(object):
 
     def __repr__(self):
 
-        return 'Configuration({0})'.format(self.categories)
-
-    def get(self, category_name, default=None):
-
-        return self.categories.get(category_name, default)
-
-    def setdefault(self, category_name, category):
-
-        return self.categories.setdefault(category_name, category)
+        return 'Configuration({0})'.format(self)
 
     def put(self, category):
         """Put a category and return the previous one if exist.
@@ -114,6 +94,7 @@ class Configuration(object):
 
         result = self.get(category.name)
         self.categories[category.name] = category
+
         return result
 
     def unify(self, copy=False):
@@ -193,7 +174,7 @@ class Configuration(object):
         """Add a list of parameters to self.
         """
 
-        self.categories[name] = content
+        self[name] = content
 
     def clean(self):
         """Clean this params in setting value to None.
@@ -222,14 +203,15 @@ class Configuration(object):
 
         for category in conf:
             category = self.setdefault(
-                category.name, category.copy())
+                category.name, category.copy()
+            )
 
             for param in category:
                 param = category.setdefault(
                     param.name, param.copy())
 
 
-class Category(object):
+class Category(dict):
     """Parameter category which contains a dictionary of params.
     """
 
@@ -242,31 +224,13 @@ class Category(object):
         super(Category, self).__init__()
 
         self.name = name
-        # set param by names.
-        self.params = {}
 
         for param in params:
-            self.params[param.name] = param
+            self[param.name] = param
 
     def __iter__(self):
 
-        return iter(self.params.values())
-
-    def __delitem__(self, param_name):
-
-        del self.params[param_name]
-
-    def __getitem__(self, param_name):
-
-        return self.params[param_name]
-
-    def __contains__(self, param_name):
-
-        return param_name in self.params
-
-    def __len__(self):
-
-        return len(self.params)
+        return iter(self.values())
 
     def __eq__(self, other):
 
@@ -278,12 +242,12 @@ class Category(object):
 
     def __repr__(self):
 
-        return 'Category({0}, {1})'.format(self.name, self.params)
+        return 'Category({0}, {1})'.format(self.name, self.values())
 
     def __iadd__(self, value):
 
         if isinstance(value, Category):
-            self += value.params.values()
+            self += value.values()
 
         elif isinstance(value, Iterable):
             for content in value:
@@ -295,34 +259,25 @@ class Category(object):
         else:
             raise Exception(
                 'Wrong value {0} to add. \{Parameter, Category\}+ expected.'
-                .format(
-                    value
-                )
+                .format(value)
             )
 
         return self
-
-    def setdefault(self, param_name, param):
-
-        return self.params.setdefault(param_name, param)
-
-    def get(self, param_name, default=None):
-
-        return self.params.get(param_name, default)
 
     def put(self, param):
         """Put a param and return the previous one if exist
         """
 
         result = self.get(param.name)
-        self.params[param.name] = param
+        self[param.name] = param
+
         return result
 
     def clean(self):
         """Clean this params in setting value to None.
         """
 
-        for param in self.params.values():
+        for param in self.values():
 
             param.clean()
 
@@ -350,9 +305,13 @@ class Parameter(object):
     Provide a value (None by default) and a parser (str by default).
     """
 
+    class Error(Exception):
+        """Handle Parameter errors.
+        """
+
     def __init__(
-        self, name, parser=None, value=None, critical=False,
-        local=True, asitem=None
+            self, name, parser=None, value=None, critical=False,
+            local=True, asitem=None
     ):
         """
         :param str name: unique by category.
@@ -391,23 +350,39 @@ class Parameter(object):
 
     @property
     def value(self):
+        """Get parameter value.
+
+        :return: parameter value.
+        """
         return self._value
 
     @value.setter
     def value(self, value):
+        """Change of parameter value.
+
+        :param value: new value to use. If value is a str and not parable by
+            this parameter, the value becomes the parsing exception.
+        """
+
         if isinstance(value, basestring) and self.parser is not None:
             # parse value if str and if parser exists
             try:
                 self._value = self.parser(value)
 
-            except Exception as e:
-                self._value = e
+            except Exception as ex:
+                self._value = ex
 
         else:
             self._value = value
 
     def copy(self, name=None, cleaned=False):
+        """Get a copy of the parameter with specified name and new value if
+        cleaned.
 
+        :param str name: new parameter name.
+        :param bool cleaned: clean the value.
+        :return: new parameter.
+        """
         if name is None:
             name = self.name
 
@@ -429,22 +404,93 @@ class Parameter(object):
         self._value = None
 
     @staticmethod
-    def array(item_type=str):
-        """Get an array from an input value where items are separated by ','.
+    def bool(value):
+        """Boolean value parser.
+
+        :param str value: value to parse.
+        :return: True if value in [True, true, 1]. False Otherwise.
+        :rtype: bool
         """
 
-        def split(value):
-            return [item_type(v) for v in value.split(',')]
-
-        return split
-
-    @staticmethod
-    def bool(value):
         return value == 'True' or value == 'true' or value == '1'
 
     @staticmethod
     def path(value):
+        """Python class path value parser.
+
+        :param str value: python class path to parse.
+        :return: lookup(value).
+        """
+
         return lookup(value)
+
+    @staticmethod
+    def json(value):
+        """Get a data from a json data format.
+
+        :param str value: json format to parse.
+        :return: data.
+        :rtype: str, list, dict, int, float or bool
+        """
+
+        return jsonloads(value)
+
+    @staticmethod
+    def _typedjson(value, cls):
+        """Private static method which uses the json method and check if result
+        inherits from the cls. Otherwise, raise an error.
+
+        :param str value: value to parse in a json format.
+        :param type cls: expected result class.
+        :return: parsed value.
+        :rtype: cls
+        """
+
+        result = Parameter.json(value)
+
+        if not isinstance(result, cls):
+            raise Parameter.Error(
+                'Wrong type: {0}. {1} expected.'.format(value, cls)
+            )
+
+        return result
+
+    @staticmethod
+    def hash(value):
+        """Get a hashmap from a dict json format.
+
+        :param str value: dictionary json format to parse.
+        :return: parsed dictionary.
+        :rtype: dict
+        :raises: Parameter.Error if value is not a dict json format.
+        """
+
+        return Parameter._typedjson(value, dict)
+
+    @staticmethod
+    def array(value):
+        """Get an array from:
+
+        - an array json format.
+        - a list of item name separated by commas.
+
+        :param str value: list of items to parse. The format must be of
+
+            - array json type.
+            - named item separated by commas.
+
+        :return: parsed array.
+        :rtype: list
+        :raises: Parameter.Error if value is not a list json format.
+        """
+
+        if value[0] == '[':
+            result = Parameter._typedjson(value, list)
+
+        else:
+            result = list(item for item in value.split(','))
+
+        return result
 
 
 class ParamList(object):

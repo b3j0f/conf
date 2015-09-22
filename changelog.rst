@@ -1,6 +1,11 @@
 ChangeLog
 =========
 
+0.1.8 (22/09/2015)
+------------------
+
+- add reference to Configurable, ConfigurableRegistry, ConfDriver, Configuration, Category and Parameter in the main package.
+
 0.1.7 (22/07/2015)
 ------------------
 

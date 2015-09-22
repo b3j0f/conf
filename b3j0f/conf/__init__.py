@@ -27,9 +27,18 @@
 """Main configuration package.
 """
 
-__all__ = ['__version_info__', '__version__']
+__all__ = [
+    '__version_info__', '__version__',
+    'Configuration', 'Category', 'Parameter',
+    'Configurable', 'ConfigurableRegistry',
+    'ConfDriver'
+]
 
 #: project version info
-__version_info__ = 0, 1, 7, "beta", 0
+__version_info__ = 0, 1, 8, "beta", 0
 #: project version
 __version__ = ".".join(str(v) for v in __version_info__[:3])
+
+from b3j0f.conf.configurable import Configurable, ConfigurableRegistry
+from b3j0f.conf.params import Configuration, Category, Parameter
+from b3j0f.conf.driver import ConfDriver
