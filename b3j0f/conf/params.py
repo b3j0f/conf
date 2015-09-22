@@ -38,15 +38,15 @@ from b3j0f.utils.path import lookup
 from json import loads as jsonloads
 
 
-class Configuration(OrderedDict):
+class Configuration(object):
     """Manage conf such as a list of Categories.
 
     The order of categories permit to ensure param overriding.
     """
 
-    ERRORS = 'ERRORS'  #: category name which contains errors
-    VALUES = 'VALUES'  #: category name which contains local parameter values
-    FOREIGNS = 'FOREIGN'  #: category name which contains not local parameters
+    ERRORS = 'ERRORS'  #: category name which contains errors.
+    VALUES = 'VALUES'  #: category name which contains local parameter values.
+    FOREIGNS = 'FOREIGN'  #: category name which contains not local parameters.
 
     def __init__(self, *categories):
         """
@@ -55,13 +55,31 @@ class Configuration(OrderedDict):
 
         super(Configuration, self).__init__()
 
+        self.categories = OrderedDict()
+
         # set categories
         for category in categories:
-            self[category.name] = category
+            self.categories[category.name] = category
 
     def __iter__(self):
 
-        return iter(self.values())
+        return iter(self.categories.values())
+
+    def __delitem__(self, category_name):
+
+        del self.categories[category_name]
+
+    def __getitem__(self, category_name):
+
+        return self.categories[category_name]
+
+    def __contains__(self, category_name):
+
+        return category_name in self.categories
+
+    def __len__(self):
+
+        return len(self.categories)
 
     def __iadd__(self, other):
         """Add categories or conf categories in self.
@@ -69,11 +87,12 @@ class Configuration(OrderedDict):
 
         # if other is a conf add a copy of all other categories
         if isinstance(other, Configuration):
+
             for category in other:
                 self += category
 
         else:  # in case of category
-            category = self.get(other.name)
+            category = self.categories.get(other.name)
 
             if category is None:
                 self.put(other)
@@ -88,11 +107,19 @@ class Configuration(OrderedDict):
 
         return 'Configuration({0})'.format(self)
 
+    def get(self, category_name, default=None):
+
+        return self.categories.get(category_name, default)
+
+    def setdefault(self, category_name, category):
+
+        return self.categories.setdefault(category_name, category)
+
     def put(self, category):
         """Put a category and return the previous one if exist.
         """
 
-        result = self.get(category.name)
+        result = self.categories.get(category.name)
         self.categories[category.name] = category
 
         return result
@@ -117,8 +144,9 @@ class Configuration(OrderedDict):
         errors = Category(Configuration.ERRORS)
         foreigns = Category(Configuration.FOREIGNS)
 
-        for category in self:
+        for category in self.categories.values():
             for param in category:
+
                 if param.value is not None:
                     final_values = values if param.local else foreigns
 
@@ -152,9 +180,9 @@ class Configuration(OrderedDict):
 
         result = Category(name)
 
-        for category in self:
+        for category in self.categories.values():
             if not isinstance(category, ParamList):
-                for param in category:
+                for param in category.values():
                     result.put(param.copy() if copy else param)
 
         return result
@@ -174,13 +202,13 @@ class Configuration(OrderedDict):
         """Add a list of parameters to self.
         """
 
-        self[name] = content
+        self.categories[name] = content
 
     def clean(self):
         """Clean this params in setting value to None.
         """
 
-        for category in self:
+        for category in self.categories:
 
             category.clean()
 
@@ -192,7 +220,7 @@ class Configuration(OrderedDict):
 
         result = Configuration()
 
-        for category in self:
+        for category in self.categories.values():
             result.put(category.copy(cleaned=cleaned))
 
         return result
@@ -202,13 +230,14 @@ class Configuration(OrderedDict):
         """
 
         for category in conf:
-            category = self.setdefault(
+            category = self.categories.setdefault(
                 category.name, category.copy()
             )
 
             for param in category:
                 param = category.setdefault(
-                    param.name, param.copy())
+                    param.name, param.copy()
+                )
 
 
 class Category(dict):
