@@ -24,6 +24,8 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+"""Configurable registry module."""
+
 __all__ = ['Configurables', 'ConfigurableTypes', 'ConfigurableRegistry']
 
 
@@ -146,9 +148,12 @@ class ConfigurableTypes(dict):
 
         else:
             # check if an old value exiss
-            if name in self.registry._configurables \
+            if (
+                name in self.registry._configurables
                     and not isinstance(
-                        self.registry._configurables[name], configurable_type):
+                        self.registry._configurables[name], configurable_type
+                    )
+            ):
                 # if the old value is not an instance of newly type
                 self.registry.logger.warning(
                     "Old configurable {0} removed. Not an instance of {1}"
@@ -186,7 +191,7 @@ class ConfigurableRegistry(Configurable):
     CONFIGURABLE_TYPE_SUFFIX = '_type'  #: type config suffix
 
     def __init__(
-        self, configurables=None, configurable_types=None, *args, **kwargs
+            self, configurables=None, configurable_types=None, *args, **kwargs
     ):
         """
         :param dict configurables: dictionary of configurables by name.
@@ -226,9 +231,10 @@ class ConfigurableRegistry(Configurable):
         return result
 
     def apply_configuration(
-        self,
-        conf=None, conf_paths=None, drivers=None, logger=None, override=True,
-        *args, **kwargs
+            self,
+            conf=None, conf_paths=None, drivers=None, logger=None,
+            override=True,
+            *args, **kwargs
     ):
 
         super(ConfigurableRegistry, self).apply_configuration(
@@ -348,7 +354,7 @@ class ConfigurableRegistry(Configurable):
         """
 
         if name.endswith(ConfigurableRegistry.CONFIGURABLE_TYPE_SUFFIX):
-            return self._configurables_types[name]
+            return self._configurable_types[name]
 
         return self._configurables[name]
 
@@ -357,7 +363,7 @@ class ConfigurableRegistry(Configurable):
         """
 
         if name.endswith(ConfigurableRegistry.CONFIGURABLE_TYPE_SUFFIX):
-            self._configurables_types[name] = value
+            self._configurable_types[name] = value
 
         else:
             self._configurables[name] = value
@@ -367,7 +373,7 @@ class ConfigurableRegistry(Configurable):
         """
 
         if name.endswith(ConfigurableRegistry.CONFIGURABLE_TYPE_SUFFIX):
-            del self._configurables_types[name]
+            del self._configurable_types[name]
 
         else:
             del self._configurables[name]

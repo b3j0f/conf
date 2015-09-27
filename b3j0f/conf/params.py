@@ -108,10 +108,25 @@ class Configuration(object):
         return 'Configuration({0})'.format(self)
 
     def get(self, category_name, default=None):
+        """Get a category by its name.
+
+        :param str category_name: category name.
+        :param default: default value if category_name is not registered.
+        :return: related Category.
+        :rtype: Category
+        """
 
         return self.categories.get(category_name, default)
 
     def setdefault(self, category_name, category):
+        """Register a category with specific name if name not already used.
+
+        :param str category_name: category name.
+        :param Category category: to register.
+        :return: existing category or input category if no category have been
+            registered with this name.
+        :rtype: Category
+        """
 
         return self.categories.setdefault(category_name, category)
 
@@ -287,7 +302,7 @@ class Category(dict):
 
         else:
             raise Exception(
-                'Wrong value {0} to add. \{Parameter, Category\}+ expected.'
+                'Wrong value {0} to add. (Param | Category)+ expected.'
                 .format(value)
             )
 
@@ -485,8 +500,8 @@ class Parameter(object):
         return result
 
     @staticmethod
-    def hash(value):
-        """Get a hashmap from a dict json format.
+    def dict(value):
+        """Get a dict from a dict json format.
 
         :param str value: dictionary json format to parse.
         :return: parsed dictionary.
@@ -525,8 +540,3 @@ class Parameter(object):
 class ParamList(object):
     """Identify the list of parameters in a category.
     """
-
-    def __init__(self, parser=None, *args, **kwargs):
-        super(ParamList, self).__init__(*args, **kwargs)
-
-        self.parser = parser
