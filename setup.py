@@ -48,7 +48,7 @@ description = 'python class configuration tools useful in python projects.'
 
 setup(
     name='b3j0f.conf',
-    version='0.1.8',
+    version='0.1.9',
     packages=find_packages(exclude=['test.*', '*.test.*']),
     author='b3j0f',
     author_email='jlabejof@yahoo.fr',

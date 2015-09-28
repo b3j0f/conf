@@ -1,6 +1,12 @@
 ChangeLog
 =========
 
+0.1.9 (2015/09/28)
+------------------
+
+- use b3j0f.utils.property.addproperties in order to reduce code lines.
+- use the english date time format in the changelog file.
+
 0.1.8 (2015/09/22)
 ------------------
 

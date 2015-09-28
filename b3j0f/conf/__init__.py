@@ -36,7 +36,7 @@ __all__ = [
 ]
 
 #: project version info
-__version_info__ = 0, 1, 8, "beta", 0
+__version_info__ = 0, 1, 9, "beta", 0
 #: project version
 __version__ = ".".join(str(v) for v in __version_info__[:3])
 
