@@ -34,6 +34,7 @@ from os.path import join, sep
 from inspect import isclass
 
 from b3j0f.utils.version import basestring
+from b3j0f.utils.property import addproperties
 
 from b3j0f.conf.params import Configuration, Category, Parameter
 from b3j0f.conf.driver.core import ConfDriver
@@ -72,6 +73,18 @@ class ConfigurableError(Exception):
     pass
 
 
+def _updatelogger(self, value, name):
+
+    self._logger = self.newlogger()
+
+
+@addproperties(
+    names=[
+        'log_debug_format', 'log_info_format', 'log_warning_format',
+        'log_error_format', 'log_critical_format', 'log_name', 'log_path'
+    ], afset=_updatelogger
+)
+@addproperties(names=['auto_conf', 'reconf_once'])
 class Configurable(object):
     """Manages class conf synchronisation with conf resources.
     """
@@ -301,83 +314,6 @@ class Configurable(object):
         self._to_configure = value
 
     @property
-    def log_debug_format(self):
-
-        return self._log_debug_format
-
-    @log_debug_format.setter
-    def log_debug_format(self, value):
-
-        self._log_debug_format = value
-        self._logger = self.newlogger()
-
-    @property
-    def log_info_format(self):
-
-        return self._log_info_format
-
-    @log_info_format.setter
-    def log_info_format(self, value):
-
-        self._log_info_format = value
-        self._logger = self.newlogger()
-
-    @property
-    def log_warning_format(self):
-
-        return self._log_warning_format
-
-    @log_warning_format.setter
-    def log_warning_format(self, value):
-
-        self._log_warning_format = value
-        self._logger = self.newlogger()
-
-    @property
-    def log_error_format(self):
-
-        return self._log_error_format
-
-    @log_error_format.setter
-    def log_error_format(self, value):
-
-        self._log_error_format = value
-        self._logger = self.newlogger()
-
-    @property
-    def log_critical_format(self):
-
-        return self._log_critical_format
-
-    @log_critical_format.setter
-    def log_critical_format(self, value):
-
-        self._log_critical_format = value
-        self._logger = self.newlogger()
-
-    @property
-    def log_name(self):
-
-        return self._log_name
-
-    @log_name.setter
-    def log_name(self, value):
-
-        self._log_name = value
-        self._logger = self.newlogger()
-
-    @property
-    def log_path(self):
-
-        return self._log_path
-
-    @log_path.setter
-    def log_path(self, value):
-
-        self._log_path = value
-        self._logger = self.newlogger()
-
-    @property
     def log_lvl(self):
         """Get this logger lvl.
 
@@ -430,42 +366,6 @@ class Configurable(object):
         """
 
         self._conf_paths = tuple(value)
-
-    @property
-    def auto_conf(self):
-        """Get this auto_conf property.
-
-        :rtype: bool
-        """
-
-        return self._auto_conf
-
-    @auto_conf.setter
-    def auto_conf(self, value):
-        """Change of auto_conf value.
-
-        :param bool value: new auto_conf to use.
-        """
-
-        self._auto_conf = value
-
-    @property
-    def reconf_once(self):
-        """Get reconf_once attribute value.
-
-        :rtype: bool
-        """
-
-        return self._reconf_once
-
-    @reconf_once.setter
-    def reconf_once(self, value):
-        """Change of reconf_once value.
-
-        :param bool value: new reconf_once to use.
-        """
-
-        self._reconf_once = value
 
     def apply_configuration(
             self, conf=None, conf_paths=None, drivers=None, logger=None,
