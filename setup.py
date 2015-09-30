@@ -27,7 +27,7 @@
 
 from setuptools import setup, find_packages
 
-from os.path import abspath, dirname, join
+from os.path import abspath, dirname, join, expanduser
 
 # get setup directory abspath
 _path = dirname(abspath(__file__))
@@ -77,5 +77,11 @@ setup(
         'Programming Language :: Python :: 3.4'
     ],
     test_suite='b3j0f',
-    keywords=keywords
+    keywords=keywords,
+    data_files=[
+        (
+            expanduser('~/etc/'),
+            ['etc/b3j0fconf-configurable.conf', 'etc/b3j0fconf-registry.conf']
+        )
+    ]
 )

@@ -70,7 +70,6 @@ class MetaConfigurable(type):
 class ConfigurableError(Exception):
     """Handle Configurable errors
     """
-    pass
 
 
 def _updatelogger(self, value, name):
@@ -98,7 +97,7 @@ class Configurable(object):
 
     INIT_CAT = 'init_cat'  #: initialization category
 
-    CONF_PATH = 'configuration/configurable.conf'
+    CONF_PATH = 'b3j0fconf-configurable.conf'
 
     CONF = 'CONFIGURATION'
     LOG = 'LOG'

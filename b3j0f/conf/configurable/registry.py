@@ -183,7 +183,7 @@ class ConfigurableRegistry(Configurable):
         """handle ConfigurableRegistry errors"""
         pass
 
-    CONF_PATH = 'configuration/registry.conf'  #: default conf path
+    CONF_PATH = 'b3j0fconf-registry.conf'  #: default conf path
 
     CATEGORY = 'MANAGER'  #: default ConfigurableRegistry category name
 
