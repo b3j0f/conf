@@ -42,8 +42,7 @@ from b3j0f.conf.driver.core import ConfDriver
 
 
 class FileConfDriver(ConfDriver):
-    """Conf Manager dedicated to files.
-    """
+    """Conf Manager dedicated to files."""
 
     CONF_DIR_VAR = 'B3J0F_CONF_DIR'  #: conf dir environment variable
     #: final conf dir, given by CONF_DIR_VAR environment variable or '~/etc'

@@ -25,10 +25,7 @@
 # --------------------------------------------------------------------
 
 
-__all__ = [
-    'Configurable', 'ConfigurableRegistry', 'conf_paths', 'add_category'
-]
+__all__ = ['Configurable', 'conf_paths', 'add_category']
 
 from b3j0f.conf.configurable.core import Configurable
-from b3j0f.conf.configurable.registry import ConfigurableRegistry
 from b3j0f.conf.configurable.decorator import conf_paths, add_category

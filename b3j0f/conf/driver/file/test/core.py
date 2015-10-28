@@ -32,8 +32,8 @@ from b3j0f.utils.ut import UTCase
 
 from unittest import main
 
-from b3j0f.conf.params import Configuration, Category, Parameter
-from b3j0f.conf.driver.file.core import FileConfDriver
+from ...model import Configuration, Category, Parameter
+from ..core import FileConfDriver
 
 from pickle import loads, dump
 
@@ -59,11 +59,12 @@ class TestConfDriver(FileConfDriver):
 
         return param.name in conf_resource[category.name]
 
-    def _get_categories(self, conf_resource, logger, *args, **kwargs):
+    def _get_categories(self, conf_resource, *args, **kwargs):
+
         return conf_resource.keys()
 
     def _get_parameters(
-        self, conf_resource, category, logger, *args, **kwargs
+            self, conf_resource, category, *args, **kwargs
     ):
         return conf_resource[category.name].keys()
 
@@ -86,22 +87,23 @@ class TestConfDriver(FileConfDriver):
         return result
 
     def _get_value(
-        self, conf_resource, category, param, logger,
+        self, conf_resource, category, param,
         *args, **kwargs
     ):
 
         return conf_resource[category.name][param.name]
 
     def _set_category(
-        self, conf_resource, category, logger, *args, **kwargs
+        self, conf_resource, category, *args, **kwargs
     ):
 
         conf_resource.setdefault(category.name, dict())
 
     def _set_parameter(
-        self, conf_resource, category, param, logger,
+        self, conf_resource, category, param,
         *args, **kwargs
     ):
+
         conf_resource[category.name][param.name] = param.value
 
     def _update_conf_resource(
@@ -124,6 +126,7 @@ class FileConfDriverTest(UTCase):
     ERROR_PARAMETER = 'foo4'
 
     def setUp(self):
+
         self.logger = getLogger()
 
         self.manager = self._get_conf_manager()

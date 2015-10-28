@@ -101,11 +101,6 @@ Driver
 Drivers are the mean to parse configuration resources, such as files, etc. By
 default, conf drivers are able to parse json/ini files. Those last use a relative path given by the environment variable ``B3J0F_CONF_DIR`` or ``~/etc`` if not given.
 
-Configurable Registry
-#####################
-
-A Configurable registry is provided in the b3j0f.conf.configurable.registry. It allows to use several Configurable classes once at a time.
-
 Examples
 --------
 

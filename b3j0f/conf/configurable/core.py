@@ -36,13 +36,12 @@ from inspect import isclass
 from b3j0f.utils.version import basestring
 from b3j0f.utils.property import addproperties
 
-from b3j0f.conf.params import Configuration, Category, Parameter
-from b3j0f.conf.driver.core import ConfDriver
+from ..model import Configuration, Category, Parameter
+from ..driver.core import ConfDriver
 
 
 class MetaConfigurable(type):
-    """Meta class for Configurable.
-    """
+    """Meta class for Configurable."""
 
     def __call__(cls, *args, **kwargs):
         """Get a new instance of input cls class, and if instance.auto_conf or
@@ -54,6 +53,7 @@ class MetaConfigurable(type):
         if result.auto_conf or result.reconf_once:
             # get configuration
             conf = result.conf
+
             # add a last category which contains args and kwargs as parameters
             if kwargs:
                 init_category = Category(Configurable.INIT_CAT)
@@ -61,6 +61,7 @@ class MetaConfigurable(type):
                     param = Parameter(name=name, value=kwargs[name])
                     init_category += param
                 conf += init_category
+
             # apply configuration
             result.apply_configuration(conf=conf)
 
@@ -68,8 +69,7 @@ class MetaConfigurable(type):
 
 
 class ConfigurableError(Exception):
-    """Handle Configurable errors
-    """
+    """Handle Configurable errors."""
 
 
 def _updatelogger(self, value, name):
@@ -83,10 +83,9 @@ def _updatelogger(self, value, name):
         'log_error_format', 'log_critical_format', 'log_name', 'log_path'
     ], afset=_updatelogger
 )
-@addproperties(names=['auto_conf', 'reconf_once'])
+@addproperties(names=['auto_conf', 'reconf_once', 'drivers', 'logger'])
 class Configurable(object):
-    """Manages class conf synchronisation with conf resources.
-    """
+    """Manage class conf synchronisation with conf resources."""
 
     __metaclass__ = MetaConfigurable
 
@@ -135,7 +134,8 @@ class Configurable(object):
             log_lvl='INFO', log_name=None, log_path='.',
             log_info_format=INFO_FORMAT,
             log_debug_format=DEBUG_FORMAT, log_warning_format=WARNING_FORMAT,
-            log_error_format=ERROR_FORMAT, log_critical_format=CRITICAL_FORMAT
+            log_error_format=ERROR_FORMAT, log_critical_format=CRITICAL_FORMAT,
+            *args, **kwargs
     ):
         """
         :param str unified_category: if not None, used such as a unified
@@ -159,7 +159,7 @@ class Configurable(object):
         :param str log_critical_format: critical logging level format.
         """
 
-        super(Configurable, self).__init__()
+        super(Configurable, self).__init__(*args, **kwargs)
 
         # init protected attributes
         self._auto_conf = auto_conf
@@ -183,8 +183,7 @@ class Configurable(object):
         # set logging properties
         self._log_lvl = log_lvl
         self._log_path = log_path
-        self._log_name = log_name if log_name is not None else \
-            type(self).__name__.lower()
+        self._log_name = log_name if log_name else type(self).__name__.lower()
         self._log_debug_format = log_debug_format
         self._log_info_format = log_info_format
         self._log_warning_format = log_warning_format
@@ -193,23 +192,8 @@ class Configurable(object):
 
         self._logger = self.newlogger()
 
-    @property
-    def drivers(self):
-        """Get drivers.
-        """
-
-        return self._drivers
-
-    @drivers.setter
-    def drivers(self, value):
-        """Change of drivers.
-        """
-
-        self._drivers = value
-
     def newlogger(self):
-        """Get a new logger related to self properties.
-        """
+        """Get a new logger related to self properties."""
 
         result = getLogger(self.log_name)
         result.setLevel(self.log_lvl)
@@ -257,8 +241,8 @@ class Configurable(object):
 
     @property
     def conf(self):
-        """Get conf with parsers and self property values
-        """
+        """Get conf with parsers and self property values."""
+
         result = self._conf()
 
         # add a last unified category if asked by self
@@ -297,8 +281,8 @@ class Configurable(object):
 
     @property
     def to_configure(self):
-        """Get resource to configure.
-        """
+        """Get resource to configure."""
+
         return self._to_configure
 
     @to_configure.setter
@@ -310,13 +294,14 @@ class Configurable(object):
 
         if value is None:
             value = self
+
         self._to_configure = value
 
     @property
     def log_lvl(self):
         """Get this logger lvl.
 
-        :return: self logger lvl
+        :return: self logger lvl.
         :rtype: str
         """
 
@@ -330,17 +315,29 @@ class Configurable(object):
         """
 
         self._log_lvl = value
+
         self._logger.setLevel(self._log_lvl)
 
     @property
-    def logger(self):
+    def log_name(self):
+        """Get this logger name.
 
-        return self._logger
+        :return: self logger name.
+        :rtype: str
+        """
 
-    @logger.setter
-    def logger(self, value):
+        return self._log_name
 
-        self._logger = value
+    @log_name.setter
+    def log_name(self, value):
+        """Change of logging name.
+
+        :param str value: new log_name to set up.
+        """
+
+        self._log_name = value
+
+        self._logger.setLevel(self._log_name)
 
     @property
     def conf_paths(self):
@@ -359,10 +356,7 @@ class Configurable(object):
 
     @conf_paths.setter
     def conf_paths(self, value):
-        """Change of conf_paths in adding it in watching list.
-
-        .. TODO:: add watchers here
-        """
+        """Change of conf_paths in adding it in watching list."""
 
         self._conf_paths = tuple(value)
 
@@ -521,6 +515,7 @@ class Configurable(object):
 
     def configure(self, conf, logger=None, to_configure=None):
         """Update self properties with input params only if:
+
         - self.configure is True
         - self.auto_conf is True
         - param conf 'configure' is True
@@ -560,8 +555,7 @@ class Configurable(object):
             self.reconf_once = False
 
     def _is_local(self, to_configure, name):
-        """True iif input name parameter can be handled by to_configure.
-        """
+        """True iif input name parameter can be handled by to_configure."""
 
         return hasattr(to_configure, name)
 
@@ -650,8 +644,7 @@ class Configurable(object):
             to_configure.logger = self.logger
 
     def _is_critical_category(self, category, criticals):
-        """Check if input category parameters are among criticals.
-        """
+        """Check if input category parameters are among criticals."""
 
         result = False
 

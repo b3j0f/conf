@@ -40,8 +40,8 @@ __version_info__ = 0, 1, 9, "beta", 0
 #: project version
 __version__ = ".".join(str(v) for v in __version_info__[:3])
 
-from b3j0f.conf.configurable import (
+from .configurable import (
     Configurable, ConfigurableRegistry, conf_paths, add_category
 )
-from b3j0f.conf.params import Configuration, Category, Parameter
-from b3j0f.conf.driver import ConfDriver
+from .model import Configuration, Category, Parameter
+from .driver import ConfDriver

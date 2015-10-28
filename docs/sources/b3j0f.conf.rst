@@ -15,7 +15,7 @@ Submodules
 
 .. toctree::
 
-   b3j0f.conf.params
+   b3j0f.conf.model
    b3j0f.conf.watcher
 
 Module contents

@@ -27,8 +27,8 @@
 __all__ = ['conf_paths', 'add_category']
 
 
-from b3j0f.conf.configurable.core import Configurable
-from b3j0f.conf.params import Category, ParamList
+from .core import Configurable
+from ..model import Category, ParamList
 
 
 def conf_paths(*conf_paths):
@@ -64,13 +64,13 @@ def conf_paths(*conf_paths):
     return add_conf_paths
 
 
-def add_category(name, unified=True, content=None):
+def add_category(name, content=None, unified=True):
     """Add a category to a configurable configuration.
 
     :param str name: category name.
+    :param content: category or list of parameters to add to the new category.
     :param bool unified: if True (by default), the new category is unified from
         previous conf.
-    :param content: category or list of parameters to add to the new category.
     :type content: Category or list(Parameter)
     """
 

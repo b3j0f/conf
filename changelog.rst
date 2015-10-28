@@ -1,6 +1,14 @@
 ChangeLog
 =========
 
+0.2.0 (2015/10/28)
+------------------
+
+- simplify the global architecture in removing both module registry and ParamList.
+- separate the module model to three dedicated modules: model.configuration, model.parameter, model.category.
+- add model UTs.
+- add parameter conf and type in Parameter in order to respectively set initialization parameter value with additional configuration data and force parameter type.
+
 0.1.9 (2015/09/28)
 ------------------
 

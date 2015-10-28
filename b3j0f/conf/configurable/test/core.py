@@ -28,8 +28,8 @@
 
 from unittest import TestCase, main
 
-from b3j0f.conf.configurable.core import Configurable
-from b3j0f.conf.params import Configuration, Category, Parameter
+from ..core import Configurable
+from ..model import Configuration, Category, Parameter
 
 from tempfile import NamedTemporaryFile
 

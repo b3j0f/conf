@@ -27,9 +27,12 @@
 __all__ = ['MetaConfDriver', 'ConfDriver']
 
 
+from b3j0f.utils.version import basestring
 from b3j0f.utils.path import lookup, getpath
 
-from b3j0f.conf.params import Configuration, Parameter, Category, ParamList
+from ..model.configuration import Configuration
+from ..model.parameter import Parameter
+from ..model.category import Category
 
 
 class MetaConfDriver(type):
@@ -48,8 +51,7 @@ class MetaConfDriver(type):
 
 
 class ConfDriver(object):
-    """Base class for managing conf.
-    """
+    """Base class for managing conf."""
 
     """Apply meta class for registering automatically it among global drivers
     if __register__ is True
@@ -80,13 +82,12 @@ class ConfDriver(object):
         return result
 
     def exists(self, conf_path):
-        """True if conf_path exist related to this driver behaviour.
-        """
+        """True if conf_path exist related to this driver behaviour."""
 
         raise NotImplementedError()
 
     def get_conf(
-        self, conf_path, logger, conf=None, override=True
+            self, conf_path, logger, conf=None, override=True
     ):
         """Parse a configuration_files with input conf and returns
         parameters and errors by param name.
@@ -112,14 +113,11 @@ class ConfDriver(object):
                     logger=logger
                 )
 
-            except Exception as e:
+            except Exception as ex:
                 # if an error occured, log it
                 logger.error(
-                    'Impossible to parse conf_path {0} with {1}: {2}'.format(
-                        conf_path,
-                        type(self),
-                        e
-                    )
+                    'Impossible to parse conf_path {0} with {1}: {2}'
+                    .format(conf_path, type(self), ex)
                 )
 
             else:  # else process conf file
@@ -136,72 +134,61 @@ class ConfDriver(object):
                 for category_name in categories:
                     # do something only for referenced categories
                     if category_name in result:
+
                         category = result.setdefault(
                             category_name,
                             Category(category_name)
                         )
 
-                        if isinstance(category, Category):
-                            parameters = self._get_parameters(
-                                conf_resource=conf_resource,
-                                category=category,
-                                logger=logger
-                            )
+                        pnames = self._get_pnames(
+                            conf_resource=conf_resource,
+                            category=category,
+                            logger=logger
+                        )
 
-                            for name in parameters:
-                                # if param name exists in conf
-                                if name in category:
-                                    # copy parameter
-                                    param = category[name].copy()
+                        for param in category:
 
-                                # else create not local parameter
-                                else:
-                                    param = Parameter(name, local=False)
+                            pname = param.name
 
-                                param = category.setdefault(name, param)
+                            # list of matching conf parameters
+                            cparams = []
 
-                                value = self._get_value(
+                            if isinstance(pname, basestring):
+
+                                if self._has_parameter(
                                     conf_resource=conf_resource,
                                     category=category,
                                     param=param,
                                     logger=logger
-                                )
+                                ):
 
-                                if value not in (None, ''):
-                                    if override or param.value in (None, ''):
-                                        param.value = value
+                                    cparams = [category[pname].copy()]
 
-                        elif isinstance(category, ParamList):
-                            paramlist = category
-                            category = Category(category_name)
-                            result.categories[category_name] = category
+                            else:
 
-                            parameters = self._get_parameters(
-                                conf_resource=conf_resource,
-                                category=category,
-                                logger=logger
-                            )
+                                regex = pname
 
-                            for name in parameters:
-                                param = Parameter(
-                                    name,
-                                    local=False,
-                                    parser=paramlist.parser,
-                                    asitem=category
-                                )
+                                for pname in pnames:
 
-                                param = category.setdefault(name, param)
+                                    if regex.match(pname):
 
+                                        param = category[pname].copy()
+                                        param.name = pname
+                                        cparams.append(param)
+
+                            for cparam in cparams:
+                                # update result
+                                category.setdefault(cparam.name, cparam)
+                                # get param value
                                 value = self._get_value(
                                     conf_resource=conf_resource,
                                     category=category,
-                                    param=param,
-                                    logger=logger
+                                    param=cparam
                                 )
-
+                                # set value to param
                                 if value not in (None, ''):
-                                    if override or param.value in (None, ''):
-                                        param.value = value
+                                    if override or cparam.value in (None, ''):
+                                        cparam.value = value
 
         return result
 
@@ -221,12 +208,12 @@ class ConfDriver(object):
                 conf_path=conf_path,
                 logger=logger)
 
-        except Exception as e:
+        except Exception as ex:
             # if an error occured, stop processing
             logger.error(
                 'Impossible to parse conf_path {0}: {1}'.format(
-                    conf_path, e))
-            result = e
+                    conf_path, ex))
+            result = ex
 
         # if conf_path can not be loaded, get default config conf_resource
         if conf_resource is None:
@@ -283,20 +270,17 @@ class ConfDriver(object):
         return result
 
     def _get_categories(self, conf_resource, logger):
-        """Get a list of category names in conf_resource.
-        """
+        """Get a list of category names in conf_resource."""
 
         raise NotImplementedError()
 
-    def _get_parameters(self, conf_resource, category, logger):
-        """Get a list of param names in conf_resource related to category.
-        """
+    def _get_pnames(self, conf_resource, category, logger):
+        """Get a list of param names in conf_resource related to category."""
 
         raise NotImplementedError()
 
     def _has_category(self, conf_resource, category, logger):
-        """True iif input conf_resource contains input category.
-        """
+        """True iif input conf_resource contains input category."""
 
         raise NotImplementedError()
 
@@ -320,25 +304,21 @@ class ConfDriver(object):
         raise NotImplementedError()
 
     def _get_value(self, conf_resource, category, param):
-        """Get a param related to input conf_resource, category and param
-        """
+        """Get a param related to input conf_resource, category and param."""
 
         raise NotImplementedError()
 
     def _set_category(self, conf_resource, category, logger):
-        """Set category on conf_resource.
-        """
+        """Set category on conf_resource."""
 
         raise NotImplementedError()
 
     def _set_parameter(self, conf_resource, category, param, logger):
-        """Set param on conf_resource.
-        """
+        """Set param on conf_resource."""
 
         raise NotImplementedError()
 
     def _update_conf_resource(self, conf_resource, conf_path):
-        """Write conf_resource into conf_path.
-        """
+        """Write conf_resource into conf_path."""
 
         raise NotImplementedError()
