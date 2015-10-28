@@ -11,6 +11,7 @@ ChangeLog
 - add regex in parameter name.
 - allow to configure parameter values which are configurables.
 - add the property Parameter.error which equals an Exception if change of value fired an exception.
+- add the module version in order to manage from one access point the project version number.
 
 0.1.9 (2015/09/28)
 ------------------
