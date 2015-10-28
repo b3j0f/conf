@@ -174,9 +174,12 @@ class Parameter(object):
     def value(self, value):
         """Change of parameter value.
 
+        If an error occured, the error is available from the property error.
+
         :param value: new value to use. If value is a str and not parable by
             this parameter, the value becomes the parsing exception.
-        :raises: TypeError if value does not match self type.
+        :raises: Parameter.Error for any error occuring while changing of value
+        .
         """
 
         self._error = None  # nonify error.
