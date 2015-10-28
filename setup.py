@@ -29,14 +29,27 @@ from setuptools import setup, find_packages
 
 from os.path import abspath, dirname, join, expanduser
 
-# get setup directory abspath
-_path = dirname(abspath(__file__))
+from re import compile as re_compile, S as re_S
 
-# get long description
-with open(join(_path, 'README.rst')) as f:
-    desc = f.read()
+NAME = 'b3j0f.conf'  #: library name.
 
-keywords = [
+_namepath = NAME.replace('.', '/')
+
+_base_path = dirname(abspath(__file__))
+
+# get long description from setup directory abspath
+with open(join(_base_path, 'README.rst')) as f:
+    DESC = f.read()
+
+# Get the version - do not use normal import because it does break coverage
+# thanks to the python jira project
+# (https://github.com/pycontribs/jira/blob/master/setup.py)
+with open(join(_base_path, _namepath, 'version.py')) as f:
+    stream = f.read()
+    regex = r'.*__version__ = \'(.*?)\''
+    VERSION = re_compile(regex, re_S).match(stream).group(1)
+
+KEYWORDS = [
     'conf', 'configuration', 'configurable', 'class', 'ini', 'json', 'xml',
     'tools', 'property', 'dynamic', 'reflection', 'reflect', 'runtime',
     'reflectivity'
@@ -44,19 +57,21 @@ keywords = [
 
 dependencies = ['b3j0f.utils']
 
-description = 'python class configuration tools useful in python projects.'
+DESCRIPTION = 'python class configuration tools useful in python projects.'
+
+URL = 'https://github.com/{0}'.format(_namepath)
 
 setup(
-    name='b3j0f.conf',
-    version='0.1.9',
+    name=NAME,
+    version=VERSION,
     packages=find_packages(exclude=['test.*', '*.test.*']),
     author='b3j0f',
     author_email='jlabejof@yahoo.fr',
     install_requires=dependencies,
-    description=description,
-    long_description=desc,
+    description=DESCRIPTION,
+    long_description=DESC,
     include_package_data=True,
-    url='https://github.com/b3j0f/conf/',
+    url=URL,
     license='MIT License',
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -77,11 +92,11 @@ setup(
         'Programming Language :: Python :: 3.4'
     ],
     test_suite='b3j0f',
-    keywords=keywords,
+    keywords=KEYWORDS,
     data_files=[
         (
             expanduser('~/etc/'),
-            ['etc/b3j0fconf-configurable.conf', 'etc/b3j0fconf-registry.conf']
+            ['etc/b3j0fconf-configurable.conf']
         )
     ]
 )

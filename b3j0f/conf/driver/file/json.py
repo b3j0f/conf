@@ -33,12 +33,11 @@ try:
 except ImportError:
     from simplejson import loads, dump
 
-from b3j0f.conf.driver.file.core import FileConfDriver
+from .core import FileConfDriver
 
 
 class JSONConfDriver(FileConfDriver):
-    """Manage json configuration.
-    """
+    """Manage json configuration."""
 
     __register__ = True  #: Register it automatically among global managers.
 
@@ -50,7 +49,7 @@ class JSONConfDriver(FileConfDriver):
 
         return param.name in conf_resource[category.name]
 
-    def _get_conf_resource(self, logger, conf_path=None, *args, **kwargs):
+    def _get_conf_resource(self, conf_path=None, *args, **kwargs):
 
         result = {}
 
@@ -73,7 +72,7 @@ class JSONConfDriver(FileConfDriver):
 
         return conf_resource.keys()
 
-    def _get_parameters(
+    def _get_pnames(
             self, conf_resource, category, *args, **kwargs
     ):
 

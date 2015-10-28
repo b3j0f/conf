@@ -30,7 +30,7 @@
 __all__ = [
     '__version_info__', '__version__',
     'Configuration', 'Category', 'Parameter',
-    'Configurable', 'ConfigurableRegistry',
+    'Configurable',
     'ConfDriver',
     'conf_paths', 'add_category'
 ]
@@ -40,8 +40,6 @@ __version_info__ = 0, 1, 9, "beta", 0
 #: project version
 __version__ = ".".join(str(v) for v in __version_info__[:3])
 
-from .configurable import (
-    Configurable, ConfigurableRegistry, conf_paths, add_category
-)
+from .configurable import Configurable, conf_paths, add_category
 from .model import Configuration, Category, Parameter
 from .driver import ConfDriver

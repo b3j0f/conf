@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # --------------------------------------------------------------------
@@ -24,7 +25,19 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-__all__ = ['ConfDriver']
+
+from unittest import main
+
+from .core import FileConfDriverTest
+
+from ..json import JSONConfDriver
 
 
-from .core import ConfDriver
+class JSONConfDriverTest(FileConfDriverTest):
+
+    def _get_manager(self):
+        print ('KOKOKO')
+        return JSONConfDriver
+
+if __name__ == '__main__':
+    main()

@@ -8,6 +8,9 @@ ChangeLog
 - separate the module model to three dedicated modules: model.configuration, model.parameter, model.category.
 - add model UTs.
 - add parameter conf and type in Parameter in order to respectively set initialization parameter value with additional configuration data and force parameter type.
+- add regex in parameter name.
+- allow to configure parameter values which are configurables.
+- add the property Parameter.error which equals an Exception if change of value fired an exception.
 
 0.1.9 (2015/09/28)
 ------------------

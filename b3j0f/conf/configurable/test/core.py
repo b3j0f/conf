@@ -29,7 +29,7 @@
 from unittest import TestCase, main
 
 from ..core import Configurable
-from ..model import Configuration, Category, Parameter
+from ...model import Configuration, Category, Parameter
 
 from tempfile import NamedTemporaryFile
 
@@ -51,12 +51,20 @@ class ConfigurableTest(TestCase):
             Category(
                 'A',
                 Parameter('a', value='a'),
-                Parameter('2', value=2, parser=int),
-                Parameter('error', value='error', parser=float)),
+                Parameter('_', value=2, parser=int),
+                Parameter('error', parser=float)
+            ),
             Category(
                 'B',
                 Parameter('a', value='b'),
-                Parameter('b', value='b')))
+                Parameter('b', value='b')
+            )
+        )
+
+        try:
+            self.conf['A']['error'].value = 'error'
+        except:
+            pass
 
     def test_configuration_files(self):
 
@@ -67,12 +75,9 @@ class ConfigurableTest(TestCase):
             configurable.conf_paths,
             self.conf_paths)
 
-        configurable = Configurable(
-            conf_paths=self.conf_paths)
+        configurable = Configurable(conf_paths=self.conf_paths)
 
-        self.assertEqual(
-            configurable.conf_paths,
-            self.conf_paths)
+        self.assertEqual(configurable.conf_paths, self.conf_paths)
 
     def test_auto_conf(self):
 
@@ -136,20 +141,21 @@ class ConfigurableTest(TestCase):
         self.assertEqual(len(conf), 0)
 
         # fill files
-        configurable = Configurable(
-            conf_paths=self.conf_paths)
+        configurable = Configurable(conf_paths=self.conf_paths)
 
         # add first category in conf file[0]
         configurable.set_conf(
             conf_path=self.conf_paths[0],
             conf=Configuration(self.conf['A']),
-            driver=configurable._drivers.split(',')[0])
+            driver=configurable._drivers.split(',')[0]
+        )
 
         # add second category in conf file[1]
         configurable.set_conf(
             conf_path=self.conf_paths[1],
             conf=Configuration(self.conf['B']),
-            driver=configurable._drivers.split(',')[1])
+            driver=configurable._drivers.split(',')[1]
+        )
 
         conf = configurable.get_conf(conf=self.conf)
 
@@ -157,10 +163,12 @@ class ConfigurableTest(TestCase):
         parameters = unified_configuration[Configuration.VALUES]
         errors = unified_configuration[Configuration.ERRORS]
 
-        self.assertTrue('a' in parameters and 'a' not in errors)
+        self.assertIn('a', parameters)
+        self.assertNotIn('a', errors)
         self.assertEqual(parameters['a'].value, 'b')
-        self.assertTrue('2' in parameters and '2' not in errors)
-        self.assertEqual(parameters['2'].value, 2)
+        self.assertIn('_', parameters)
+        self.assertNotIn('_', errors)
+        self.assertEqual(parameters['_'].value, 2)
         self.assertTrue('b' in parameters and 'b' not in errors)
         self.assertEqual(parameters['b'].value, 'b')
         self.assertTrue('error' in errors and 'error' not in parameters)
@@ -179,9 +187,8 @@ class ConfigurableTest(TestCase):
         self.assertEqual(self.configurable.log_lvl, 'INFO')
 
         conf = Configuration(
-            Category(
-                'TEST',
-                Parameter('log_lvl', value='DEBUG')))
+            Category('TEST', Parameter('log_lvl', value='DEBUG'))
+        )
 
         self.configurable.configure(conf=conf)
         self.assertEqual(self.configurable.log_lvl, 'INFO')
@@ -243,10 +250,7 @@ class ConfigurableTest(TestCase):
         param = 'test'
 
         conf = Configuration(
-            Category(
-                'TEST',
-                Parameter(param, value=True)
-            )
+            Category('TEST', Parameter(param, value=True))
         )
 
         configurable.configure(conf=conf, to_configure=to_configure)
@@ -258,8 +262,7 @@ class ConfigurableTest(TestCase):
 
             def _conf(self, *args, **kwargs):
 
-                result = super(_Configurable, self)._conf(
-                    *args, **kwargs)
+                result = super(_Configurable, self)._conf(*args, **kwargs)
 
                 result += Category('PLOP')
 

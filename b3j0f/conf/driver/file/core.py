@@ -38,7 +38,7 @@ from os import stat, environ
 
 from os.path import exists, join, expanduser
 
-from b3j0f.conf.driver.core import ConfDriver
+from ..core import ConfDriver
 
 
 class FileConfDriver(ConfDriver):

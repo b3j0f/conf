@@ -42,7 +42,7 @@ else:
         RawConfigParser, DuplicateSectionError, MissingSectionHeaderError
     )
 
-from b3j0f.conf.driver.file.core import FileConfDriver
+from .core import FileConfDriver
 
 
 class INIConfDriver(FileConfDriver):
@@ -84,7 +84,7 @@ class INIConfDriver(FileConfDriver):
 
         return conf_resource.sections()
 
-    def _get_parameters(self, conf_resource, category, *args, **kwargs):
+    def _get_pnames(self, conf_resource, category, *args, **kwargs):
 
         return conf_resource.options(category.name)
 

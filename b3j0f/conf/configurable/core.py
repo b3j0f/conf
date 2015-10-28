@@ -90,8 +90,8 @@ class Configurable(object):
     __metaclass__ = MetaConfigurable
 
     DEFAULT_DRIVERS = '{0},{1}'.format(
-        'b3j0f.conf.driver.file._json.JSONConfDriver',
-        'b3j0f.conf.driver.file._ini.INIConfDriver'
+        'b3j0f.conf.driver.file.json.JSONConfDriver',
+        'b3j0f.conf.driver.file.ini.INIConfDriver'
     )
 
     INIT_CAT = 'init_cat'  #: initialization category
@@ -166,6 +166,7 @@ class Configurable(object):
         self._reconf_once = reconf_once
         self._conf_paths = None
         self._drivers = None
+        self._conf_paths = None
 
         self.unified_category = unified_category
 
@@ -346,9 +347,6 @@ class Configurable(object):
         :return: self conf files
         :rtype: tuple
         """
-
-        if not hasattr(self, '_conf_paths'):
-            self._conf_paths = []
 
         result = self._conf_paths
 

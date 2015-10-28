@@ -32,7 +32,9 @@ from b3j0f.utils.ut import UTCase
 
 from unittest import main
 
-from ...model import Configuration, Category, Parameter
+from ....model.configuration import Configuration
+from ....model.category import Category
+from ....model.parameter import Parameter
 from ..core import FileConfDriver
 
 from pickle import loads, dump
@@ -41,8 +43,7 @@ from os import remove
 
 
 class TestConfDriver(FileConfDriver):
-    """Configuration Manager for test.
-    """
+    """Configuration Manager for test."""
 
     __register__ = True
 
@@ -63,7 +64,7 @@ class TestConfDriver(FileConfDriver):
 
         return conf_resource.keys()
 
-    def _get_parameters(
+    def _get_pnames(
             self, conf_resource, category, *args, **kwargs
     ):
         return conf_resource[category.name].keys()
@@ -120,8 +121,7 @@ class TestConfDriver(FileConfDriver):
 
 
 class FileConfDriverTest(UTCase):
-    """Configuration Manager unittest class.
-    """
+    """Configuration Manager unittest class."""
 
     ERROR_PARAMETER = 'foo4'
 
@@ -140,15 +140,20 @@ class FileConfDriverTest(UTCase):
             Category(
                 'B',
                 Parameter('b', value=1, parser=int),  # b is 1
-                Parameter('c', value='er', parser=int)   # error
+                Parameter('c', parser=int)   # error
             )
         )
+
+        try:
+            self.conf['B']['c'].value = 'er'
+        except:
+            pass
 
         self.conf_path = self.get_conf_file()
 
     def get_conf_file(self):
 
-        return '/tmp/b3j0f.conf'
+        return '/tmp/b3j0f{0}.conf'.format(self.__class__.__name__)
 
     def _remove(self):
         try:
@@ -212,7 +217,6 @@ class FileConfDriverTest(UTCase):
         self.assertIn('b', parameters)
         self.assertNotIn('b', errors)
         self.assertEqual(parameters['b'].value, 1)
-        #print(parameters['c'])
         self.assertIn('c', errors)
         self.assertNotIn('c', parameters)
 
@@ -239,13 +243,9 @@ class FileConfDriverTest(UTCase):
         self.assertIn('c', errors)
 
     def _get_conf_manager(self):
-        """Only one method to override by sub tests
-        """
-        return TestConfDriver()
+        """Only one method to override by sub tests."""
 
-    def _get_manager_path(self):
-
-        return 'b3j0f.conf.driver.file.test.TestConfDriver'
+        return self._get_manager()()
 
     def _get_manager(self):
 

@@ -78,8 +78,7 @@ class Configuration(object):
         return len(self.categories)
 
     def __iadd__(self, other):
-        """Add categories or conf categories in self.
-        """
+        """Add categories or conf categories in self."""
 
         # if other is a conf add a copy of all other categories
         if isinstance(other, Configuration):
@@ -127,8 +126,7 @@ class Configuration(object):
         return self.categories.setdefault(category_name, category)
 
     def put(self, category):
-        """Put a category and return the previous one if exist.
-        """
+        """Put a category and return the previous one if exist."""
 
         result = self.categories.get(category.name)
         self.categories[category.name] = category
@@ -159,10 +157,10 @@ class Configuration(object):
 
             for param in category:
 
-                if param.value is not None:
+                if (param.value, param.error) != (None, None):
                     final_values = values if param.local else foreigns
 
-                    if isinstance(param.value, Exception):
+                    if param.error is not None:  # if param is in error
                         to_update = errors
                         to_delete = final_values
 
@@ -199,8 +197,7 @@ class Configuration(object):
         return result
 
     def add_unified_category(self, name, copy=False, new_content=None):
-        """Add a unified category to self and add new_content if not None.
-        """
+        """Add a unified category to self and add new_content if not None."""
 
         category = self.get_unified_category(name=name, copy=copy)
 
@@ -210,14 +207,12 @@ class Configuration(object):
         self += category
 
     def add_param_list(self, name, content):
-        """Add a list of parameters to self.
-        """
+        """Add a list of parameters to self."""
 
         self.categories[name] = content
 
     def clean(self):
-        """Clean this params in setting value to None.
-        """
+        """Clean this params in setting value to None."""
 
         for category in self.categories:
 
@@ -237,8 +232,7 @@ class Configuration(object):
         return result
 
     def update(self, conf):
-        """Update this content with input conf.
-        """
+        """Update this content with input conf."""
 
         for category in conf:
             category = self.categories.setdefault(

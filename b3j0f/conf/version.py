@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # --------------------------------------------------------------------
@@ -25,27 +24,15 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+"""version module."""
 
-from unittest import main
+__all__ = ['__version__']
 
-from b3j0f.conf.driver.file.test.core import FileConfDriverTest
+# Store the version here so:
+# 1) we don't load dependencies by storing it in __init__.py
+# 2) we can import it in setup.py for the same reason
+# 3) we can import it into the utils module
+# thanks to https://github.com/pycontribs/jira/blob/master/jira/version.py
 
-from b3j0f.conf.driver.file._ini import INIConfDriver
-
-
-class INIConfDriverTest(FileConfDriverTest):
-
-    def _get_conf_manager(self):
-
-        return INIConfDriver()
-
-    def _get_manager_path(self):
-
-        return 'b3j0f.conf.driver.file._ini.INIConfDriver'
-
-    def _get_manager(self):
-
-        return INIConfDriver
-
-if __name__ == '__main__':
-    main()
+#: project version
+__version__ = '0.2.0'

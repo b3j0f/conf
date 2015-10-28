@@ -24,7 +24,9 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-__all__ = ['FileConfDriver']
+__all__ = ['FileConfDriver', 'INIConfDriver', 'JSONConfDriver']
 
 
-from b3j0f.conf.driver.file.core import FileConfDriver
+from .core import FileConfDriver
+from .ini import INIConfDriver
+from .json import JSONConfDriver

@@ -31,8 +31,8 @@ from b3j0f.utils.version import basestring
 from b3j0f.utils.path import lookup, getpath
 
 from ..model.configuration import Configuration
-from ..model.parameter import Parameter
 from ..model.category import Category
+from ..model.parameter import Parameter
 
 
 class MetaConfDriver(type):
@@ -54,7 +54,7 @@ class ConfDriver(object):
     """Base class for managing conf."""
 
     """Apply meta class for registering automatically it among global drivers
-    if __register__ is True
+    if __register__ is True.
     """
     __metaclass__ = MetaConfDriver
 
@@ -75,7 +75,8 @@ class ConfDriver(object):
         """
 
         conf_resource = self._get_conf_resource(
-            conf_path=conf_path, logger=logger)
+            conf_path=conf_path, logger=logger
+        )
 
         result = conf_resource is not None
 
@@ -155,12 +156,7 @@ class ConfDriver(object):
 
                             if isinstance(pname, basestring):
 
-                                if self._has_parameter(
-                                    conf_resource=conf_resource,
-                                    category=category,
-                                    param=param,
-                                    logger=logger
-                                ):
+                                if pname in pnames:
 
                                     cparams = [category[pname].copy()]
 
@@ -180,15 +176,47 @@ class ConfDriver(object):
                                 # update result
                                 category.setdefault(cparam.name, cparam)
                                 # get param value
+
                                 value = self._get_value(
                                     conf_resource=conf_resource,
                                     category=category,
-                                    param=cparam
+                                    param=cparam,
+                                    logger=logger
                                 )
+
                                 # set value to param
                                 if value not in (None, ''):
                                     if override or cparam.value in (None, ''):
-                                        cparam.value = value
+                                        try:
+                                            cparam.value = value
+                                        except Parameter.Error as ex:
+                                            pass
+
+                                configurable = cparam.value
+
+                                # apply conf if given
+                                # get conf category name
+                                conf_name = cparam.conf_name
+                                confcategory = conf.get_unified_category(
+                                    name=conf_name
+                                )
+
+                                if self._has_category(
+                                    conf_resource=conf_resource,
+                                    category=confcategory,
+                                    logger=logger
+                                ):
+
+                                    conf = configurable.conf
+                                    conf += confcategory
+
+                                    conf_paths = list(configurable.conf_paths)
+                                    if conf_path not in conf_paths:
+                                        conf_paths.append(conf_path)
+
+                                        configurable.conf_paths = conf_paths
+                                    # apply configuration
+                                    configurable.apply_configurable()
 
         return result
 
@@ -206,13 +234,14 @@ class ConfDriver(object):
         try:  # get conf_resource
             conf_resource = self._get_conf_resource(
                 conf_path=conf_path,
-                logger=logger)
+                logger=logger
+            )
 
         except Exception as ex:
             # if an error occured, stop processing
             logger.error(
-                'Impossible to parse conf_path {0}: {1}'.format(
-                    conf_path, ex))
+                'Impossible to parse conf_path {0}: {1}'.format(conf_path, ex)
+            )
             result = ex
 
         # if conf_path can not be loaded, get default config conf_resource
@@ -224,22 +253,26 @@ class ConfDriver(object):
 
             # set category
             self._set_category(
-                conf_resource=conf_resource, category=category,
-                logger=logger)
+                conf_resource=conf_resource, category=category, logger=logger
+            )
 
             # iterate on parameters
             for param in category:
 
-                # set param
-                self._set_parameter(
-                    conf_resource=conf_resource,
-                    category=category,
-                    param=param,
-                    logger=logger)
+                if param.value is not None:
+
+                    # set param
+                    self._set_parameter(
+                        conf_resource=conf_resource,
+                        category=category,
+                        param=param,
+                        logger=logger
+                    )
 
         # write conf_resource in conf file
         self._update_conf_resource(
-            conf_resource=conf_resource, conf_path=conf_path)
+            conf_resource=conf_resource, conf_path=conf_path, logger=logger
+        )
 
         return result
 
@@ -270,23 +303,46 @@ class ConfDriver(object):
         return result
 
     def _get_categories(self, conf_resource, logger):
-        """Get a list of category names in conf_resource."""
+        """Get a list of category names in conf_resource.
+
+        :param conf_resource: configuration resource.
+        :param Logger logger: logger to use.
+        :rtype: list
+        """
 
         raise NotImplementedError()
 
     def _get_pnames(self, conf_resource, category, logger):
-        """Get a list of param names in conf_resource related to category."""
+        """Get a list of param names in conf_resource related to category.
+
+        :param conf_resource: configuration resource.
+        :param Category category: category from which get parameter names.
+        :param Logger logger: logger to use.
+        :rtype: list
+        """
 
         raise NotImplementedError()
 
     def _has_category(self, conf_resource, category, logger):
-        """True iif input conf_resource contains input category."""
+        """True iif input conf_resource contains input category.
+
+        :param conf_resource: configuration resource.
+        :param Category category: category to check in conf_resource.
+        :param Logger logger: logger to use.
+        :rtype: bool
+        """
 
         raise NotImplementedError()
 
     def _has_parameter(self, conf_resource, category, param, logger):
         """True iif input conf_resource has input parameter_name in input
             category.
+
+        :param conf_resource: configuration resource.
+        :param Category category: category to check in conf_resource.
+        :param Parameter param: parameter to check in conf_resource.
+        :param Logger logger: logger to use.
+        :rtype: bool
         """
 
         raise NotImplementedError()
@@ -303,22 +359,44 @@ class ConfDriver(object):
 
         raise NotImplementedError()
 
-    def _get_value(self, conf_resource, category, param):
-        """Get a param related to input conf_resource, category and param."""
+    def _get_value(self, conf_resource, category, param, logger):
+        """Get a param related to input conf_resource, category and param.
+
+        :param conf_resource: configuration resource.
+        :param Category category: category to retrieve from conf_resource.
+        :param Parameter param: parameter to use from conf_resource.
+        :param Logger logger: logger to use.
+        """
 
         raise NotImplementedError()
 
     def _set_category(self, conf_resource, category, logger):
-        """Set category on conf_resource."""
+        """Set category on conf_resource.
+
+        :param conf_resource: configuration resource.
+        :param Category category: category to set in conf_resource.
+        :param Logger logger: logger to use.
+        """
 
         raise NotImplementedError()
 
     def _set_parameter(self, conf_resource, category, param, logger):
-        """Set param on conf_resource."""
+        """Set param on conf_resource.
+
+        :param conf_resource: configuration resource.
+        :param Category category: category to set in conf_resource.
+        :param Parameter param: parameter to set in conf_resource.
+        :param Logger logger: logger to use.
+        """
 
         raise NotImplementedError()
 
-    def _update_conf_resource(self, conf_resource, conf_path):
-        """Write conf_resource into conf_path."""
+    def _update_conf_resource(self, conf_resource, conf_path, logger):
+        """Write conf_resource into conf_path.
+
+        :param conf_resource: configuration resource.
+        :param str conf_path: configuration path to use.
+        :param Logger logger: logger to use.
+        """
 
         raise NotImplementedError()

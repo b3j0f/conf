@@ -28,7 +28,7 @@ __all__ = ['conf_paths', 'add_category']
 
 
 from .core import Configurable
-from ..model import Category, ParamList
+from ..model import Category
 
 
 def conf_paths(*conf_paths):
@@ -57,7 +57,8 @@ def conf_paths(*conf_paths):
 
         else:
             raise Configurable.Error(
-                "class {0} is not a Configurable class".format(cls))
+                "class {0} is not a Configurable class".format(cls)
+            )
 
         return cls
 
@@ -96,7 +97,8 @@ def add_category(name, content=None, unified=True):
 
         else:
             raise Configurable.Error(
-                "class {0} is not a Configurable class".format(cls))
+                "class {0} is not a Configurable class".format(cls)
+            )
 
         return cls
 
@@ -113,10 +115,12 @@ def add_config(config, unified=True):
     """
 
     def _add_unified(result, name, content):
+
         result.add_unified_category(name=name, new_content=content)
         return result
 
     def _add_not_unified(result, name, content):
+
         category = Category(name=name)
 
         if content is not None:
@@ -127,19 +131,17 @@ def add_config(config, unified=True):
         return result
 
     def _add_category(result, name, content, unified):
-        if isinstance(content, ParamList):
-            result.add_param_list(name=name, content=content)
+
+        if unified:
+            result = _add_unified(result, name, content)
 
         else:
-            if unified:
-                result = _add_unified(result, name, content)
-
-            else:
-                result = _add_not_unified(result, name, content)
+            result = _add_not_unified(result, name, content)
 
         return result
 
     def _conf(self, *args, **kwargs):
+
         result = super(type(self), self)._conf(*args, **kwargs)
 
         for name in config.keys():
@@ -148,6 +150,7 @@ def add_config(config, unified=True):
         return result
 
     def add_conf(cls):
+
         if issubclass(cls, Configurable):
             cls._conf = _conf
 

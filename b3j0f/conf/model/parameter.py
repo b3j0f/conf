@@ -47,7 +47,8 @@ class Parameter(object):
     - name: parameter name. If regex, drivers will generated as many parameters
         as they exist in the configuration resource with this properties (
         value, conf, parser, etc.).
-    - value: parameter value.
+    - value: parameter value. None if error is not None.
+    - error: parameter error encountered while attempting to set values.
     - parser: parameter value parser from configuration resources.
     - conf: parameter configuration if not None. If not None, the value must be
         a callable beceause the conf is used such as a kwargs.
@@ -59,7 +60,7 @@ class Parameter(object):
 
     CONF_SUFFIX = '::conf'  #: parameter configuration name.
 
-    PARAM_NAME_REGEX = '^[a-zA-Z_]\w*'  #: simple name validation.
+    PARAM_NAME_REGEX = '[a-zA-Z_][a-zA-Z0-9_]*'  #: simple name validation.
     #: simple name regex compiler.
     _PARAM_NAME_COMPILER = re_compile(PARAM_NAME_REGEX)
 
@@ -67,7 +68,7 @@ class Parameter(object):
         """Handle Parameter errors."""
 
     def __init__(
-            self, name, ptype=object, parser=None, value=None, conf=None,
+            self, name, vtype=object, parser=None, value=None, conf=None,
             critical=False, local=True, asitem=None
     ):
         """
@@ -75,7 +76,7 @@ class Parameter(object):
             - str: unique by category.
             - regex: designates a group of parameters with a matching name and
                 common properties (parser, value, conf, etc.).
-        :param type ptype: parameter type.
+        :param type vtype: parameter value type.
         :param callable parser: param test deserializer which takes in param
             a str.
         :param value: param value. None if not given.
@@ -95,16 +96,17 @@ class Parameter(object):
         # init private attributes
         self._name = None
         self._value = None
+        self._error = None
 
         # init public attributes
         self.name = name
-        self.value = value
-        self.type = ptype
+        self.vtype = vtype
         self.conf = conf
         self.parser = parser
         self.critical = critical
         self.local = local
         self.asitem = asitem
+        self.value = value
 
     def __eq__(self, other):
 
@@ -119,6 +121,12 @@ class Parameter(object):
         return 'Parameter({0}, {1}, {2})'.format(
             self.name, self.value, self.parser
         )
+
+    @property
+    def error(self):
+        """Get encountered error."""
+
+        return self._error
 
     @property
     def name(self):
@@ -136,8 +144,11 @@ class Parameter(object):
 
         :param str value: name value.
         """
-        if not Parameter._PARAM_NAME_COMPILER.match(value):
-            value = re_compile(value)
+
+        if isinstance(value, basestring):
+
+            if not Parameter._PARAM_NAME_COMPILER.match(value):
+                value = re_compile(value)
 
         self._name = value
 
@@ -165,32 +176,47 @@ class Parameter(object):
 
         :param value: new value to use. If value is a str and not parable by
             this parameter, the value becomes the parsing exception.
+        :raises: TypeError if value does not match self type.
         """
+
+        self._error = None  # nonify error.
 
         finalvalue = None  # final value to compare with self type
 
         if isinstance(value, basestring) and self.parser is not None:
             # parse value if str and if parser exists
+
             try:
                 finalvalue = self.parser(value)
-
             except Exception as ex:
-                finalvalue = ex
+                self._error = ex
+                raise Parameter.Error(
+                    'Impossible to parse value {0} with {1}.'.format(
+                        value, self
+                    )
+                ).with_traceback(ex.__traceback__)
 
         else:
             finalvalue = value
 
-        if isinstance(finalvalue, (self.type, Exception)):
+        # check type
+        if finalvalue is None or isinstance(finalvalue, self.vtype):
 
-            if self.conf is not None:
+            # apply conf if necessary
+            if finalvalue is not None and self.conf is not None:
                 finalvalue = finalvalue(**self.conf)
 
+            # update value property
             self._value = finalvalue
 
-        else:
-            raise Parameter.Error(
-                'Wrong value type, {0} expected.'.format(self.type)
+        else:  # raise wrong type error
+            error = Parameter.Error(
+                'Wrong value type of {0}. {1} expected.'.format(
+                    finalvalue, self.vtype
+                )
             )
+            self._error = error
+            raise error
 
     def copy(self, name=None, cleaned=False):
         """Get a copy of the parameter with specified name and new value if
