@@ -30,13 +30,13 @@ from unittest import main
 
 from .core import FileConfDriverTest
 
-from ..json import JSONConfDriver
+from ..json_ import JSONConfDriver
 
 
 class JSONConfDriverTest(FileConfDriverTest):
 
     def _get_manager(self):
-        print ('KOKOKO')
+
         return JSONConfDriver
 
 if __name__ == '__main__':

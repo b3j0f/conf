@@ -90,7 +90,7 @@ class Configurable(object):
     __metaclass__ = MetaConfigurable
 
     DEFAULT_DRIVERS = '{0},{1}'.format(
-        'b3j0f.conf.driver.file.json.JSONConfDriver',
+        'b3j0f.conf.driver.file.json_.JSONConfDriver',
         'b3j0f.conf.driver.file.ini.INIConfDriver'
     )
 

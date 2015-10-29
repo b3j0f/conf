@@ -29,4 +29,4 @@ __all__ = ['FileConfDriver', 'INIConfDriver', 'JSONConfDriver']
 
 from .core import FileConfDriver
 from .ini import INIConfDriver
-from .json import JSONConfDriver
+from .json_ import JSONConfDriver

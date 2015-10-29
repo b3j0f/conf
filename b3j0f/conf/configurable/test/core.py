@@ -26,7 +26,9 @@
 # --------------------------------------------------------------------
 
 
-from unittest import TestCase, main
+from unittest import main
+
+from b3j0f.utils.ut import UTCase
 
 from ..core import Configurable
 from ...model import Configuration, Category, Parameter
@@ -36,7 +38,7 @@ from tempfile import NamedTemporaryFile
 from os import remove
 
 
-class ConfigurableTest(TestCase):
+class ConfigurableTest(UTCase):
 
     def setUp(self):
 
