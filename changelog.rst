@@ -1,6 +1,13 @@
 ChangeLog
 =========
 
+0.2.1 (2015/10/29)
+------------------
+
+- add the module model.parser which contains all parser functions provided previously in the class Parameter.
+- add serialized value in parameter.
+- add the parser eval which evaluates a simple and safe python lambda body expression (without I/O functions).
+
 0.2.0 (2015/10/28)
 ------------------
 

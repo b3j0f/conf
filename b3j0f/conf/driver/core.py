@@ -30,6 +30,8 @@ __all__ = ['MetaConfDriver', 'ConfDriver']
 from b3j0f.utils.version import basestring
 from b3j0f.utils.path import lookup, getpath
 
+from parser import ParserError
+
 from ..model.configuration import Configuration
 from ..model.category import Category
 from ..model.parameter import Parameter
@@ -187,9 +189,9 @@ class ConfDriver(object):
                                 # set value to param
                                 if value not in (None, ''):
                                     if override or cparam.value in (None, ''):
-                                        try:
-                                            cparam.value = value
-                                        except Parameter.Error as ex:
+                                        try:  # set serialized value
+                                            cparam.svalue = value
+                                        except ParserError as ex:
                                             pass
 
                                 configurable = cparam.value

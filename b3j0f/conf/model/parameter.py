@@ -30,11 +30,10 @@ __all__ = ['Parameter']
 
 
 from b3j0f.utils.version import basestring
-from b3j0f.utils.path import lookup
-
-from json import loads as jsonloads
 
 from re import compile as re_compile
+
+from parser import ParserError
 
 
 class Parameter(object):
@@ -68,8 +67,8 @@ class Parameter(object):
         """Handle Parameter errors."""
 
     def __init__(
-            self, name, vtype=object, parser=None, value=None, conf=None,
-            critical=False, local=True, asitem=None
+            self, name, vtype=object, parser=None, svalue=None, value=None,
+            conf=None, critical=False, local=True, asitem=None
     ):
         """
         :param name: depends on type:
@@ -79,6 +78,7 @@ class Parameter(object):
         :param type vtype: parameter value type.
         :param callable parser: param test deserializer which takes in param
             a str.
+        :param str svalue: serialized value.
         :param value: param value. None if not given.
         :param dict conf: parameter configuration used to init the parameter
             value if not None. In this case, the parameter value must be
@@ -97,6 +97,7 @@ class Parameter(object):
         self._name = None
         self._value = None
         self._error = None
+        self._svalue = None
 
         # init public attributes
         self.name = name
@@ -106,6 +107,7 @@ class Parameter(object):
         self.critical = critical
         self.local = local
         self.asitem = asitem
+        self.svalue = svalue
         self.value = value
 
     def __eq__(self, other):
@@ -163,59 +165,96 @@ class Parameter(object):
         return '{0}{1}'.format(self.name, Parameter.CONF_SUFFIX)
 
     @property
+    def svalue(self):
+        """Get serialized value.
+
+        :rtype: str
+        """
+
+        return self._svalue
+
+    @svalue.setter
+    def svalue(self, value):
+        """Change of serialized value.
+
+        Nonify this value as well.
+
+        :param str value: serialized value to use.
+        """
+
+        self._value = None
+        self._svalue = value
+
+    @property
     def value(self):
         """Get parameter value.
 
+        If this cached value is None and this serialized value is not None,
+        calculate the new value from the serialized one.
+
         :return: parameter value.
+        :raises: TypeError if serialized value is not an instance of self vtype
+            . ParserError if parsing step raised an error.
         """
+
+        # if cached value is None and serialiazed value exists
+        if self._value is None and self.svalue is not None:
+
+            self._error = None  # nonify error.
+
+            if self.parser is None:
+
+                self.value = self._svalue
+
+            else:
+                # parse value if str and if parser exists
+                try:
+                    self._value = self.parser(self._svalue, conf=self)
+
+                except Exception as ex:
+                    self._error = ex
+                    raise ParserError(
+                        'Impossible to parse value {0} in {1}.'.format(
+                            self._svalue, self
+                        )
+                    ).with_traceback(ex.__traceback__)
+
+                else:
+                    # try to apply conf
+                    if self._value is None or self.conf is None:
+                        self.value = self._value
+
+                    else:  # apply conf
+                        try:
+                            self.value = self._value(**self.conf)
+                        except Exception as ex:
+                            self._error = ex
+                            raise ex
+
         return self._value
 
     @value.setter
     def value(self, value):
         """Change of parameter value.
 
-        If an error occured, the error is available from the property error.
+        If an error occured, it is stored in this error attribute.
 
-        :param value: new value to use. If value is a str and not parable by
-            this parameter, the value becomes the parsing exception.
-        :raises: Parameter.Error for any error occuring while changing of value
-        .
+        :param value: new value to use. If input value is not an instance of
+            self.vtype, self error
+        :raises: TypeError if input value is not an instance of self vtype.
         """
 
-        self._error = None  # nonify error.
+        if value is None or (
+                self.vtype is not None and isinstance(value, self.vtype)
+        ):
 
-        finalvalue = None  # final value to compare with self type
-
-        if isinstance(value, basestring) and self.parser is not None:
-            # parse value if str and if parser exists
-
-            try:
-                finalvalue = self.parser(value)
-            except Exception as ex:
-                self._error = ex
-                raise Parameter.Error(
-                    'Impossible to parse value {0} with {1}.'.format(
-                        value, self
-                    )
-                ).with_traceback(ex.__traceback__)
+            self._value = value
 
         else:
-            finalvalue = value
-
-        # check type
-        if finalvalue is None or isinstance(finalvalue, self.vtype):
-
-            # apply conf if necessary
-            if finalvalue is not None and self.conf is not None:
-                finalvalue = finalvalue(**self.conf)
-
-            # update value property
-            self._value = finalvalue
-
-        else:  # raise wrong type error
-            error = Parameter.Error(
+            # raise wrong type error
+            error = TypeError(
                 'Wrong value type of {0}. {1} expected.'.format(
-                    finalvalue, self.vtype
+                    value, self.vtype
                 )
             )
             self._error = error
@@ -249,92 +288,3 @@ class Parameter(object):
         """Clean this param in removing values."""
 
         self._value = None
-
-    @staticmethod
-    def bool(value):
-        """Boolean value parser.
-
-        :param str value: value to parse.
-        :return: True if value in [True, true, 1]. False Otherwise.
-        :rtype: bool
-        """
-
-        return value == 'True' or value == 'true' or value == '1'
-
-    @staticmethod
-    def path(value):
-        """Python class path value parser.
-
-        :param str value: python class path to parse.
-        :return: lookup(value).
-        """
-
-        return lookup(value)
-
-    @staticmethod
-    def json(value):
-        """Get a data from a json data format.
-
-        :param str value: json format to parse.
-        :return: data.
-        :rtype: str, list, dict, int, float or bool
-        """
-
-        return jsonloads(value)
-
-    @staticmethod
-    def _typedjson(value, cls):
-        """Private static method which uses the json method and check if result
-        inherits from the cls. Otherwise, raise an error.
-
-        :param str value: value to parse in a json format.
-        :param type cls: expected result class.
-        :return: parsed value.
-        :rtype: cls
-        """
-
-        result = Parameter.json(value)
-
-        if not isinstance(result, cls):
-            raise Parameter.Error(
-                'Wrong type: {0}. {1} expected.'.format(value, cls)
-            )
-
-        return result
-
-    @staticmethod
-    def dict(value):
-        """Get a dict from a dict json format.
-
-        :param str value: dictionary json format to parse.
-        :return: parsed dictionary.
-        :rtype: dict
-        :raises: Parameter.Error if value is not a dict json format.
-        """
-
-        return Parameter._typedjson(value, dict)
-
-    @staticmethod
-    def array(value):
-        """Get an array from:
-
-        - an array json format.
-        - a list of item name separated by commas.
-
-        :param str value: list of items to parse. The format must be of
-
-            - array json type.
-            - named item separated by commas.
-
-        :return: parsed array.
-        :rtype: list
-        :raises: Parameter.Error if value is not a list json format.
-        """
-
-        if value[0] == '[':
-            result = Parameter._typedjson(value, list)
-
-        else:
-            result = list(value.split(','))
-
-        return result

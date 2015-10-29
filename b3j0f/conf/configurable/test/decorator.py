@@ -36,8 +36,7 @@ from ..decorator import conf_paths, add_category
 
 
 class DecoratorTest(TestCase):
-    """Configuration Manager unittest class.
-    """
+    """Configuration Manager unittest class."""
 
     def test_conf_paths(self):
 
