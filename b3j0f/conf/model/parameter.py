@@ -33,8 +33,6 @@ from b3j0f.utils.version import basestring
 
 from re import compile as re_compile
 
-from parser import ParserError
-
 
 class Parameter(object):
     """Parameter identified among a category by its name.
@@ -214,7 +212,7 @@ class Parameter(object):
                 except Exception as ex:
 
                     self._error = ex
-                    raise ParserError(
+                    raise Parameter.Error(
                         'Impossible to parse value "{0}"" with {1}.'.format(
                             self._svalue, self.parser
                         )

@@ -157,6 +157,8 @@ class Configuration(object):
 
             for param in category:
 
+                pvalue = None
+
                 try:  # get value
                     pvalue = param.value
 
