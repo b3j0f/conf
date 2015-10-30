@@ -55,7 +55,7 @@ KEYWORDS = [
     'reflectivity'
 ]
 
-dependencies = ['b3j0f.utils', 'RestrictedPython']
+dependencies = ['b3j0f.utils']
 
 DESCRIPTION = 'python class configuration tools useful in python projects.'
 
