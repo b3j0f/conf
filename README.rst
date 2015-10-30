@@ -102,13 +102,16 @@ Parser
 
 The module b3j0f.conf.model.parser provides parsers used to deserialize parameter values.
 
-Cross-reference
-~~~~~~~~~~~~~~~
+Default parser is the expression parser.
+
+Expression parser
+~~~~~~~~~~~~~~~~~
 
 The parser ``exprparser`` permits to write simple expressions using the python builtin functions except those able to do I/O operations like the ``open`` function.
 
 In such expression, you can call back other configuration parameter in using this format (thanks to the idea from the pypi config_ project) related to a Configuration model:
 
+- `` `{path}` `` where ``path`` corresponds to a python object path. For example, `sys.maxsize` designates the max size of the integer on the host machine (attribute ``maxsize`` of the module ``sys``).
 - ``${cat}.{param}`` where ``cat`` designates a configuration category name, and ``param`` designates related parameter value.
 - ``${param}`` where ``param`` designates a final parameter value (last overidden value).
 
@@ -135,16 +138,16 @@ Configuration file
 
 The configuration file contains a category named ``MYCLASS`` containing the parameters:
 
-- ``myattr`` equals ``myvalue``.
+- ``myattr`` equals ``'myvalue'``.
 - ``six`` equals ``6``.
-- ``twelve`` equals ``six * 2``
+- ``bignumber`` equals ``six * sizeof(int)``
 
 .. code-block:: ini
 
     [MYCLASS]
-    myattr = myvalue
+    myattr = 'myvalue'
     six = 6
-    twelve = $six * 2
+    bignumber = $six * `sys.maxsize`
 
 
 With inheritance
@@ -152,27 +155,20 @@ With inheritance
 
 .. code-block:: python
 
-    from b3j0f.conf import conf_paths, add_category, Configurable, Parameter
-    from b3j0f.conf.model.parser import exprparser, intparser
+    from b3j0f.conf import conf_paths, add_category, Configurable
 
     MYCATEGORY = 'MYCLASS'  # MyClass configuration category name
     MYCONF = 'myclass.conf'  # MyClass configuration file
 
     # define the configurable business class
-    @add_category(  # set configuration file category
-        MYCATEGORY,
-        content=[
-            Parameter('six', parser=intparser),
-            Parameter('twelve', parser=exprparser)
-        ]
-    )
+    @add_category(MYCATEGORY)  # set configuration file category
     @conf_paths(MYCONF)  # set conf path
     class MyClass(Configurable):
         def __init__(self, *args, **kwargs):
             super(MyClass, self).__init__(*args, **kwargs)
             self.myattr = None
             self.six = None
-            self.twelve = None
+            self.bignumber = None
 
     # instantiate the business class
     myclass = MyClass()
@@ -180,15 +176,15 @@ With inheritance
     # assert attributes
     assert myclass.myattr == 'myvalue'
     assert myclass.six == 6
-    assert myclass.twelve == 12
+    from sys import maxsize
+    assert myclass.bignumber == myclass * maxsize
 
 Without inheritance
 ###################
 
 .. code-block:: python
 
-    from b3j0f.conf import Configurable, Configuration, Category, Parameter
-    from b3j0f.conf.model.parser import intparser, exprparser
+    from b3j0f.conf import Configurable
 
     MYCATEGORY = 'MYCLASS'  # MyClass configuration category name
     MYCONF = 'myclass.conf'  # MyClass configuration file
@@ -199,26 +195,18 @@ Without inheritance
             super(MyClass, self).__init__()
             self.myattr = None
             self.six = None
-            self.twelve = None
+            self.bignumber = None
 
     myclass = MyClass()
 
-    # define a configuration model
-    conf = Configuration(
-        Category(
-            MYCATEGORY,
-            Parameter('six', parser=intparser),
-            Parameter('twelve', parser=exprparser)
-        )
-    )
-
     # apply configuration to the business class
-    Configurable(to_configure=myclass, conf=conf, conf_paths=MYCONF)
+    Configurable(to_configure=myclass, conf_paths=MYCONF)
 
     # assert attributes
     assert myclass.myattr == 'myvalue'
     assert myclass.six == 6
-    assert myclass.twelve == 12
+    from sys import maxsize
+    assert myclass.bignumber == myclass.six * maxsize
 
 Perspectives
 ------------
