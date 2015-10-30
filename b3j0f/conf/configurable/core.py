@@ -36,7 +36,11 @@ from inspect import isclass
 from b3j0f.utils.version import basestring
 from b3j0f.utils.property import addproperties
 
-from ..model import Configuration, Category, Parameter
+from ..model.configuration import Configuration
+from ..model.category import Category
+from ..model.parameter import Parameter
+from ..model.parser import boolparser, arrayparser
+
 from ..driver.core import ConfDriver
 
 
@@ -260,10 +264,10 @@ class Configurable(object):
         result = Configuration(
             Category(
                 Configurable.CONF,
-                Parameter(Configurable.AUTO_CONF, Parameter.bool),
-                Parameter(Configurable.DRIVERS),
-                Parameter(Configurable.RECONF_ONCE, Parameter.bool),
-                Parameter(Configurable.CONF_PATHS, Parameter.array)
+                Parameter(Configurable.AUTO_CONF, parser=boolparser),
+                Parameter(Configurable.DRIVERS, parser=arrayparser),
+                Parameter(Configurable.RECONF_ONCE, parser=boolparser),
+                Parameter(Configurable.CONF_PATHS, parser=arrayparser)
             ),
             Category(
                 Configurable.LOG,

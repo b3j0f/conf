@@ -35,20 +35,43 @@ A parser is a callable object which takes in parameter :
 - logger: a logger.
 """
 
-__all__ = ['bool', 'path', 'json', 'dict', 'array', 'eval']
+__all__ = [
+    'boolparser', 'pathparser', 'jsonparser', 'dictparser', 'arrayparser',
+    'exprparser'
+]
 
 
 from b3j0f.utils.path import lookup
-from b3j0f.utils.runtime import safebuiltin
+from b3j0f.utils.runtime import safe_eval
 
 from json import loads as jsonloads
 
 from re import compile as re_compile
 
 from .parameter import Parameter
+from .configuration import Configuration
 
 
-def bool(value, *args, **kwargs):
+def simpleparser(function):
+    """Parser to use with a function which takes in parameter only one param.
+
+    For example, simpleparser(int) returns a parser of integer.
+    """
+
+    def parse(value, *args, **kwargs):
+
+        return function(value)
+
+    return parse
+
+
+intparser = simpleparser(int)  #: Integer value parser.
+floatparser = simpleparser(float)  #: Float value parser.
+complexparser = simpleparser(complex)  #: complex value parser.
+strparser = simpleparser(str)  #: str value parser.
+
+
+def boolparser(value, *args, **kwargs):
     """Boolean value parser.
 
     :param str value: value to parse.
@@ -59,7 +82,7 @@ def bool(value, *args, **kwargs):
     return value == 'True' or value == 'true' or value == '1'
 
 
-def path(value, *args, **kwargs):
+def pathparser(value, *args, **kwargs):
     """Python class path value parser.
 
     :param str value: python class path to parse.
@@ -69,7 +92,7 @@ def path(value, *args, **kwargs):
     return lookup(value)
 
 
-def json(value, *args, **kwargs):
+def jsonparser(value, *args, **kwargs):
     """Get a data from a json data format.
 
     :param str value: json format to parse.
@@ -80,7 +103,7 @@ def json(value, *args, **kwargs):
     return jsonloads(value, *args, **kwargs)
 
 
-def _typedjson(value, cls, *args, **kwargs):
+def _typedjsonparser(value, cls, *args, **kwargs):
     """Private static method which uses the json method and check if result
     inherits from the cls. Otherwise, raise an error.
 
@@ -90,7 +113,7 @@ def _typedjson(value, cls, *args, **kwargs):
     :rtype: cls
     """
 
-    result = json(value, *args, **kwargs)
+    result = jsonparser(value, *args, **kwargs)
 
     if not isinstance(result, cls):
         raise Parameter.Error(
@@ -100,7 +123,7 @@ def _typedjson(value, cls, *args, **kwargs):
     return result
 
 
-def dict(value, *args, **kwargs):
+def dictparser(value, *args, **kwargs):
     """Get a dict from a dict json format.
 
     :param str value: dictionary json format to parse.
@@ -109,10 +132,10 @@ def dict(value, *args, **kwargs):
     :raises: Parameter.Error if value is not a dict json format.
     """
 
-    return _typedjson(value, dict, *args, **kwargs)
+    return _typedjsonparser(value, dict, *args, **kwargs)
 
 
-def array(value, *args, **kwargs):
+def arrayparser(value, *args, **kwargs):
     """Get an array from:
 
     - an array json format.
@@ -129,7 +152,7 @@ def array(value, *args, **kwargs):
     """
 
     if value[0] == '[':
-        result = _typedjson(value, list, *args, **kwargs)
+        result = _typedjsonparser(value, list, *args, **kwargs)
 
     else:
         result = list(value.split(','))
@@ -138,11 +161,12 @@ def array(value, *args, **kwargs):
 
 EVAL_REGEX = r'((?<=\$)[a-zA-Z_]\w*)(\.[a-zA-Z_]\w*)?'  #: eval regex.
 EVAL_COMPILED_REGEX = re_compile(EVAL_REGEX)  #: eval compiled regex.
-SAFE_BUILTIN = safebuiltin()  #: safe builtin.
 
 
-def eval(value, conf, *args, **kwargs):
-    """Evaluate safely input value.
+def exprparser(value, conf, *args, **kwargs):
+    """Expression parser.
+
+    Evaluate safely input value.
 
     Value is a lambda body expression evaluated in a safely scope (only builtin
     is loaded) where configuration categories/parameters are prefixed by the
@@ -163,7 +187,7 @@ def eval(value, conf, *args, **kwargs):
 
         if match[1]:
             result = 'conf[{0}][{1}].value'.format(
-                'UNIFIED_CATEGORY', match[0]
+                Configuration.VALUES, match[0]
             )
 
         else:
@@ -175,9 +199,8 @@ def eval(value, conf, *args, **kwargs):
 
     if compilation:
 
-        _globals = safebuiltin
         _locals = {'conf': conf}
 
-        result = eval(compilation, _globals, _locals)
+        result = safe_eval(compilation, None, _locals)
 
     return result

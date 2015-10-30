@@ -35,6 +35,7 @@ from unittest import main
 from ....model.configuration import Configuration
 from ....model.category import Category
 from ....model.parameter import Parameter
+from ....model.parser import boolparser, intparser
 from ..core import FileConfDriver
 
 from pickle import loads, dump
@@ -134,20 +135,15 @@ class FileConfDriverTest(UTCase):
         self.conf = Configuration(
             Category(
                 'A',
-                Parameter('a', value=0, parser=int),  # a is 0
-                Parameter('b', value=True, parser=Parameter.bool)
+                Parameter('a', value=0, parser=intparser),  # a is 0
+                Parameter('b', value=True, parser=boolparser)
             ),  # b is overriden
             Category(
                 'B',
-                Parameter('b', value=1, parser=int),  # b is 1
-                Parameter('c', parser=int)   # error
+                Parameter('b', value=1, parser=intparser),  # b is 1
+                Parameter('c', parser=intparser, svalue='er')   # error
             )
         )
-
-        try:
-            self.conf['B']['c'].value = 'er'
-        except:
-            pass
 
         self.conf_path = self.get_conf_file()
 

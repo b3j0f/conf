@@ -40,9 +40,9 @@ class Configuration(object):
     The order of categories permit to ensure param overriding.
     """
 
-    ERRORS = 'ERRORS'  #: category name which contains errors.
-    VALUES = 'VALUES'  #: category name which contains local parameter values.
-    FOREIGNS = 'FOREIGN'  #: category name which contains not local parameters.
+    ERRORS = '_ERRORS'  #: category name which contains errors.
+    VALUES = '_VALUES'  #: category name which contains local param values.
+    FOREIGNS = '_FOREIGN'  #: category name which contains foreign params vals.
 
     def __init__(self, *categories):
         """
@@ -157,7 +157,13 @@ class Configuration(object):
 
             for param in category:
 
-                if (param.value, param.error) != (None, None):
+                try:  # get value
+                    pvalue = param.value
+
+                except:
+                    pass
+
+                if (pvalue, param.error) != (None, None):
                     final_values = values if param.local else foreigns
 
                     if param.error is not None:  # if param is in error
@@ -196,7 +202,7 @@ class Configuration(object):
 
         return result
 
-    def add_unified_category(self, name, copy=False, new_content=None):
+    def add_unified_category(self, name=VALUES, copy=False, new_content=None):
         """Add a unified category to self and add new_content if not None."""
 
         category = self.get_unified_category(name=name, copy=copy)

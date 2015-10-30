@@ -34,7 +34,6 @@ from parser import ParserError
 
 from ..model.configuration import Configuration
 from ..model.category import Category
-from ..model.parameter import Parameter
 
 
 class MetaConfDriver(type):
@@ -261,15 +260,23 @@ class ConfDriver(object):
             # iterate on parameters
             for param in category:
 
-                if param.value is not None:
+                try:
+                    pvalue = param.value
 
-                    # set param
-                    self._set_parameter(
-                        conf_resource=conf_resource,
-                        category=category,
-                        param=param,
-                        logger=logger
-                    )
+                except:
+                    pass
+
+                else:
+
+                    if pvalue is not None:
+
+                        # set param
+                        self._set_parameter(
+                            conf_resource=conf_resource,
+                            category=category,
+                            param=param,
+                            logger=logger
+                        )
 
         # write conf_resource in conf file
         self._update_conf_resource(

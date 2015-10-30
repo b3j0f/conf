@@ -31,7 +31,10 @@ from unittest import main
 from b3j0f.utils.ut import UTCase
 
 from ..core import Configurable
-from ...model import Configuration, Category, Parameter
+from ...model.configuration import Configuration
+from ...model.category import Category
+from ...model.parameter import Parameter
+from ...model.parser import intparser, floatparser
 
 from tempfile import NamedTemporaryFile
 
@@ -53,8 +56,8 @@ class ConfigurableTest(UTCase):
             Category(
                 'A',
                 Parameter('a', value='a'),
-                Parameter('_', value=2, parser=int),
-                Parameter('error', parser=float)
+                Parameter('_', value=2, parser=intparser),
+                Parameter('error', parser=floatparser, svalue='error')
             ),
             Category(
                 'B',
@@ -62,11 +65,6 @@ class ConfigurableTest(UTCase):
                 Parameter('b', value='b')
             )
         )
-
-        try:
-            self.conf['A']['error'].value = 'error'
-        except:
-            pass
 
     def test_configuration_files(self):
 
@@ -171,9 +169,11 @@ class ConfigurableTest(UTCase):
         self.assertIn('_', parameters)
         self.assertNotIn('_', errors)
         self.assertEqual(parameters['_'].value, 2)
-        self.assertTrue('b' in parameters and 'b' not in errors)
+        self.assertIn('b', parameters)
+        self.assertNotIn('b', errors)
         self.assertEqual(parameters['b'].value, 'b')
-        self.assertTrue('error' in errors and 'error' not in parameters)
+        self.assertIn('error', errors)
+        self.assertNotIn('error', parameters)
 
     def test_reconfigure(self):
 

@@ -182,7 +182,7 @@ class Parameter(object):
         :param str value: serialized value to use.
         """
 
-        self._value = None
+        self.value = None
         self._svalue = value
 
     @property
@@ -198,7 +198,7 @@ class Parameter(object):
         """
 
         # if cached value is None and serialiazed value exists
-        if self._value is None and self.svalue is not None:
+        if self._value is None and self._svalue is not None:
 
             self._error = None  # nonify error.
 
@@ -209,24 +209,25 @@ class Parameter(object):
             else:
                 # parse value if str and if parser exists
                 try:
-                    self._value = self.parser(self._svalue, conf=self)
+                    finalvalue = self.parser(self._svalue, conf=self)
 
                 except Exception as ex:
+
                     self._error = ex
                     raise ParserError(
-                        'Impossible to parse value {0} in {1}.'.format(
-                            self._svalue, self
+                        'Impossible to parse value "{0}"" with {1}.'.format(
+                            self._svalue, self.parser
                         )
                     ).with_traceback(ex.__traceback__)
 
                 else:
                     # try to apply conf
-                    if self._value is None or self.conf is None:
-                        self.value = self._value
+                    if finalvalue is None or self.conf is None:
+                        self.value = finalvalue
 
                     else:  # apply conf
                         try:
-                            self.value = self._value(**self.conf)
+                            self.value = finalvalue(**self.conf)
                         except Exception as ex:
                             self._error = ex
                             raise ex
@@ -273,14 +274,21 @@ class Parameter(object):
             name = self.name
 
         kwargs = {
-            "name": name,
-            "parser": self.parser
+            'name': name,
+            'parser': self.parser,
+            'local': self.local,
+            'svalue': self.svalue,
+            'critical': self.critical,
+            'vtype': self.vtype,
+            'conf': self.conf,
+            'asitem': self.asitem,
+            'value': self._value
         }
 
-        if not cleaned:
-            kwargs["value"] = self.value
-
         result = Parameter(**kwargs)
+
+        if cleaned:
+            result.clean()
 
         return result
 
@@ -288,3 +296,4 @@ class Parameter(object):
         """Clean this param in removing values."""
 
         self._value = None
+        self._svalue = None
