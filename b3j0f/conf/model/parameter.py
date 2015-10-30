@@ -57,7 +57,7 @@ class Parameter(object):
 
     CONF_SUFFIX = '::conf'  #: parameter configuration name.
 
-    PARAM_NAME_REGEX = '[a-zA-Z_][a-zA-Z0-9_]*'  #: simple name validation.
+    PARAM_NAME_REGEX = '[a-zA-Z_][\w]*'  #: simple name validation.
     #: simple name regex compiler.
     _PARAM_NAME_COMPILER = re_compile(PARAM_NAME_REGEX)
 

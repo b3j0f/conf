@@ -72,14 +72,14 @@ Configuration process is in 2 steps:
 Configuration
 #############
 
-The sub-module b3j0f.conf.params provides Configuration class in order to inject configuration resources in a Configurable class.
+The sub-module b3j0f.conf.model provides Configuration class in order to inject configuration resources in a configurable class.
 
-Configuration resources respect two levels of configuration such as the ini configuration model. Both levels are respectively:
+Configuration resources respect two levels of configuration same as the ini configuration model. Both levels are respectively:
 
 - Category: permits to define a set of parameters unique by name.
 - Parameter: couple of property name and value.
 
-And all categories/options are embedded in a Configuration class.
+And all categories/parameters are embedded in a Configuration class.
 
 Configuration and Categories are like dictionaries where key values are inner element names. Therefore, Parameter names are unique per Categories, and Category/Parameter names are unique per Configuration.
 
@@ -90,16 +90,40 @@ In a dynamic and complex way, one Configurable class can be bound to several Cat
 
 This overriding is respected by default with Configurable class inheritance. That means a sub class which adds a resource after its parent class resources indicates than all parameters in the final resources will override parameters in the parent class resources where names are the sames.
 
+Name such as a regular expression
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Even if a parameter uses a name, it is possible to use this name such as a regular expression name.
+
+In this case, while reading a configuration from a resource, all configuration parameters which match the regular expression will use the same attributes as defined in the parameter with the regular expression. And a name which is the name from the configuration resource.
+
+Parser
+~~~~~~
+
+The module b3j0f.conf.model.parser provides parsers used to deserialize parameter values.
+
+Cross-reference
+~~~~~~~~~~~~~~~
+
+The parser ``exprparser`` permits to write simple expressions using the python builtin functions except those able to do I/O operations like the ``open`` function.
+
+In such expression, you can call back other configuration parameter in using this format (thanks to the idea from the pypi config_ project) related to a Configuration model:
+
+- ``${cat}.{param}`` where ``cat`` designates a configuration category name, and ``param`` designates related parameter value.
+- ``${param}`` where ``param`` designates a final parameter value (last overidden value).
+
 Configurable
 ############
 
 A Configurable class is provided in the b3j0f.conf.configurable.core module. It permits to get parameters from a configuration resources.
 
+It uses a Configuration model and drivers.
+
 Driver
 ######
 
-Drivers are the mean to parse configuration resources, such as files, etc. By
-default, conf drivers are able to parse json/ini files. Those last use a relative path given by the environment variable ``B3J0F_CONF_DIR`` or ``~/etc`` if not given.
+Drivers are the mean to parse configuration resources, such as files, etc. from a configuration model provided by a Configurable object.
+By default, conf drivers are able to parse json/ini files. Those last use a relative path given by the environment variable ``B3J0F_CONF_DIR`` or ``~/etc`` if not given.
 
 Examples
 --------
@@ -109,12 +133,18 @@ Bind the configuration file ``~/etc/myclass.conf`` to a business class ``MyClass
 Configuration file
 ##################
 
-The configuration file contains a category named ``MYCLASS`` containing the parameter ``myattr`` equals ``myvalue``.
+The configuration file contains a category named ``MYCLASS`` containing the parameters:
+
+- ``myattr`` equals ``myvalue``.
+- ``six`` equals ``6``.
+- ``twelve`` equals ``six * 2``
 
 .. code-block:: ini
 
     [MYCLASS]
-    myattr=myvalue
+    myattr = myvalue
+    six = 6
+    twelve = $six * 2
 
 
 With inheritance
@@ -122,34 +152,45 @@ With inheritance
 
 .. code-block:: python
 
-    from b3j0f.conf.configurable import Configurable
-    from b3j0f.conf.configurable.decorator import conf_paths, add_category
+    from b3j0f.conf import conf_paths, add_category, Configurable, Parameter
+    from b3j0f.conf.model.parser import exprparser, intparser
 
-    MYCATEGORY = 'MYCLASS'  # MyClass configuration category
+    MYCATEGORY = 'MYCLASS'  # MyClass configuration category name
     MYCONF = 'myclass.conf'  # MyClass configuration file
 
     # define the configurable business class
-    @add_category(MYCATEGORY)  # set configuration file category
+    @add_category(  # set configuration file category
+        MYCATEGORY,
+        content=[
+            Parameter('six', parser=intparser),
+            Parameter('twelve', parser=exprparser)
+        ]
+    )
     @conf_paths(MYCONF)  # set conf path
     class MyClass(Configurable):
         def __init__(self, *args, **kwargs):
             super(MyClass, self).__init__(*args, **kwargs)
             self.myattr = None
+            self.six = None
+            self.twelve = None
 
     # instantiate the business class
     myclass = MyClass()
 
-    # check if myattr equals 'myvalue'
+    # assert attributes
     assert myclass.myattr == 'myvalue'
+    assert myclass.six == 6
+    assert myclass.twelve == 12
 
 Without inheritance
 ###################
 
 .. code-block:: python
 
-    from b3j0f.conf.configurable import Configurable
+    from b3j0f.conf import Configurable, Configuration, Category, Parameter
+    from b3j0f.conf.model.parser import intparser, exprparser
 
-    MYCATEGORY = 'MYCLASS'  # MyClass configuration category
+    MYCATEGORY = 'MYCLASS'  # MyClass configuration category name
     MYCONF = 'myclass.conf'  # MyClass configuration file
 
     # instantiate a business class
@@ -157,18 +198,27 @@ Without inheritance
         def __init__(self):
             super(MyClass, self).__init__()
             self.myattr = None
+            self.six = None
+            self.twelve = None
 
     myclass = MyClass()
 
-    # apply configuration to the business class
-    Configurable(
-        to_configure=myclass,
-        conf_paths=MYCONF,
-        unified_category=MYCATEGORY
+    # define a configuration model
+    conf = Configuration(
+        Category(
+            MYCATEGORY,
+            Parameter('six', parser=intparser),
+            Parameter('twelve', parser=exprparser)
+        )
     )
 
-    # check if myattr equals 'myvalue'
+    # apply configuration to the business class
+    Configurable(to_configure=myclass, conf=conf, conf_paths=MYCONF)
+
+    # assert attributes
     assert myclass.myattr == 'myvalue'
+    assert myclass.six == 6
+    assert myclass.twelve == 12
 
 Perspectives
 ------------
@@ -186,3 +236,4 @@ Donation
 .. _Homepage: https://github.com/b3j0f/conf
 .. _Documentation: http://b3j0fconf.readthedocs.org/en/master/
 .. _PyPI: https://pypi.python.org/pypi/b3j0f.conf/
+.. _config: https://pypi.python.org/pypi/config/
