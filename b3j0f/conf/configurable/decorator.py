@@ -26,6 +26,7 @@
 
 __all__ = ['conf_paths', 'add_category']
 
+from b3j0f.annotation import PrivateInterceptor, Annotation
 
 from .core import Configurable
 from ..model import Category
@@ -63,6 +64,17 @@ def conf_paths(*conf_paths):
         return cls
 
     return add_conf_paths
+
+
+class ClassConfiguration(Annotation):
+
+    def __init__(self, conf, unified=True, useclsconf=True, *args, **kwargs):
+
+        super(ClassConfiguration, self).__init__(*args, **kwargs)
+
+    def _set_target(self):
+
+        pass
 
 
 def add_category(name, content=None, unified=True):
@@ -162,3 +174,31 @@ def add_config(config, unified=True):
         return cls
 
     return add_conf
+
+
+class Configuration(PrivateInterceptor):
+    """Annotation dedicated to bind a configurable to all class instances."""
+
+    def __init__(
+        self, conf_paths=None, conf=None, store=False, configurable=None,
+        configurablecls=Configurable, confparams=None, *args, **kwargs
+    ):
+
+        super(Configuration, self).__init__(*args, **kwargs)
+
+        self.confparams = {} if confparams is None else confparams
+
+        if configurable is None:
+            self.configurable = self.configurablecls(
+                store=store, conf_paths=conf_paths, conf=conf
+            )
+        else:
+            self.configurable = configurable
+
+    def _interception(self, joinpoint):
+
+        result = joinpoint.proceed()
+
+        self.configurable.to_configure.append(result)
+
+        return result

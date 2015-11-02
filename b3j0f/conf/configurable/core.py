@@ -39,7 +39,7 @@ from b3j0f.utils.property import addproperties
 from ..model.configuration import Configuration
 from ..model.category import Category
 from ..model.parameter import Parameter
-from ..model.parser import boolparser, arrayparser
+from ..model.parser import arrayparser, boolparser
 
 from ..driver.core import ConfDriver
 
@@ -91,8 +91,10 @@ def _updatelogger(self, value, name):
 class Configurable(object):
     """Manage class conf synchronisation with conf resources."""
 
+    #: ensure to applyconfiguration after instanciation of the configurable.
     __metaclass__ = MetaConfigurable
 
+    # default drivers which are json and ini.
     DEFAULT_DRIVERS = '{0},{1}'.format(
         'b3j0f.conf.driver.file.json_.JSONConfDriver',
         'b3j0f.conf.driver.file.ini.INIConfDriver'
@@ -100,15 +102,18 @@ class Configurable(object):
 
     INIT_CAT = 'init_cat'  #: initialization category
 
-    CONF_PATH = 'b3j0fconf-configurable.conf'
+    CONF_PATH = 'b3j0fconf-configurable.conf'  #: default conf path/
 
-    CONF = 'CONFIGURATION'
-    LOG = 'LOG'
+    #: configurable storing attribute in configured objects.
+    STORE_ATTR = '__configurable__'
 
-    AUTO_CONF = 'auto_conf'
-    RECONF_ONCE = 'reconf_once'
-    CONF_PATHS = 'conf_paths'
-    DRIVERS = 'drivers'
+    CONF = 'CONFIGURATION'  #: configuration attribute name.
+    LOG = 'LOG'  #: log attribute name.
+
+    AUTO_CONF = 'auto_conf'  #: auto_conf attribute name.
+    RECONF_ONCE = 'reconf_once'  #: reconf_once attribute name.
+    CONF_PATHS = 'conf_paths'  #: conf_paths attribute name.
+    DRIVERS = 'drivers'  #: drivers attribute name.
 
     LOG_NAME = 'log_name'  #: logger name property name
     LOG_LVL = 'log_lvl'  #: logging level property name
@@ -122,17 +127,20 @@ class Configurable(object):
     DEFAULT_AUTO_CONF = True  #: default auto conf.
     DEFAULT_RECONF_ONCE = False  #: default reconf once.
 
+    # log messages format.
+    #: debug message format.
     DEBUG_FORMAT = "[%(asctime)s] [%(levelname)s] [%(name)s] \
 [%(process)d] [%(thread)d] [%(pathname)s] [%(lineno)d] %(message)s"
+    #: info message format.
     INFO_FORMAT = "[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s"
-    WARNING_FORMAT = INFO_FORMAT
-    ERROR_FORMAT = WARNING_FORMAT
-    CRITICAL_FORMAT = ERROR_FORMAT
+    WARNING_FORMAT = INFO_FORMAT  #: warning message format.
+    ERROR_FORMAT = WARNING_FORMAT  #: error message format.
+    CRITICAL_FORMAT = ERROR_FORMAT  #: critical message format.
 
     def __init__(
             self,
-            unified_category=None,
-            to_configure=None,
+            conf=None, usecls_conf=True, unified_conf=True,
+            to_configure=None, store=False,
             conf_paths=None, drivers=DEFAULT_DRIVERS,
             auto_conf=DEFAULT_AUTO_CONF, reconf_once=DEFAULT_RECONF_ONCE,
             log_lvl='INFO', log_name=None, log_path='.',
@@ -142,10 +150,17 @@ class Configurable(object):
             *args, **kwargs
     ):
         """
-        :param str unified_category: if not None, used such as a unified
-            category.
-        :param to_configure: object to reconfigure. Such object may
+        :param Configuration conf: conf to use at instance level.
+        :param bool usecls_conf: if True (default) add conf to cls conf.
+        :param bool unified_conf: if True (default) enrich instance conf with
+            unified cls conf (all cls parameters will be copied in instance
+            conf).
+        :param to_configure: object(s) to reconfigure. Such object may
             implement the methods configure apply_configuration and configure.
+        :type to_configure: list or instance.
+        :param bool store: if True (default False) and to_configure is given,
+            store this instance into to_configure instance with the attribute
+            STORE_ATTR.
         :param conf_paths: conf_paths to parse.
         :type conf_paths: Iterable or str
         :param bool auto_conf: True (default) force auto conf as soon as param
@@ -171,8 +186,14 @@ class Configurable(object):
         self._conf_paths = None
         self._drivers = None
         self._conf_paths = None
+        self._to_configure = None
+        self._conf = None
 
-        self.unified_category = unified_category
+        self.store = store
+
+        self.usecls_conf = usecls_conf
+        self.unified_conf = unified_conf
+        self.conf = conf
 
         self.to_configure = to_configure
 
@@ -246,39 +267,66 @@ class Configurable(object):
 
     @property
     def conf(self):
-        """Get conf with parsers and self property values."""
+        """Get conf with parsers and self property values.
 
-        result = self._conf()
-
-        # add a last unified category if asked by self
-        if self.unified_category is not None:
-            result.add_unified_category(self.unified_category)
-
-        return result
-
-    def _conf(self):
-        """Protected method to override in order to specify which conf
-        return with parsers and default values
+        :rtype: Configuration.
         """
+
+        result = self._conf
+
+        if result is None:
+
+            if self.usecls_conf:  # use cls conf if specified
+                result = self._clsconf()
+
+            else:
+                result = Configuration()
+
+        return self._conf
+
+    @conf.setter
+    def conf(self, value):
+        """Change of configuration.
+
+        :param Configuration value: new configuration to use.
+        """
+
+        # get cls conf if specified
+        self._conf = self._clsconf() if self.usecls_conf else Configuration()
+
+        if value is not None:
+
+            if self.unified_conf:
+
+                for cname in value:
+                    category = value[cname]
+
+                    self._conf.add_unified_category(category)
+
+            else:
+                self._conf += value
+
+    def _clsconf(self):
+        """Method to override in order to specify class configuration."""
 
         result = Configuration(
             Category(
                 Configurable.CONF,
-                Parameter(Configurable.AUTO_CONF, parser=boolparser),
-                Parameter(Configurable.DRIVERS, parser=arrayparser),
-                Parameter(Configurable.RECONF_ONCE, parser=boolparser),
-                Parameter(Configurable.CONF_PATHS, parser=arrayparser)
+                Parameter(name=Configurable.AUTO_CONF, parser=boolparser),
+                Parameter(name=Configurable.DRIVERS, parser=arrayparser),
+                Parameter(name=Configurable.RECONF_ONCE, parser=boolparser),
+                Parameter(name=Configurable.CONF_PATHS, parser=arrayparser)
             ),
             Category(
                 Configurable.LOG,
-                Parameter(Configurable.LOG_NAME, critical=True),
-                Parameter(Configurable.LOG_PATH, critical=True),
-                Parameter(Configurable.LOG_LVL, critical=True),
-                Parameter(Configurable.LOG_DEBUG_FORMAT, critical=True),
-                Parameter(Configurable.LOG_INFO_FORMAT, critical=True),
-                Parameter(Configurable.LOG_WARNING_FORMAT, critical=True),
-                Parameter(Configurable.LOG_ERROR_FORMAT, critical=True),
-                Parameter(Configurable.LOG_CRITICAL_FORMAT, critical=True)
+                Parameter(name=Configurable.LOG_NAME, critical=True),
+                Parameter(name=Configurable.LOG_PATH, critical=True),
+                Parameter(name=Configurable.LOG_LVL, critical=True),
+                Parameter(name=Configurable.LOG_DEBUG_FORMAT, critical=True),
+                Parameter(name=Configurable.LOG_INFO_FORMAT, critical=True),
+                Parameter(name=Configurable.LOG_WARNING_FORMAT, critical=True),
+                Parameter(name=Configurable.LOG_ERROR_FORMAT, critical=True),
+                Parameter(name=Configurable.LOG_CRITICAL_FORMAT, critical=True)
             )
         )
 
@@ -286,19 +334,60 @@ class Configurable(object):
 
     @property
     def to_configure(self):
-        """Get resource to configure."""
+        """Get resources to configure.
+
+        :rtype: list
+        """
 
         return self._to_configure
 
     @to_configure.setter
     def to_configure(self, value):
-        """Change of resource to configure.
+        """Change of resource(s) to configure.
 
-        :param value: new object to configure by default.
+        If value is literally a list (without inheritance), this configurable
+        will be associated to all its items.
+
+        :param value: new object(s) to configure by default. List of objects to
+            configure is used only if value is a literally list (not a
+            subclass of list).
+        :type value: list or object.
         """
 
         if value is None:
-            value = self
+
+            value = [self]
+
+        elif type(value) is not list:
+
+            value = [value]
+
+        if self._to_configure is not None:
+
+            for to_configure in self._to_configure:
+                if to_configure not in value:
+                    try:  # remove old configurable storing
+                        delattr(to_configure, Configurable.STORE_ATTR)
+                    except AttributeError:
+                        pass
+
+        if self.store:
+
+            for to_configure in value:
+
+                try:
+                    setattr(to_configure, Configurable.STORE_ATTR, self)
+                except AttributeError:
+                    self.logger.warning(
+                        'Impossible to store configurable in {0}.'.format(
+                            to_configure
+                        )
+                    )
+
+        # add self to value in order to synchronize this configurable with
+        # to_configure objects
+        if self not in value:
+            value.append(self)
 
         self._to_configure = value
 
@@ -383,20 +472,36 @@ class Configurable(object):
         :param to_configure: object to configure. self by default.
         """
 
-        conf = self.get_conf(
-            conf=conf, conf_paths=conf_paths, logger=logger,
-            drivers=drivers, override=override
-        )
+        if conf is None:
+            conf = self.conf
 
-        self.configure(conf=conf, to_configure=to_configure)
+        if to_configure is None:  # init to_configure
+            to_configure = self.to_configure
+
+        if type(to_configure) is list:
+
+            for to_conf in to_configure:
+                self.apply_configuration(
+                    conf=conf, conf_paths=conf_paths, drivers=drivers,
+                    logger=logger, override=override, to_configure=to_conf
+                )
+
+        else:
+
+            conf = self.get_conf(
+                conf=conf, conf_paths=conf_paths, logger=logger,
+                drivers=drivers, override=override
+            )
+
+            self.configure(conf=conf, to_configure=to_configure)
 
     def get_conf(
             self,
             conf=None, conf_paths=None, drivers=None, logger=None,
             override=True
     ):
-        """Get a dictionary of params by name from conf,
-        conf_paths and drivers
+        """Get a dictionary of params by name from conf, conf_paths and drivers
+        .
 
         :param Configuration conf: conf to update. If None, use self.conf
         :param conf_paths: list of conf files. If None, use self.conf_paths
@@ -434,7 +539,6 @@ class Configurable(object):
 
             # if a config_resource is not None
             if conf_driver is not None:
-
                 conf = conf_driver.get_conf(
                     conf=conf, logger=logger,
                     conf_path=conf_path, override=override
@@ -450,7 +554,7 @@ class Configurable(object):
 
         return conf
 
-    def set_conf(self, conf_path, conf, driver=None, logger=None):
+    def set_conf(self, conf_path, conf=None, driver=None, logger=None):
         """Set params on input conf_path.
 
         :param str conf_paths: conf_path to udate with params
@@ -459,6 +563,9 @@ class Configurable(object):
         """
 
         result = None
+
+        if conf is None:
+            conf = self.conf
 
         if logger is None:
             logger = self.logger
@@ -493,8 +600,10 @@ class Configurable(object):
                 drivers=driver)
 
         # if prev driver is not the new driver
-        if prev_conf is not None \
-                and type(driver) is not type(prev_driver):
+        if (
+            prev_conf is not None
+            and type(driver) is not type(prev_driver)
+        ):
             # update prev_conf with input conf
             prev_conf.update(conf)
             conf = prev_conf
@@ -515,7 +624,10 @@ class Configurable(object):
 
         return result
 
-    def configure(self, conf, logger=None, to_configure=None):
+    def configure(
+            self, conf=None, logger=None, to_configure=None,
+            _locals=None, _globals=None
+    ):
         """Update self properties with input params only if:
 
         - self.configure is True
@@ -525,111 +637,142 @@ class Configurable(object):
 
         This method may not be overriden. see _configure instead
 
-        :param Configuration conf: object from where get paramters
+        :param Configuration conf: configuration model to configure. Default is
+            this conf.
         :param to_configure: object to configure. self if equals None.
+        :param dict _locals: local variable to use for local python expression
+            resolution.
+        :param dict _globals: global variable to use for local python
+            expression resolution.
+        :raises: Parameter.Error for any raised exception.
         """
 
-        if logger is None:
-            logger = self.logger
+        if conf is None:
+            conf = self.conf
 
-        unified_conf = conf.unify()
+        if to_configure is None:  # init to_configure
+            to_configure = self.to_configure
 
-        values = unified_conf[Configuration.VALUES]
+        if type(to_configure) is list:
+            for to_conf in to_configure:
+                self.configure(conf=conf, logger=logger, to_configure=to_conf)
 
-        # set configure
-        reconf_once = values.get(Configurable.RECONF_ONCE)
+        else:
+            if logger is None:
+                logger = self.logger
 
-        if reconf_once is not None:
-            self.reconf_once = reconf_once.value
+            unified_conf = conf.unify()
 
-        # set auto_conf
-        auto_conf_parameter = values.get(Configurable.AUTO_CONF)
-
-        if auto_conf_parameter is not None:
-            self.auto_conf = auto_conf_parameter.value
-
-        if self.reconf_once or self.auto_conf:
-            self._configure(
-                unified_conf=unified_conf, logger=logger,
-                to_configure=to_configure
+            unified_conf.resolve(
+                configurable=self, _locals=_locals, _globals=_globals
             )
-            # when conf succeed, deactive reconf_once
-            self.reconf_once = False
+
+            values = unified_conf[Configuration.VALUES]
+
+            # set configure
+            reconf_once = values.get(Configurable.RECONF_ONCE)
+
+            if reconf_once is not None:
+                self.reconf_once = reconf_once.value
+
+            # set auto_conf
+            auto_conf_parameter = values.get(Configurable.AUTO_CONF)
+
+            if auto_conf_parameter is not None:
+                self.auto_conf = auto_conf_parameter.value
+
+            if self.reconf_once or self.auto_conf:
+                self._configure(
+                    unified_conf=unified_conf, logger=logger,
+                    to_configure=to_configure
+                )
+                # when conf succeed, deactive reconf_once
+                self.reconf_once = False
 
     def _is_local(self, to_configure, name):
         """True iif input name parameter can be handled by to_configure."""
 
         return hasattr(to_configure, name)
 
-    def _configure(self, unified_conf, logger=None, to_configure=None):
+    def _configure(self, unified_conf=None, logger=None, to_configure=None):
         """Configure this class with input conf only if auto_conf or
         configure is true.
 
         This method should be overriden for specific conf
 
-        :param Configuration unified_conf: Configuration with two categories
-            VALUES and ERRORS
+        :param Configuration unified_conf: unified configuration. Default is
+            self.conf.unify().
         :param bool configure: if True, force full self conf
         :param to_configure: object to configure. self if equals None.
         """
 
-        if to_configure is None:
+        if unified_conf is None:
+            unified_conf = self.conf.unify()
+
+        if to_configure is None:  # init to_configure
             to_configure = self._to_configure
 
-        values = [p for p in unified_conf[Configuration.VALUES]]
-        foreigns = [p for p in unified_conf[Configuration.FOREIGNS]]
+        if type(to_configure) is list:
+            for to_conf in to_configure:
+                self._configure(
+                    unified_conf=unified_conf, logger=logger,
+                    to_configure=to_conf
+                )
 
-        criticals = []  # list of critical parameters
+        else:
 
-        for parameter in values + foreigns:
-            name = parameter.name
-            if not parameter.asitem:
-                # if parameter is local, to_configure must a related name
-                if self._is_local(to_configure, name):
-                    if hasattr(to_configure, name):
-                        param_value = parameter.value
+            values = [p for p in unified_conf[Configuration.VALUES]]
+            foreigns = [p for p in unified_conf[Configuration.FOREIGNS]]
 
-                        # in case of a critical parameter
-                        if parameter.critical:
-                            # check if current value is not the same as new val
-                            value = getattr(to_configure, name)
+            criticals = []  # list of critical parameters
 
-                            if value != parameter.value:
-                                # add it to list of criticals
-                                criticals.append(parameter)
-                                # set private name
-                                privname = '_%s' % name
+            for parameter in values + foreigns:
+                name = parameter.name
+                if not parameter.asitem:
+                    # if parameter is local, to_configure must a related name
+                    if self._is_local(to_configure, name):
+                        if hasattr(to_configure, name):
+                            pvalue = parameter.value
 
-                                # if private name exists
-                                if hasattr(to_configure, privname):
-                                    # change of value of private name
-                                    setattr(
-                                        to_configure, privname, param_value
-                                    )
+                            # in case of a critical parameter
+                            if parameter.critical:
+                                # check if current value != new val
+                                value = getattr(to_configure, name)
 
-                                else:  # update public value
-                                    setattr(to_configure, name, param_value)
+                                if value != parameter.value:
+                                    # add it to list of criticals
+                                    criticals.append(parameter)
+                                    # set private name
+                                    privname = '_%s' % name
 
-                        else:  # change public value
-                            setattr(to_configure, name, param_value)
+                                    # if private name exists
+                                    if hasattr(to_configure, privname):
+                                        # change of value of private name
+                                        setattr(to_configure, privname, pvalue)
 
-                else:  # else log the warning
-                    message = 'Param {0} is not bound to an attribute in {1}'
-                    self.logger.warning(message.format(name, to_configure))
+                                    else:  # update public value
+                                        setattr(to_configure, name, pvalue)
 
-            else:
-                value = getattr(to_configure, parameter.asitem.name)
-                param_value = parameter.value
-                param_name = parameter.name
+                            else:  # change public value
+                                setattr(to_configure, name, pvalue)
 
-                if param_name not in value or param_value != value[param_name]:
-                    criticals.append(parameter)
+                    else:  # else log the warning
+                        message = 'Param {0} does not exist in {1}.'
+                        self.logger.warning(message.format(name, to_configure))
 
-                value[parameter.name] = parameter.value
+                else:
+                    value = getattr(to_configure, parameter.asitem.name)
+                    pvalue = parameter.value
+                    param_name = parameter.name
 
-        # if criticals
-        if criticals:
-            self.restart(to_configure=to_configure, criticals=criticals)
+                    if param_name not in value or pvalue != value[param_name]:
+                        criticals.append(parameter)
+
+                    value[parameter.name] = parameter.value
+
+            # if criticals
+            if criticals:
+                self.restart(to_configure=to_configure, criticals=criticals)
 
     def restart(self, criticals, to_configure=None):
         """Restart a configurable object with critical parameters.
@@ -638,10 +781,14 @@ class Configurable(object):
         :param tuple criticals: list of critical parameters
         """
 
-        if to_configure is None:
+        if to_configure is None:  # init to_configure
             to_configure = self._to_configure
 
-        if self._is_critical_category(Configurable.LOG, criticals):
+        if type(to_configure) is list:
+            for to_conf in to_configure:
+                self.restart(criticals=criticals, to_configure=to_conf)
+
+        elif self._is_critical_category(Configurable.LOG, criticals):
             self._logger = self.newlogger()
             to_configure.logger = self.logger
 
@@ -663,8 +810,11 @@ class Configurable(object):
 
     def _init_conf_paths(self, conf_paths):
 
-        self.conf_paths = self._get_conf_paths() \
-            if conf_paths is None else conf_paths
+        if conf_paths is None:
+            self.conf_paths = self._get_conf_paths()
+
+        else:
+            self.conf_paths = conf_paths
 
     def _get_conf_paths(self):
 
@@ -687,8 +837,10 @@ class Configurable(object):
             driver = ConfDriver.get_driver(driver)
             driver = driver()
 
-            handle = conf_path is None \
+            handle = (
+                conf_path is None
                 or driver.handle(conf_path=conf_path, logger=logger)
+            )
 
             if handle:
                 result = driver

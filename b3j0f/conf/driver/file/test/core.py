@@ -149,7 +149,7 @@ class FileConfDriverTest(UTCase):
 
     def get_conf_file(self):
 
-        return '/tmp/b3j0f{0}.conf'.format(self.__class__.__name__)
+        return '/tmp/b3j0f{0}.conf'.format(type(self).__name__)
 
     def _remove(self):
         try:
@@ -192,6 +192,8 @@ class FileConfDriverTest(UTCase):
             conf=self.conf,
             logger=self.logger
         )
+
+        self.conf.resolve()
 
         conf = self.manager.get_conf(
             conf_path=self.conf_path,

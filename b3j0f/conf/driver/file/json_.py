@@ -88,7 +88,9 @@ class JSONConfDriver(FileConfDriver):
 
     def _set_parameter(self, conf_resource, category, param, *args, **kwargs):
 
-        conf_resource[category.name][param.name] = param.value
+        svalue = param.value if param.svalue is None else param.svalue
+
+        conf_resource[category.name][param.name] = svalue
 
     def _update_conf_resource(self, conf_resource, conf_path, *args, **kwargs):
 

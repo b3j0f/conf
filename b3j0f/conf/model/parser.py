@@ -3,7 +3,7 @@
 # --------------------------------------------------------------------
 # The MIT License (MIT)
 #
-# Copyright (c) 2014 Jonathan Labéjof <jonathan.labejof@gmail.com>
+# Copyright (c) 2015 Jonathan Labéjof <jonathan.labejof@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -30,177 +30,154 @@ A parser is able to transform a serialized parameter value to a python object.
 
 A parser is a callable object which takes in parameter :
 
-- value: the serialized value.
-- conf: the configuration.
+- svalue: the serialized value.
+- configuration: the configuration.
+- configurable: the configurable.
 - logger: a logger.
+- _locals and _globals respective dictionaries of local/global variables.
+- _type: final value type to check.
 """
 
-__all__ = [
-    'boolparser', 'pathparser', 'jsonparser', 'dictparser', 'arrayparser',
-    'exprparser'
-]
+__all__ = ['boolparser', 'getexprparser', 'exprparser']
 
 
 from b3j0f.utils.path import lookup
 from b3j0f.utils.runtime import safe_eval
 
-from json import loads as jsonloads
-
 from re import compile as re_compile
 
-from .parameter import Parameter
-from .configuration import Configuration
+
+class ParserError(Exception):
+    """Handle parser errors."""
 
 
-def simpleparser(function):
-    """Parser to use with a function which takes in parameter only one param.
-
-    For example, simpleparser(int) returns a parser of integer.
-    """
-
-    def parse(value, *args, **kwargs):
-
-        return function(value)
-
-    return parse
-
-
-intparser = simpleparser(int)  #: Integer value parser.
-floatparser = simpleparser(float)  #: Float value parser.
-complexparser = simpleparser(complex)  #: complex value parser.
-strparser = simpleparser(str)  #: str value parser.
-
-
-def boolparser(value, *args, **kwargs):
+def boolparser(svalue, *args, **kwargs):
     """Boolean value parser.
 
-    :param str value: value to parse.
-    :return: True if value in [True, true, 1]. False Otherwise.
+    :param str svalue: serialized value to parse.
+    :return: True if svalue in [True, true, 1]. False Otherwise.
     :rtype: bool
     """
 
-    return value == 'True' or value == 'true' or value == '1'
+    return svalue == 'True' or svalue == 'true' or svalue == '1'
 
 
-def pathparser(value, *args, **kwargs):
-    """Python class path value parser.
+EVAL_PARAM = r'\$[a-zA-Z_]\w*(\.[a-zA-Z_]\w*)+?'  #: local param regex.
+EVAL_FOREIGN = r'\@(.+)\/([a-zA-Z_]\w*)\.([a-zA-Z_]\w*)'  #: foreign param re.
+EVAL_LOOKUP = r'\#([a-zA-Z_]\w*\.?)+'  #: lookup param regex.
 
-    :param str value: python class path to parse.
-    :return: lookup(value).
-    """
-
-    return lookup(value)
+REGEX = '({0})|({1})|({2})'.format(EVAL_PARAM, EVAL_LOOKUP, EVAL_FOREIGN)
+COMPILED_REGEX = re_compile(REGEX)
 
 
-def jsonparser(value, *args, **kwargs):
-    """Get a data from a json data format.
+def getexprparser(_globals=None, _locals=None):
+    """Generate an expression parser from input parameters."""
 
-    :param str value: json format to parse.
-    :return: data.
-    :rtype: str, list, dict, int, float or bool
-    """
+    def _exprparser(
+            svalue, configuration, configurable, _type=object,
+            _locals=_locals, _globals=_globals, *args, **kwargs
+    ):
+        """Expression parser.
 
-    return jsonloads(value, *args, **kwargs)
+        Evaluate safely input svalue.
+
+        Value is a lambda body expression evaluated in a safely scope (only
+        builtin is loaded) where configuration categories/parameters are
+        prefixed by the character '$'.
+
+        For example, ``$cat.param`` designates the svalue of the category named
+        ``cat`` and the parameter named ``param``. And ``$param`` designates
+        the final svalue of the parameter named ``param``.
+        """
+
+        result = None
+
+        compilation = COMPILED_REGEX.sub(repl, svalue)
+
+        if compilation:
+
+            if _locals is None:
+                _locals = {}
+
+            _locals.update(
+                {
+                    'resolve': _resolve,
+                    'configurable': configurable,
+                    'lookup': lookup,
+                    'configuration': configuration
+                }
+            )
+
+            result = safe_eval(compilation, _globals, _locals)
+
+            if not isinstance(result, _type):
+
+                # try to convert to _type
+                try:
+                    result = _type(result)
+
+                except Exception:
+                    pass
+
+                if not isinstance(result, _type):
+
+                    raise ParserError(
+                        'Wrong svalue {0}. {1} expected.'.format(svalue, _type)
+                    )
+
+        return result
+
+    return _exprparser
 
 
-def _typedjsonparser(value, cls, *args, **kwargs):
-    """Private static method which uses the json method and check if result
-    inherits from the cls. Otherwise, raise an error.
+def repl(match):
+    """Replace matching expression in input match with corresponding
+    conf accessor."""
 
-    :param str value: value to parse in a json format.
-    :param type cls: expected result class.
-    :return: parsed value.
-    :rtype: cls
-    """
+    result = match
 
-    result = jsonparser(value, *args, **kwargs)
+    if match[0] == '`':
 
-    if not isinstance(result, cls):
-        raise Parameter.Error(
-            'Wrong type: {0}. {1} expected.'.format(value, cls)
+        result = 'lookup(path={0})'.format(match[1: -1])
+
+    elif match[0] == '@':
+
+        result = '_resolve(match={0}, configurable=configurable)'.format(
+            match[1: -1]
+        )
+
+    elif match[1]:
+        result = 'configuration[{0}][{1}].value'.format(*match)
+
+    else:
+        result = 'configuration.getvparam({0}).value'.format(match[0])
+
+    return result
+
+
+def _resolve(match, configurable):
+    """Resolve a foreign parameter value."""
+
+    result = None
+
+    conf_path, cat, param = match
+
+    conf = configurable.get_conf(conf_paths=conf_path)
+
+    category = conf.get(cat)
+
+    if category is not None:
+        parameter = category.get(param)
+
+        if parameter is not None:
+            result = parameter.value
+
+    if result is None:
+        raise ParserError(
+            'Foreign value ({0}) does not exist.'.format(match)
         )
 
     return result
 
 
-def dictparser(value, *args, **kwargs):
-    """Get a dict from a dict json format.
-
-    :param str value: dictionary json format to parse.
-    :return: parsed dictionary.
-    :rtype: dict
-    :raises: Parameter.Error if value is not a dict json format.
-    """
-
-    return _typedjsonparser(value, dict, *args, **kwargs)
-
-
-def arrayparser(value, *args, **kwargs):
-    """Get an array from:
-
-    - an array json format.
-    - a list of item name separated by commas.
-
-    :param str value: list of items to parse. The format must be of
-
-        - array json type.
-        - named item separated by commas.
-
-    :return: parsed array.
-    :rtype: list
-    :raises: Parameter.Error if value is not a list json format.
-    """
-
-    if value[0] == '[':
-        result = _typedjsonparser(value, list, *args, **kwargs)
-
-    else:
-        result = list(value.split(','))
-
-    return result
-
-EVAL_REGEX = r'((?<=\$)[a-zA-Z_]\w*)(\.[a-zA-Z_]\w*)?'  #: eval regex.
-EVAL_COMPILED_REGEX = re_compile(EVAL_REGEX)  #: eval compiled regex.
-
-
-def exprparser(value, conf, *args, **kwargs):
-    """Expression parser.
-
-    Evaluate safely input value.
-
-    Value is a lambda body expression evaluated in a safely scope (only builtin
-    is loaded) where configuration categories/parameters are prefixed by the
-    character '$'.
-
-    For example, ``$cat.param`` designates the value of the category named
-    ``cat`` and the parameter named ``param``. And ``$param`` designates
-    the final value of the parameter named ``param``.
-    """
-
-    result = None
-
-    def repl(match):
-        """Replace matching expressin in match with corresponding conf accessor
-        ."""
-
-        result = match
-
-        if match[1]:
-            result = 'conf[{0}][{1}].value'.format(
-                Configuration.VALUES, match[0]
-            )
-
-        else:
-            result = 'conf[{0}][{1}].value'.format(*match)
-
-        return result
-
-    compilation = EVAL_COMPILED_REGEX.sub(repl, value)
-
-    if compilation:
-
-        _locals = {'conf': conf}
-
-        result = safe_eval(compilation, None, _locals)
-
-    return result
+exprparser = getexprparser()  #: default expr parser.

@@ -29,109 +29,47 @@
 __all__ = ['Configuration']
 
 
-from b3j0f.utils.version import OrderedDict
-
+from .base import CompositeModelElement
 from .category import Category
+from .parameter import Parameter
 
 
-class Configuration(object):
+class Configuration(CompositeModelElement):
     """Manage conf such as a list of Categories.
 
     The order of categories permit to ensure param overriding.
     """
 
+    __contenttype__ = Category  #: content type.
+
+    __slots__ = CompositeModelElement.__slots__
+
     ERRORS = '_ERRORS'  #: category name which contains errors.
     VALUES = '_VALUES'  #: category name which contains local param values.
     FOREIGNS = '_FOREIGN'  #: category name which contains foreign params vals.
 
-    def __init__(self, *categories):
-        """
-        :param list categories: categories to configure.
-        """
+    def resolve(self, configurable=None, _locals=None, _globals=None):
+        """Resolve all category parameters.
 
-        super(Configuration, self).__init__()
-
-        self.categories = OrderedDict()
-
-        # set categories
-        for category in categories:
-            self.categories[category.name] = category
-
-    def __iter__(self):
-
-        return iter(self.categories.values())
-
-    def __delitem__(self, category_name):
-
-        del self.categories[category_name]
-
-    def __getitem__(self, category_name):
-
-        return self.categories[category_name]
-
-    def __contains__(self, category_name):
-
-        return category_name in self.categories
-
-    def __len__(self):
-
-        return len(self.categories)
-
-    def __iadd__(self, other):
-        """Add categories or conf categories in self."""
-
-        # if other is a conf add a copy of all other categories
-        if isinstance(other, Configuration):
-
-            for category in other:
-                self += category
-
-        else:  # in case of category
-            category = self.categories.get(other.name)
-
-            if category is None:
-                self.put(other)
-
-            else:
-                for param in other:
-                    category.put(param)
-
-        return self
-
-    def __repr__(self):
-
-        return 'Configuration({0})'.format(self)
-
-    def get(self, category_name, default=None):
-        """Get a category by its name.
-
-        :param str category_name: category name.
-        :param default: default value if category_name is not registered.
-        :return: related Category.
-        :rtype: Category
+        :param Configurable configurable: configurable to use for foreign
+            parameter resolution.
+        :param Configuration configuration: configuration to use for
+            cross-value resolution.
+        :param dict _locals: local variable to use for local python expression
+            resolution.
+        :param dict _globals: global variable to use for local python
+            expression resolution.
+        :raises: Parameter.Error for any raised exception.
         """
 
-        return self.categories.get(category_name, default)
+        for category in self._content.values():
 
-    def setdefault(self, category_name, category):
-        """Register a category with specific name if name not already used.
+            for param in category:
 
-        :param str category_name: category name.
-        :param Category category: to register.
-        :return: existing category or input category if no category have been
-            registered with this name.
-        :rtype: Category
-        """
-
-        return self.categories.setdefault(category_name, category)
-
-    def put(self, category):
-        """Put a category and return the previous one if exist."""
-
-        result = self.categories.get(category.name)
-        self.categories[category.name] = category
-
-        return result
+                param.resolve(
+                    configurable=configurable, configuration=self,
+                    _locals=_locals, _globals=_globals
+                )
 
     def unify(self, copy=False):
         """Get a conf which contains only two categories:
@@ -162,7 +100,7 @@ class Configuration(object):
                 try:  # get value
                     pvalue = param.value
 
-                except:
+                except Parameter.Error:
                     pass
 
                 if (pvalue, param.error) != (None, None):
@@ -198,8 +136,8 @@ class Configuration(object):
 
         result = Category(name)
 
-        for category in self.categories.values():
-            for param in category.values():
+        for category in self._content.values():
+            for param in category:
                 result.put(param.copy() if copy else param)
 
         return result
@@ -214,40 +152,26 @@ class Configuration(object):
 
         self += category
 
-    def add_param_list(self, name, content):
-        """Add a list of parameters to self."""
+    def get_vparam(self, pname):
+        """Get final parameter value, from the category "VALUES" or
+        from a calculated."""
 
-        self.categories[name] = content
+        result = None
 
-    def clean(self):
-        """Clean this params in setting value to None."""
+        if Configuration.VALUES in self.content:
 
-        for category in self.categories:
+            categories = [self.content[Configuration.VALUES]]
 
-            category.clean()
+        else:
 
-    def copy(self, cleaned=False):
-        """Copy this Configuration.
+            categories = self.content.values()
 
-        :param bool cleaned: copy this element without parameter values.
-        """
+        for category in categories:
 
-        result = Configuration()
+            param = category.get(pname)
 
-        for category in self.categories.values():
-            result.put(category.copy(cleaned=cleaned))
+            if param is not None:
+
+                result = param.value
 
         return result
-
-    def update(self, conf):
-        """Update this content with input conf."""
-
-        for category in conf:
-            category = self.categories.setdefault(
-                category.name, category.copy()
-            )
-
-            for param in category:
-                param = category.setdefault(
-                    param.name, param.copy()
-                )

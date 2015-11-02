@@ -29,12 +29,16 @@
 __all__ = ['Parameter']
 
 
+from .base import ModelElement
+
 from b3j0f.utils.version import basestring
 
 from re import compile as re_compile
 
+from .parser import exprparser
 
-class Parameter(object):
+
+class Parameter(ModelElement):
     """Parameter identified among a category by its name.
 
     Provide a value (None by default) and a parser (str by default).
@@ -55,9 +59,14 @@ class Parameter(object):
     - asitem: distinguish parameters from those in a ParamList.
     """
 
+    __slots__ = (
+        '_name', 'vtype', 'parser', '_svalue', '_value', '_error', 'conf',
+        'critical', 'local', 'asitem'
+    ) + ModelElement.__slots__
+
     CONF_SUFFIX = '::conf'  #: parameter configuration name.
 
-    PARAM_NAME_REGEX = '[a-zA-Z_][\w]*'  #: simple name validation.
+    PARAM_NAME_REGEX = r'[a-zA-Z_]\w*'  #: simple name validation.
     #: simple name regex compiler.
     _PARAM_NAME_COMPILER = re_compile(PARAM_NAME_REGEX)
 
@@ -65,8 +74,9 @@ class Parameter(object):
         """Handle Parameter errors."""
 
     def __init__(
-            self, name, vtype=object, parser=None, svalue=None, value=None,
-            conf=None, critical=False, local=True, asitem=None
+            self, name, vtype=object, svalue=None, parser=exprparser,
+            value=None, conf=None, critical=False, local=True, asitem=None,
+            *args, **kwargs
     ):
         """
         :param name: depends on type:
@@ -75,7 +85,7 @@ class Parameter(object):
                 common properties (parser, value, conf, etc.).
         :param type vtype: parameter value type.
         :param callable parser: param test deserializer which takes in param
-            a str.
+            a str. Default is exprparser.
         :param str svalue: serialized value.
         :param value: param value. None if not given.
         :param dict conf: parameter configuration used to init the parameter
@@ -98,10 +108,10 @@ class Parameter(object):
         self._svalue = None
 
         # init public attributes
+        self.parser = exprparser
         self.name = name
         self.vtype = vtype
         self.conf = conf
-        self.parser = parser
         self.critical = critical
         self.local = local
         self.asitem = asitem
@@ -180,8 +190,73 @@ class Parameter(object):
         :param str value: serialized value to use.
         """
 
-        self.value = None
-        self._svalue = value
+        self._value = None  # nonify this value
+        self._error = None  # nonify this error
+        self._svalue = value  # set svalue
+
+    def resolve(
+            self,
+            configurable=None, configuration=None, _locals=None, _globals=None
+    ):
+        """Resolve this parameter value related to a configurable and a
+        configuration.
+
+        :param Configurable configurable: configurable to use for foreign
+            parameter resolution.
+        :param Configuration configuration: configuration to use for
+            cross-value resolution.
+        :param dict _locals: local variable to use for local python expression
+            resolution.
+        :param dict _globals: global variable to use for local python
+            expression resolution.
+        :return: newly resolved value.
+        :raises: Parameter.Error for any raised exception.
+        """
+
+        result = self._value
+
+        # if cached value is None and serialiazed value exists
+        if self._value is None and self._svalue is not None:
+
+            self._error = None  # nonify error.
+
+            if self.parser is None:
+                result = self.value = self._svalue
+
+            else:
+                # parse value if str and if parser exists
+                try:
+                    finalvalue = self.parser(
+                        value=self._svalue, configuration=configuration,
+                        configurable=configurable, _type=self.vtype,
+                        _locals=_locals, _globals=_globals
+                    )
+
+                except Exception as ex:
+                    self._error = ex
+                    raise Parameter.Error(
+                        'Impossible to parse value "{0}" with {1}.'.format(
+                            self._svalue, self.parser
+                        )
+                    ).with_traceback(ex.__traceback__)
+
+                else:
+                    # try to apply conf
+                    if finalvalue is None or self.conf is None:
+                        result = self.value = finalvalue
+
+                    else:  # apply conf
+                        try:
+                            result = self.value = finalvalue(**self.conf)
+
+                        except Exception as ex:
+                            self._error = ex
+                            raise Parameter.Error(
+                                'Error while calling param conf {0} on ({1}).'
+                                .format(self.conf, finalvalue)
+                            ).with_traceback(ex.__traceback__)
+
+        return result
 
     @property
     def value(self):
@@ -195,42 +270,20 @@ class Parameter(object):
             . ParserError if parsing step raised an error.
         """
 
-        # if cached value is None and serialiazed value exists
+        result = self._value
+
         if self._value is None and self._svalue is not None:
 
-            self._error = None  # nonify error.
+            try:
+                result = self.resolve()
 
-            if self.parser is None:
+            except Exception as ex:
 
-                self.value = self._svalue
+                raise Parameter.Error(
+                    'Call the method "resolve" first.'
+                ).with_traceback(ex.__traceback__)
 
-            else:
-                # parse value if str and if parser exists
-                try:
-                    finalvalue = self.parser(self._svalue, conf=self)
-
-                except Exception as ex:
-
-                    self._error = ex
-                    raise Parameter.Error(
-                        'Impossible to parse value "{0}"" with {1}.'.format(
-                            self._svalue, self.parser
-                        )
-                    ).with_traceback(ex.__traceback__)
-
-                else:
-                    # try to apply conf
-                    if finalvalue is None or self.conf is None:
-                        self.value = finalvalue
-
-                    else:  # apply conf
-                        try:
-                            self.value = finalvalue(**self.conf)
-                        except Exception as ex:
-                            self._error = ex
-                            raise ex
-
-        return self._value
+        return result
 
     @value.setter
     def value(self, value):
@@ -275,18 +328,17 @@ class Parameter(object):
             'name': name,
             'parser': self.parser,
             'local': self.local,
-            'svalue': self.svalue,
             'critical': self.critical,
             'vtype': self.vtype,
             'conf': self.conf,
             'asitem': self.asitem,
-            'value': self._value
         }
 
-        result = Parameter(**kwargs)
+        if not cleaned:  # add value and svalue if not cleaned
+            kwargs['value'] = self.value
+            kwargs['svalue'] = self.svalue
 
-        if cleaned:
-            result.clean()
+        result = Parameter(**kwargs)
 
         return result
 

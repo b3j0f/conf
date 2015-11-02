@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # --------------------------------------------------------------------
@@ -24,25 +25,41 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-"""Configuration definition objects."""
 
-__all__ = ['Category']
+from unittest import main
+
+from b3j0f.utils.ut import UTCase
+
+from ..configuration import Configuration
+from ..category import Category
+from ..parameter import Parameter
+
+from ...configurable.core import Configurable
 
 
-from .base import CompositeModelElement
-from .parameter import Parameter
+from ..parser import getexprparser
 
 
-class Category(CompositeModelElement):
-    """Parameter category which contains a dictionary of params.
-    """
+class ParserTest(UTCase):
+    """Test exprparser."""
 
-    __contenttype__ = Parameter  #: content type.
+    def setUp(self):
 
-    __slots__ = ('name', ) + CompositeModelElement.__slots__
+        self.configuration = Configuration(
+            Category(
+                'ctest',
+                Parameter('ptest')
+            )
+        )
 
-    def __init__(self, name, *args, **kwargs):
+        self.configurable = Configurable()
 
-        super(Category, self).__init__(*args, **kwargs)
+    def test_default(self):
+        """Test getexprparser with default parameters."""
 
-        self.name = name
+        exprparser = getexprparser()
+
+        self.assertNotNone(exprparser)
+
+if __name__ == '__main__':
+    main()

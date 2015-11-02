@@ -34,7 +34,7 @@ from ..core import Configurable
 from ...model.configuration import Configuration
 from ...model.category import Category
 from ...model.parameter import Parameter
-from ...model.parser import intparser, floatparser
+from ...model.parser import intparser, floatparser, strparser
 
 from tempfile import NamedTemporaryFile
 
@@ -55,14 +55,14 @@ class ConfigurableTest(UTCase):
         self.conf = Configuration(
             Category(
                 'A',
-                Parameter('a', value='a'),
+                Parameter('a', value='a', parser=strparser),
                 Parameter('_', value=2, parser=intparser),
                 Parameter('error', parser=floatparser, svalue='error')
             ),
             Category(
                 'B',
-                Parameter('a', value='b'),
-                Parameter('b', value='b')
+                Parameter('a', value='b', parser=strparser),
+                Parameter('b', value='b', parser=strparser)
             )
         )
 
@@ -71,9 +71,7 @@ class ConfigurableTest(UTCase):
         configurable = Configurable()
         configurable.conf_paths = self.conf_paths
 
-        self.assertEqual(
-            configurable.conf_paths,
-            self.conf_paths)
+        self.assertEqual(configurable.conf_paths, self.conf_paths)
 
         configurable = Configurable(conf_paths=self.conf_paths)
 
@@ -180,9 +178,8 @@ class ConfigurableTest(UTCase):
         self.assertTrue(self.configurable.auto_conf)
 
         conf = Configuration(
-            Category(
-                'TEST',
-                Parameter('auto_conf', value=False)))
+            Category('TEST', Parameter('auto_conf', value=False))
+        )
 
         self.configurable.configure(conf=conf)
         self.assertFalse(self.configurable.auto_conf)
@@ -222,12 +219,7 @@ class ConfigurableTest(UTCase):
 
         param = 'test'
 
-        conf = Configuration(
-            Category(
-                'TEST',
-                Parameter(param, value=True)
-            )
-        )
+        conf = Configuration(Category('TEST', Parameter(param, value=True)))
 
         self.configurable.configure(conf=conf, to_configure=to_configure)
         self.assertTrue(to_configure.test)
@@ -251,9 +243,7 @@ class ConfigurableTest(UTCase):
 
         param = 'test'
 
-        conf = Configuration(
-            Category('TEST', Parameter(param, value=True))
-        )
+        conf = Configuration(Category('TEST', Parameter(param, value=True)))
 
         configurable.configure(conf=conf, to_configure=to_configure)
         self.assertTrue(to_configure.test)
@@ -262,9 +252,9 @@ class ConfigurableTest(UTCase):
 
         class _Configurable(Configurable):
 
-            def _conf(self, *args, **kwargs):
+            def _clsconf(self, *args, **kwargs):
 
-                result = super(_Configurable, self)._conf(*args, **kwargs)
+                result = super(_Configurable, self)._clsconf(*args, **kwargs)
 
                 result += Category('PLOP')
 
