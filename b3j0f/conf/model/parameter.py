@@ -179,7 +179,19 @@ class Parameter(ModelElement):
         :rtype: str
         """
 
-        return self._svalue
+        result = self._svalue
+
+        try:
+            value = self.value
+
+        except Parameter.Error:
+            pass
+
+        else:
+            if isinstance(value, basestring):
+                result = '"{0}"'.format(self._svalue)
+
+        return result
 
     @svalue.setter
     def svalue(self, value):
@@ -227,7 +239,7 @@ class Parameter(ModelElement):
                 # parse value if str and if parser exists
                 try:
                     finalvalue = self.parser(
-                        value=self._svalue, configuration=configuration,
+                        svalue=self._svalue, configuration=configuration,
                         configurable=configurable, _type=self.vtype,
                         _locals=_locals, _globals=_globals
                     )

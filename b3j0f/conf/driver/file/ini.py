@@ -24,88 +24,66 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+"""Ini configuration file driver."""
+
 __all__ = ['INIConfDriver']
 
-
-from os.path import join
-
-from sys import prefix as sys_prefix
-
-from b3j0f.utils.version import PY2
-
-if PY2:
-    from ConfigParser import (
-        RawConfigParser, DuplicateSectionError, MissingSectionHeaderError
-    )
-else:
-    from configparser import (
-        RawConfigParser, DuplicateSectionError, MissingSectionHeaderError
-    )
+from b3j0f.utils.version import configparser
 
 from .core import FileConfDriver
 
 
 class INIConfDriver(FileConfDriver):
-    """Manage ini configuration.
-    """
+    """Manage ini resource configuration."""
 
-    __register__ = True  #: Register it automatically among global managers.
+    def _resource(self, rscpath, logger):
 
-    def _has_category(self, conf_resource, category, *args, **kwargs):
+        result = configparser.RawConfigParser()
 
-        return conf_resource.has_section(category.name)
+        try:
+            result.read(rscpath)
 
-    def _has_parameter(self, conf_resource, category, param, *args, **kwargs):
-
-        return conf_resource.has_option(category.name, param.name)
-
-    def _get_conf_resource(self, logger, conf_path=None, *args, **kwargs):
-
-        result = RawConfigParser()
-
-        if conf_path is not None:
-
-            files = []
-
-            path = FileConfDriver.get_path(conf_path)
-
-            try:
-                files = result.read(path)
-
-            except MissingSectionHeaderError:
-                logger.warning('Missing section header')
-
-            if not files:
-                result = None
+        except configparser.MissingSectionHeaderError as mshe:
+            msg = 'Missing section header in {0}.'.format(rscpath)
+            logger.error(
+                '{0} {1}: {2}'.format(msg, mshe, mshe.__traceback__)
+            )
+            raise self.Error(msg).with_traceback(mshe.__traceback__)
 
         return result
 
-    def _get_categories(self, conf_resource, *args, **kwargs):
+    def _cnames(self, resource, logger):
 
-        return conf_resource.sections()
+        return resource.categories()
 
-    def _get_pnames(self, conf_resource, category, *args, **kwargs):
+    def _params(self, resource, cname, logger):
 
-        return conf_resource.options(category.name)
+        pnames = resource.options(cname)
 
-    def _get_value(self, conf_resource, category, param, *args, **kwargs):
+        result = [
+            (pname, resource.get_option(cname, pname)) for pname in pnames
+        ]
 
-        return conf_resource.get(category.name, param.name)
+        return result
 
-    def _set_category(self, conf_resource, category, logger, *args, **kwargs):
+    def _set_conf(self, conf, resource, rscpath, logger):
+
+        for category in conf:
+
+            if not resource.has_section(category.name):
+                resource.add_section(category.name)
+
+            for param in category:
+                resource.set(category.name, param.name, param.svalue)
 
         try:
-            conf_resource.add_section(category.name)
-        except (DuplicateSectionError, ValueError):
-            pass
+            with open(rscpath, 'wb') as fps:
+                resource.write(fps)
 
-    def _set_parameter(self, conf_resource, category, param, *args, **kwargs):
-
-        svalue = param.value if param.svalue is None else param.svalue
-
-        conf_resource.set(category.name, param.name, param.svalue)
-
-    def _update_conf_resource(self, conf_resource, conf_path, *args, **kwargs):
-
-        with open(join(sys_prefix, 'etc', conf_path), 'w') as fso:
-            conf_resource.write(fso)
+        except OSError as ose:
+            msg = 'Error while putting resource to {0}'.format(rscpath)
+            full_msg = '{0} {1}: {2}'.format(
+                msg, ose, ose.__traceback__
+            )
+            logger.error(full_msg)
+            raise self.Error(msg).with_traceback(ose.__traceback__)

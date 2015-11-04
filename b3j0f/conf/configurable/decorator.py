@@ -24,7 +24,7 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-__all__ = ['conf_paths', 'add_category']
+__all__ = ['confpaths', 'add_category']
 
 from b3j0f.annotation import PrivateInterceptor, Annotation
 
@@ -32,29 +32,29 @@ from .core import Configurable
 from ..model import Category
 
 
-def conf_paths(*conf_paths):
-    """Configurable decorator which adds conf_path paths to a Configurable.
+def confpaths(*paths):
+    """Configurable decorator which adds path paths to a Configurable.
 
     :param paths: conf resource pathes to add to a Configurable.
     :type paths: list of str
 
     Example:
-    >>> conf_paths('test0', 'test1')(Configurable)().conf_paths[:-2]
+    >>> confpaths('test0', 'test1')(Configurable)().paths[:-2]
     ['test0', 'test1']
     """
 
-    def add_conf_paths(cls):
-        # add _get_conf_paths method to configurable classes
+    def add_paths(cls):
+        # add _get_paths method to configurable classes
         if issubclass(cls, Configurable):
 
-            def _get_conf_paths(self, *args, **kwargs):
-                # get super result and append conf_paths
-                result = super(cls, self)._get_conf_paths()
-                result += conf_paths
+            def _get_paths(self, *args, **kwargs):
+                # get super result and append paths
+                result = super(cls, self)._get_paths()
+                result += paths
 
                 return result
 
-            cls._get_conf_paths = _get_conf_paths
+            cls._get_paths = _get_paths
 
         else:
             raise Configurable.Error(
@@ -63,7 +63,7 @@ def conf_paths(*conf_paths):
 
         return cls
 
-    return add_conf_paths
+    return add_paths
 
 
 class ClassConfiguration(Annotation):
@@ -73,7 +73,6 @@ class ClassConfiguration(Annotation):
         super(ClassConfiguration, self).__init__(*args, **kwargs)
 
     def _set_target(self):
-
         pass
 
 
@@ -180,7 +179,7 @@ class Configuration(PrivateInterceptor):
     """Annotation dedicated to bind a configurable to all class instances."""
 
     def __init__(
-        self, conf_paths=None, conf=None, store=False, configurable=None,
+        self, paths=None, conf=None, store=False, configurable=None,
         configurablecls=Configurable, confparams=None, *args, **kwargs
     ):
 
@@ -190,7 +189,7 @@ class Configuration(PrivateInterceptor):
 
         if configurable is None:
             self.configurable = self.configurablecls(
-                store=store, conf_paths=conf_paths, conf=conf
+                store=store, paths=paths, conf=conf
             )
         else:
             self.configurable = configurable

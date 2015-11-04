@@ -24,81 +24,82 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+"""JSON configuration file driver."""
+
 __all__ = ['JSONConfDriver']
 
-
 try:
-    from json import loads, dump
+    from json import load, dump
 
 except ImportError:
-    from simplejson import loads, dump
+    from simplejson import load, dump
 
 from .core import FileConfDriver
 
 
 class JSONConfDriver(FileConfDriver):
-    """Manage json configuration."""
+    """Manage json resource configuration."""
 
-    __register__ = True  #: Register it automatically among global managers.
+    def _resource(self, rscpath, logger):
 
-    def _has_category(self, conf_resource, category, *args, **kwargs):
+        result = None
 
-        return category.name in conf_resource
+        try:
+            msg = 'Error while getting resource from {0}.'.format(rscpath)
+            with open(rscpath, 'rb') as fpr:
 
-    def _has_parameter(self, conf_resource, category, param, *args, **kwargs):
+                try:
+                    result = load(fpr)
 
-        return param.name in conf_resource[category.name]
+                except ValueError as ve:
+                    logger.error('{0} {1}: {2}'.format(
+                        msg, ve, ve.__traceback__)
+                    )
+                    raise self.Error(msg).with_traceback(ve.__traceback__)
 
-    def _get_conf_resource(self, conf_path=None, *args, **kwargs):
-
-        result = {}
-
-        if conf_path is not None:
-            result = None
-
-            path = FileConfDriver.get_path(conf_path)
-
-            try:
-                with open(path, 'r') as handle:
-                    content = handle.read()
-                    result = loads(content)
-
-            except Exception:
-                pass
+        except OSError as oe:
+            logger.error('{0} {1}: {2}'.format(msg, oe, oe.__traceback__))
+            raise self.Error(msg).with_traceback(oe.__traceback__)
 
         return result
 
-    def _get_categories(self, conf_resource, *args, **kwargs):
+    def _cnames(self, resource, logger):
 
-        return conf_resource.keys()
+        return resource.keys()
 
-    def _get_pnames(
-            self, conf_resource, category, *args, **kwargs
-    ):
+    def _cparams(self, resource, cname, logger):
 
-        return conf_resource[category.name].keys()
+        params = resource[cname]
 
-    def _get_value(self, conf_resource, category, param, *args, **kwargs):
+        result = [
+            (key, params[key]) for key in params
+        ]
 
-        return conf_resource[category.name][param.name]
+        return result
 
-    def _set_category(self, conf_resource, category, *args, **kwargs):
+    def _set_conf(self, conf, resource, rscpath, logger):
 
-        conf_resource.setdefault(category.name, {})
+        for category in conf:
 
-    def _set_parameter(self, conf_resource, category, param, *args, **kwargs):
+            cat = resource.setdefault(category.name, {})
 
-        svalue = param.value if param.svalue is None else param.svalue
+            for parameter in category:
 
-        conf_resource[category.name][param.name] = svalue
+                cat[parameter.name] = parameter.svalue
 
-    def _update_conf_resource(self, conf_resource, conf_path, *args, **kwargs):
-
-        path = FileConfDriver.get_path(conf_path)
+        msg = 'Error while putting conf in {0}'.format(rscpath)
 
         try:
-            with open(path, 'w') as handle:
-                dump(conf_resource, handle)
 
-        except Exception:
-            pass
+            with open(rscpath, 'wb') as fpw:
+                try:
+                    dump(fpw, resource)
+                except ValueError as ve:
+                    logger.error(
+                        '{0} {1}: {2}'.format(msg, ve, ve.__traceback__)
+                    )
+                    raise self.Error(msg).with_traceback(ve.__traceback__)
+
+        except OSError as oe:
+            logger.error('{0} {1}: {2}'.format(msg, oe, oe.__traceback__))
+            raise self.Error(msg).with_traceback(oe.__traceback__)

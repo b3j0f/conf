@@ -40,7 +40,7 @@ from ...configurable.core import Configurable
 from ..parser import getexprparser, ParserError
 
 
-class ParserTest(UTCase):
+class ConfigurationTest(UTCase):
     """Test exprparser."""
 
     def setUp(self):

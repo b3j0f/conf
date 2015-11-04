@@ -50,7 +50,7 @@ class ModelElement(object):
         """Copy this model element and contained elements if they exist.
 
         :param bool cleaned: if True (default False) copy this element without
-            parameter values.
+            parameter values/svalues.
         """
 
         result = type(self)(*args, **kwargs)
@@ -83,13 +83,22 @@ class CompositeModelElement(ModelElement):
 
     def __getitem__(self, key):
 
+        if isinstance(key, ModelElement):
+            key = key.name
+
         return self._content[key]
 
     def __setitem__(self, key, value):
 
+        if isinstance(key, ModelElement):
+            key = key.name
+
         self._content[key] = value
 
     def __delitem__(self, key):
+
+        if isinstance(key, ModelElement):
+            key = key.name
 
         del self._content[key]
 
@@ -104,22 +113,6 @@ class CompositeModelElement(ModelElement):
             result = self._content[key]
 
         return result
-
-    def __setattr__(self, key, value):
-
-        if key in self.__slots__ or hasattr(self, key):
-            super(CompositeModelElement, self).__setattr__(key, value)
-
-        else:
-            self._content[key] = value
-
-    def __delattr__(self, key):
-
-        if key in self.__slots__ or hasattr(self, key):
-            super(CompositeModelElement, self).__delattr__(key)
-
-        else:
-            del self._content[key]
 
     def __contains__(self, key):
 
@@ -209,40 +202,6 @@ class CompositeModelElement(ModelElement):
             for modelelt in value:
                 self._content[modelelt.name] = modelelt
 
-    @property
-    def value(self):
-
-        result = OrderedDict()
-
-        for key in self._content:
-            item = self._content[key]
-
-            result[key] = item.value
-
-        return result
-
-    @value.setter
-    def value(self, value):
-
-        contenttype = self.__contenttype__
-
-        if isinstance(value, (dict, contenttype)):
-
-            for key in value:
-                item = value[key]
-
-                if isinstance(item, dict):
-                    item = contenttype(name=key, value=item)
-
-                self.categories[key] = item
-
-        else:
-            raise TypeError(
-                'Wrong type {0}. dict or {1} expected.'.format(
-                    value, contenttype
-                )
-            )
-
     def put(self, value):
         """Put a content value and return the previous one if exist.
 
@@ -296,6 +255,7 @@ class CompositeModelElement(ModelElement):
 
         return self._content.setdefault(key, value)
 
-    def update(self, other):
+    def clear(self):
+        """Clear this composite model element from this content."""
 
-        self._content.update(other._content)
+        self._content.clear()

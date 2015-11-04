@@ -160,11 +160,11 @@ class Configuration(CompositeModelElement):
 
         if Configuration.VALUES in self.content:
 
-            categories = [self.content[Configuration.VALUES]]
+            categories = [self._content[Configuration.VALUES]]
 
         else:
 
-            categories = self.content.values()
+            categories = self._content.values()
 
         for category in categories:
 
@@ -175,3 +175,61 @@ class Configuration(CompositeModelElement):
                 result = param.value
 
         return result
+
+    def fill(
+            self,
+            conf, categories=True, parameters=True, override=False,
+            svalueonly=True
+    ):
+        """Fill this parameters from input configuration.
+
+        :param Configuration conf: input configuration from where get
+            parameters.
+        :param bool categories: if True (default), add not existing categories.
+        :param bool parameters: if True (default), add not existing parameters.
+        :param bool override: if False (default), do not override existing
+            parameter values.
+        :param bool svalueonly: if True (default), fill only svalue. Otherwise,
+            fill value as well.
+        :return: self
+        :rtype: Configuration
+        """
+
+        cats2fill = None
+
+        if categories:
+            cats2fill = conf._content.values()
+
+        else:
+            cats2fill = tuple(
+                category for category in conf._content.values()
+                if category.name in self._content
+            )
+
+        for cat2fill in cats2fill:
+
+            self.setdefault(cat2fill.name, Category(name=cats2fill.name))
+
+            params2fill = None
+
+            if parameters:
+                params2fill = cat2fill.parameters()
+
+            else:
+                params2fill = tuple(
+                    param for param in cat2fill.content
+                )
+
+            for param2fill in params2fill:
+
+                param = cat2fill.setdefault(param2fill.name, param2fill.copy())
+
+                if override or (
+                    param.svalue not in (None, '')
+                    and param.value not in (None, '')
+                ):
+
+                    param.svalue = param2fill.svalue
+
+                    if not svalueonly:
+                        param.value = param2fill.value

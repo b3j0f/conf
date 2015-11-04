@@ -32,26 +32,26 @@ from b3j0f.utils.version import range
 
 from ...model import Parameter, Category
 from ..core import Configurable
-from ..decorator import conf_paths, add_category
+from ..decorator import confpaths, add_category
 
 
 class DecoratorTest(TestCase):
     """Configuration Manager unittest class."""
 
-    def test_conf_paths(self):
+    def test_paths(self):
 
-        test_conf_paths = ["test1", "test2"]
+        test_paths = ["test1", "test2"]
 
-        @conf_paths(*test_conf_paths)
+        @confpaths(*test_paths)
         class TestConfigurable(Configurable):
             pass
 
         testConfigurable = TestConfigurable()
 
-        configurable_conf_paths = testConfigurable.conf_paths
+        configurable_paths = testConfigurable.paths
 
-        for i in range(1, len(test_conf_paths)):
-            self.assertEqual(test_conf_paths[-i], configurable_conf_paths[-i])
+        for i in range(1, len(test_paths)):
+            self.assertEqual(test_paths[-i], configurable_paths[-i])
 
     def test_add_category(self):
 

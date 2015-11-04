@@ -24,388 +24,212 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-__all__ = ['MetaConfDriver', 'ConfDriver']
+"""Module of configuration drivers.
 
+A configuration driver resolve a configuration path with conf resources paths.
 
-from b3j0f.utils.version import basestring
-from b3j0f.utils.path import lookup, getpath
+A conf path is a configuration path understandable by several drivers.
+A resource path is a configuration path understandable only by one type of
+driver (and all its sub types of course...).
 
-from parser import ParserError
+In order to implement your self drivers, you have to implement those methods:
+
+- rscpaths(path): get resource paths from one configuration path.
+- _get_conf(rscpath, logger): get one configuration from one resource path.
+- _set_conf(rscpath, logger): put one configuration from one resource path.
+"""
+
+__all__ = ['ConfDriver']
 
 from ..model.configuration import Configuration
 from ..model.category import Category
-
-
-class MetaConfDriver(type):
-    """ConfDriver meta class which register all driver in a global
-    set of drivers.
-    """
-
-    def __init__(self, name, bases, attrs):
-
-        super(MetaConfDriver, self).__init__(name, bases, attrs)
-
-        # if the class claims to be registered
-        if self.__register__:
-            # add it among drivers
-            ConfDriver._MANAGERS[getpath(self)] = self
+from ..model.parameter import Parameter
 
 
 class ConfDriver(object):
     """Base class for managing conf."""
 
-    """Apply meta class for registering automatically it among global drivers
-    if __register__ is True.
-    """
-    __metaclass__ = MetaConfDriver
+    class Error(Exception):
+        """Handle conf driver errors."""
 
-    """Static param which allows this class to be automatically registered
-    among drivers.
-    """
-    __register__ = False
+    def _resource(self, rscpath, logger):
+        """Get configuration resource from resource path.
 
-    CONF_FILE = 'CONF_FILE'
-
-    _MANAGERS = {}  #: Private set of shared driver types.
-
-    def handle(self, conf_path, logger):
-        """True iif input conf_path can be handled by self.
-
-        :return: True iif input conf_path can be handled by self.
-        :rtype: bool
+        :param str rscpath: resource path.
+        :param Logger logger: logger to use.
         """
-
-        conf_resource = self._get_conf_resource(
-            conf_path=conf_path, logger=logger
-        )
-
-        result = conf_resource is not None
-
-        return result
-
-    def exists(self, conf_path):
-        """True if conf_path exist related to this driver behaviour."""
 
         raise NotImplementedError()
 
-    def get_conf(
-            self, conf_path, logger, conf=None, override=True
-    ):
-        """Parse a configuration_files with input conf and returns
-        parameters and errors by param name.
+    def _cnames(self, resource, logger):
+        """Get resource category names.
 
-        :param str conf_path: conf file to parse and from get parameters.
-        :param Configuration conf: conf to fill with conf_path values and
+        :param resource: resource from where get category names.
+        :param Logger logger: logger to use.
+        :return: resource category names.
+        :rtype: list
+        """
+
+        raise NotImplementedError()
+
+    def _params(self, resource, cname, logger):
+        """Get list of (parameter name, parameter value) from a category name
+        and a specific configuration resource.
+
+        :param resource: resource from where get parameter names and values.
+        :param str cname: related category name.
+        :param Logger logger: logger to use.
+        :return: list of resource parameter
+        :rtype: list
+        """
+
+        raise NotImplementedError()
+
+    def _get_conf(self, rscpath, logger):
+        """Get specific conf from one driver path.
+
+        :param str path: relative path from where driver paths are calculated.
+        :param Logger logger: logger to use.
+        :raises: ConfDriver if any parsing errors occures.
+        """
+
+        result = None
+
+        try:
+            resource = self._resource(rscpath=rscpath, logger=logger)
+
+        except Exception as ex:
+            msg = 'Error while getting resource from {0}. {1}: {2}.'.format(
+                rscpath
+            )
+            logger.warning(msg, ex, ex.__traceback__)
+
+        else:
+            for cname in self._cnames(resource):
+
+                category = Category(name=cname)
+
+                if result is None:
+                    result = Configuration()
+
+                result += category
+
+                for pname, value in self._params(
+                    resource=resource, category=cname
+                ):
+
+                    parameter = Parameter(name=pname, svalue=value)
+
+                    category += parameter
+
+        return result
+
+    def rscpaths(self, path, logger):
+        """Get resource paths related to input configuration path.
+
+        :param str path: configuration path.
+        :rtype: list
+        """
+
+        raise NotImplementedError()
+
+    def get_conf(self, path, logger, conf=None, override=True, error=False):
+        """Parse a configuration path with input conf and returns
+        parameters by param name.
+
+        :param str path: conf resource path to parse and from get parameters.
+        :param Configuration conf: conf to fill with path values and
             conf param names.
         :param Logger logger: logger to use in order to trace
             information/error.
         :param bool override: if True (by default), override self
             configuration.
+        :param bool error: if True (default: False), stop to get conf when a
+            first error is catched.
+        :rtype: Configuration
         """
 
-        conf_resource = None
-
         result = None
-        # ensure conf_path exists and is not empty.
-        if self.exists(conf_path):
+
+        pathconf = None
+
+        rscpaths = self.rscpaths(path=path, logger=logger)
+
+        for rscpath in rscpaths:
+
             try:
-                # first, read conf file
-                conf_resource = self._get_conf_resource(
-                    conf_path=conf_path,
-                    logger=logger
-                )
+                pathconf = self._get_conf(rscpath=rscpath, logger=logger)
 
             except Exception as ex:
-                # if an error occured, log it
-                logger.error(
-                    'Impossible to parse conf_path {0} with {1}: {2}'
-                    .format(conf_path, type(self), ex)
+                msg = 'Error while getting configuration from {0}.'.format(
+                    rscpath
                 )
+                full_msg = '{0} {1}: {2}'.format(msg, ex, ex.__traceback__)
+                logger.warning(full_msg)
+                if error:
+                    raise ConfDriver.Error(msg).with_traceback(
+                        ex.__traceback__
+                    )
 
-            else:  # else process conf file
-                if conf_resource is None:
-                    return result
+            else:
+                if pathconf is None:  # do something only if pathconf exists
+                    continue
 
-                result = Configuration() if conf is None else conf
+                if result is None:
+                    result = Configuration()
 
-                categories = self._get_categories(
-                    conf_resource=conf_resource,
-                    logger=logger
+                result.fill(conf=pathconf, override=True, svalueonly=False)
+
+        if conf is None:
+            result = pathconf
+
+        else:
+            try:
+                conf.fill(pathconf, override=override, svalueonly=True)
+
+            except Parameter.Error as pex:
+                msg = 'Error while filling {0} from rscpath {1}.'.format(
+                    pex, rscpath
                 )
+                full_msg = '{0} {1}: {2}'.format(msg, pex, pex.__traceback__)
+                logger.warning(full_msg)
+                if error:
+                    raise ConfDriver.Error(msg).with_traceback(
+                        pex.__traceback__
+                    )
 
-                for category_name in categories:
-                    # do something only for referenced categories
-                    if category_name in result:
-
-                        category = result.setdefault(
-                            category_name,
-                            Category(category_name)
-                        )
-
-                        pnames = self._get_pnames(
-                            conf_resource=conf_resource,
-                            category=category,
-                            logger=logger
-                        )
-
-                        for param in category:
-
-                            pname = param.name
-
-                            # list of matching conf parameters
-                            cparams = []
-
-                            if isinstance(pname, basestring):
-
-                                if pname in pnames:
-
-                                    cparams = [category[pname].copy()]
-
-                            else:
-
-                                regex = pname
-
-                                for pname in pnames:
-
-                                    if regex.match(pname):
-
-                                        param = category[pname].copy()
-                                        param.name = pname
-                                        cparams.append(param)
-
-                            for cparam in cparams:
-                                # update result
-                                category.setdefault(cparam.name, cparam)
-                                # get param value
-
-                                value = self._get_value(
-                                    conf_resource=conf_resource,
-                                    category=category,
-                                    param=cparam,
-                                    logger=logger
-                                )
-
-                                # set value to param
-                                if value not in (None, ''):
-                                    if override or cparam.value in (None, ''):
-                                        try:  # set serialized value
-                                            cparam.svalue = value
-                                        except ParserError as ex:
-                                            pass
-
-                                configurable = cparam.value
-
-                                # apply conf if given
-                                # get conf category name
-                                conf_name = cparam.conf_name
-                                confcategory = conf.get_unified_category(
-                                    name=conf_name
-                                )
-
-                                if self._has_category(
-                                    conf_resource=conf_resource,
-                                    category=confcategory,
-                                    logger=logger
-                                ):
-
-                                    conf = configurable.conf
-                                    conf += confcategory
-
-                                    conf_paths = list(configurable.conf_paths)
-                                    if conf_path not in conf_paths:
-                                        conf_paths.append(conf_path)
-
-                                        configurable.conf_paths = conf_paths
-                                    # apply configuration
-                                    configurable.apply_configurable()
+            result = conf
 
         return result
 
-    def set_conf(self, conf_path, conf, logger):
-        """Set input conf in input conf_path.
+    def set_conf(self, conf, rscpath, logger):
+        """Set input conf in input path.
 
-        :param str conf_path: conf file to parse and from get parameters.
-        :param Configuration conf: conf to write to conf_path.
+        :param Configuration conf: conf to write to path.
+        :param str rscpath: specific resource path to use.
         :param Logger logger: used to log info/errors
         """
 
-        result = None
-        conf_resource = None
+        try:
+            resource = self._resource(rscpath=rscpath)
 
-        try:  # get conf_resource
-            conf_resource = self._get_conf_resource(
-                conf_path=conf_path,
-                logger=logger
+        except Exception as e:
+            msg = 'Error while getting resource from {0}'.format(rscpath)
+            logger.warning('{0} {1}: {2}.'.format(msg, e, e.__traceback__))
+            self.Error(msg).with_traceback(e.__traceback__)
+
+        else:
+            self._set_conf(
+                conf=conf, resource=resource, rscpath=rscpath, logger=logger
             )
 
-        except Exception as ex:
-            # if an error occured, stop processing
-            logger.error(
-                'Impossible to parse conf_path {0}: {1}'.format(conf_path, ex)
-            )
-            result = ex
+    def _set_conf(self, conf, resource, rscpath, logger):
+        """Set input conf to input resource.
 
-        # if conf_path can not be loaded, get default config conf_resource
-        if conf_resource is None:
-            conf_resource = self._get_conf_resource(logger=logger)
-
-        # iterate on all conf items
-        for category in conf:
-
-            # set category
-            self._set_category(
-                conf_resource=conf_resource, category=category, logger=logger
-            )
-
-            # iterate on parameters
-            for param in category:
-
-                try:
-                    pvalue = param.value
-
-                except:
-                    pass
-
-                else:
-
-                    if pvalue is not None:
-
-                        # set param
-                        self._set_parameter(
-                            conf_resource=conf_resource,
-                            category=category,
-                            param=param,
-                            logger=logger
-                        )
-
-        # write conf_resource in conf file
-        self._update_conf_resource(
-            conf_resource=conf_resource, conf_path=conf_path, logger=logger
-        )
-
-        return result
-
-    @staticmethod
-    def get_drivers():
-        """Get global defined drivers.
-        """
-
-        return set(ConfDriver._MANAGERS.values())
-
-    @staticmethod
-    def get_driver(path):
-        """Add a conf driver by its path definition.
-
-        :param str path: driver path to add. Must be a full path from a known
-            package/module.
-        """
-
-        # try to get if from global definition
-        result = ConfDriver._MANAGERS.get(path)
-
-        # if not already added
-        if result is None:
-            # resolve it and add it in global definition
-            result = lookup(path)
-            ConfDriver._MANAGERS[path] = result
-
-        return result
-
-    def _get_categories(self, conf_resource, logger):
-        """Get a list of category names in conf_resource.
-
-        :param conf_resource: configuration resource.
-        :param Logger logger: logger to use.
-        :rtype: list
-        """
-
-        raise NotImplementedError()
-
-    def _get_pnames(self, conf_resource, category, logger):
-        """Get a list of param names in conf_resource related to category.
-
-        :param conf_resource: configuration resource.
-        :param Category category: category from which get parameter names.
-        :param Logger logger: logger to use.
-        :rtype: list
-        """
-
-        raise NotImplementedError()
-
-    def _has_category(self, conf_resource, category, logger):
-        """True iif input conf_resource contains input category.
-
-        :param conf_resource: configuration resource.
-        :param Category category: category to check in conf_resource.
-        :param Logger logger: logger to use.
-        :rtype: bool
-        """
-
-        raise NotImplementedError()
-
-    def _has_parameter(self, conf_resource, category, param, logger):
-        """True iif input conf_resource has input parameter_name in input
-            category.
-
-        :param conf_resource: configuration resource.
-        :param Category category: category to check in conf_resource.
-        :param Parameter param: parameter to check in conf_resource.
-        :param Logger logger: logger to use.
-        :rtype: bool
-        """
-
-        raise NotImplementedError()
-
-    def _get_conf_resource(self, logger, conf_path=None):
-        """Get config conf_resource.
-
-        :param str conf_path: if not None, the config conf_resource is
-            conf_path content.
-        :param Logger logger: logger used to log processing information
-        :return: empty config conf_resource if conf_path is None, else
-            conf_path content.
-        """
-
-        raise NotImplementedError()
-
-    def _get_value(self, conf_resource, category, param, logger):
-        """Get a param related to input conf_resource, category and param.
-
-        :param conf_resource: configuration resource.
-        :param Category category: category to retrieve from conf_resource.
-        :param Parameter param: parameter to use from conf_resource.
-        :param Logger logger: logger to use.
-        """
-
-        raise NotImplementedError()
-
-    def _set_category(self, conf_resource, category, logger):
-        """Set category on conf_resource.
-
-        :param conf_resource: configuration resource.
-        :param Category category: category to set in conf_resource.
-        :param Logger logger: logger to use.
-        """
-
-        raise NotImplementedError()
-
-    def _set_parameter(self, conf_resource, category, param, logger):
-        """Set param on conf_resource.
-
-        :param conf_resource: configuration resource.
-        :param Category category: category to set in conf_resource.
-        :param Parameter param: parameter to set in conf_resource.
-        :param Logger logger: logger to use.
-        """
-
-        raise NotImplementedError()
-
-    def _update_conf_resource(self, conf_resource, conf_path, logger):
-        """Write conf_resource into conf_path.
-
-        :param conf_resource: configuration resource.
-        :param str conf_path: configuration path to use.
-        :param Logger logger: logger to use.
+        :param Configuration conf: conf to write to path.
+        :param resource: driver configuration resource.
+        :param str rscpath: specific resource path to use.
+        :param Logger logger: used to log info/errors
         """
 
         raise NotImplementedError()

@@ -38,7 +38,7 @@ A parser is a callable object which takes in parameter :
 - _type: final value type to check.
 """
 
-__all__ = ['boolparser', 'getexprparser', 'exprparser']
+__all__ = ['boolparser', 'getexprparser', 'exprparser', 'ParserError']
 
 
 from b3j0f.utils.path import lookup
@@ -51,19 +51,8 @@ class ParserError(Exception):
     """Handle parser errors."""
 
 
-def boolparser(svalue, *args, **kwargs):
-    """Boolean value parser.
-
-    :param str svalue: serialized value to parse.
-    :return: True if svalue in [True, true, 1]. False Otherwise.
-    :rtype: bool
-    """
-
-    return svalue == 'True' or svalue == 'true' or svalue == '1'
-
-
-EVAL_PARAM = r'\$[a-zA-Z_]\w*(\.[a-zA-Z_]\w*)+?'  #: local param regex.
-EVAL_FOREIGN = r'\@(.+)\/([a-zA-Z_]\w*)\.([a-zA-Z_]\w*)'  #: foreign param re.
+EVAL_PARAM = r'\$([a-zA-Z_]\w*)(\.[a-zA-Z_]\w*)+?'  #: local param regex.
+EVAL_FOREIGN = r'\@([.^\/]+)\/([a-zA-Z_]\w*)\.([a-zA-Z_]\w*)'  #: foreign param re.
 EVAL_LOOKUP = r'\#([a-zA-Z_]\w*\.?)+'  #: lookup param regex.
 
 REGEX = '({0})|({1})|({2})'.format(EVAL_PARAM, EVAL_LOOKUP, EVAL_FOREIGN)
@@ -74,8 +63,9 @@ def getexprparser(_globals=None, _locals=None):
     """Generate an expression parser from input parameters."""
 
     def _exprparser(
-            svalue, configuration, configurable, _type=object,
-            _locals=_locals, _globals=_globals, *args, **kwargs
+            svalue, configuration=None, configurable=None, _type=object,
+            _locals=None, _globals=None, __locals=_locals, __globals=_globals,
+            *args, **kwargs
     ):
         """Expression parser.
 
@@ -99,6 +89,9 @@ def getexprparser(_globals=None, _locals=None):
             if _locals is None:
                 _locals = {}
 
+            if __locals is not None:
+                _locals.update(__locals)
+
             _locals.update(
                 {
                     'resolve': _resolve,
@@ -107,6 +100,12 @@ def getexprparser(_globals=None, _locals=None):
                     'configuration': configuration
                 }
             )
+
+            if _globals is None:
+                _globals = {}
+
+            if __globals is not None:
+                _globals.update(__globals)
 
             result = safe_eval(compilation, _globals, _locals)
 
@@ -138,12 +137,12 @@ def repl(match):
 
     if match[0] == '`':
 
-        result = 'lookup(path={0})'.format(match[1: -1])
+        result = 'lookup(path={0})'.format(match[1:])
 
     elif match[0] == '@':
 
         result = '_resolve(match={0}, configurable=configurable)'.format(
-            match[1: -1]
+            match[1:]
         )
 
     elif match[1]:
@@ -160,9 +159,9 @@ def _resolve(match, configurable):
 
     result = None
 
-    conf_path, cat, param = match
+    path, cat, param = match
 
-    conf = configurable.get_conf(conf_paths=conf_path)
+    conf = configurable.get_conf(paths=path)
 
     category = conf.get(cat)
 
@@ -181,3 +180,18 @@ def _resolve(match, configurable):
 
 
 exprparser = getexprparser()  #: default expr parser.
+
+
+def boolparser(*args, **kwargs):
+    """Boolean value parser.
+
+    :param str svalue: serialized value to parse.
+    :return: True if svalue in [True, true, 1]. False Otherwise.
+    :rtype: bool
+    """
+
+    _locals = {
+        'true': True
+    }
+
+    return exprparser(_type=bool, _locals=_locals, *args, **kwargs)

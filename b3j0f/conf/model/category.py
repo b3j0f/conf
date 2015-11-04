@@ -29,6 +29,8 @@
 __all__ = ['Category']
 
 
+from b3j0f.utils.version import basestring
+
 from .base import CompositeModelElement
 from .parameter import Parameter
 
@@ -46,3 +48,26 @@ class Category(CompositeModelElement):
         super(Category, self).__init__(*args, **kwargs)
 
         self.name = name
+
+    def getparams(self, pname):
+        """Get parameters which match with input pname.
+
+        :param pname: parameter name.
+        :type pname: str or regex
+        :rtype: list
+        """
+
+        result = []
+
+        if isinstance(pname, basestring):
+
+            if pname in self._content:
+                result = [self._content[pname]]
+
+        else:
+            result = list(
+                param for param in self._content.values()
+                if pname.match(param.name)
+            )
+
+        return result

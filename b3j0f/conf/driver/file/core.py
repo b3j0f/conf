@@ -28,39 +28,64 @@ __all__ = ['FileConfDriver']
 
 """This module specifies file drivers.
 
-They work relatively to a conf directory which is given by the environment
-variable ``B3J0F_CONF_DIR`` or if not present, by the relative path ``~/etc``.
+They work relatively to system/user conf directories and an optional conf
+directory given by the environment variable ``B3J0F_CONF_DIR``.
 """
 
-from stat import ST_SIZE
-
-from os import stat, environ
-
+from os import environ, getenv
 from os.path import exists, join, expanduser
 
 from ..core import ConfDriver
+
+CONF_DIRS = []  #: all config directories
+
+
+def _addconfig(config, *paths):
+    """Add path to CONF_DIRS if exists."""
+
+    for path in paths:
+        if path is not None and exists(path):
+            config.append(path)
+
+
+_addconfig(CONF_DIRS, '/etc', '/usr/local/etc')  # add unix system conf
+
+# add XDG conf dirs
+_addconfig(CONF_DIRS, getenv('XDG_CONFIG_HOME'), getenv('XDG_CONFIG_DIRS'))
+
+# add windows conf dirs
+_addconfig(
+    CONF_DIRS,
+    getenv('APPDATA'), getenv('PROGRAMDATA'), getenv('LOCALAPPDATA')
+)
+
+HOME = environ.get(
+    'HOME',  # unix-like
+    environ.get(
+        'USERPROFILE',  # windows-like
+        expanduser('~')
+    )  # default
+)  #: set user home directory
+
+# add usr config
+_addconfig(
+    CONF_DIRS, join(HOME, '.config'), join(HOME, 'config'), join(HOME, 'etc')
+)
+
+B3J0F_CONF_DIR = 'B3J0F_CONF_DIR'  #: conf dir environment variable name.
+
+if B3J0F_CONF_DIR in environ:  # add b3j0F_CONF_DIR if necessary
+    CONF_DIRS.append(environ[B3J0F_CONF_DIR])  #: conf dir environment variable
 
 
 class FileConfDriver(ConfDriver):
     """Conf Manager dedicated to files."""
 
-    CONF_DIR_VAR = 'B3J0F_CONF_DIR'  #: conf dir environment variable
-    #: final conf dir, given by CONF_DIR_VAR environment variable or '~/etc'
-    CONF_DIR = environ.get(
-        CONF_DIR_VAR, join(expanduser('~'), 'etc')
-    )
+    def rscpaths(self, path, logger):
 
-    def exists(self, conf_path, *args, **kwargs):
-
-        path = FileConfDriver.get_path(conf_path)
-
-        result = exists(path) and stat(path)[ST_SIZE]
-
-        return result
-
-    @staticmethod
-    def get_path(conf_path):
-
-        result = join(FileConfDriver.CONF_DIR, conf_path)
+        result = list(
+            join(conf_dir, path) for conf_dir in CONF_DIRS
+            if exists(join(conf_dir, path))
+        )
 
         return result

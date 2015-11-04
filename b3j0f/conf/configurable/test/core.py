@@ -34,7 +34,6 @@ from ..core import Configurable
 from ...model.configuration import Configuration
 from ...model.category import Category
 from ...model.parameter import Parameter
-from ...model.parser import intparser, floatparser, strparser
 
 from tempfile import NamedTemporaryFile
 
@@ -45,7 +44,7 @@ class ConfigurableTest(UTCase):
 
     def setUp(self):
 
-        self.conf_paths = (
+        self.paths = (
             NamedTemporaryFile().name,
             NamedTemporaryFile().name
         )
@@ -55,27 +54,27 @@ class ConfigurableTest(UTCase):
         self.conf = Configuration(
             Category(
                 'A',
-                Parameter('a', value='a', parser=strparser),
-                Parameter('_', value=2, parser=intparser),
-                Parameter('error', parser=floatparser, svalue='error')
+                Parameter('a', value='a', _type=str),
+                Parameter('_', value=2, _type=int),
+                Parameter('error', _type=float, svalue='error')
             ),
             Category(
                 'B',
-                Parameter('a', value='b', parser=strparser),
-                Parameter('b', value='b', parser=strparser)
+                Parameter('a', value='b', _type=str),
+                Parameter('b', value='b', _type=str)
             )
         )
 
     def test_configuration_files(self):
 
         configurable = Configurable()
-        configurable.conf_paths = self.conf_paths
+        configurable.paths = self.paths
 
-        self.assertEqual(configurable.conf_paths, self.conf_paths)
+        self.assertEqual(configurable.paths, self.paths)
 
-        configurable = Configurable(conf_paths=self.conf_paths)
+        configurable = Configurable(paths=self.paths)
 
-        self.assertEqual(configurable.conf_paths, self.conf_paths)
+        self.assertEqual(configurable.paths, self.paths)
 
     def test_auto_conf(self):
 
@@ -111,11 +110,11 @@ class ConfigurableTest(UTCase):
         self.assertEqual(len(conf), len(self.conf))
 
         # test to get from files which do not exist
-        configurable.conf_paths = self.conf_paths
+        configurable.paths = self.paths
 
-        for conf_path in self.conf_paths:
+        for path in self.paths:
             try:
-                remove(conf_path)
+                remove(path)
             except OSError:
                 pass
 
@@ -124,8 +123,8 @@ class ConfigurableTest(UTCase):
         self.assertEqual(len(conf), len(self.conf))
 
         # get parameters from empty files
-        for conf_path in self.conf_paths:
-            with open(conf_path, 'w') as _file:
+        for path in self.paths:
+            with open(path, 'w') as _file:
                 _file.write('\n')
 
         conf = configurable.get_conf()
@@ -139,18 +138,18 @@ class ConfigurableTest(UTCase):
         self.assertEqual(len(conf), 0)
 
         # fill files
-        configurable = Configurable(conf_paths=self.conf_paths)
+        configurable = Configurable(paths=self.paths)
 
         # add first category in conf file[0]
         configurable.set_conf(
-            conf_path=self.conf_paths[0],
+            path=self.paths[0],
             conf=Configuration(self.conf['A']),
             driver=configurable._drivers.split(',')[0]
         )
 
         # add second category in conf file[1]
         configurable.set_conf(
-            conf_path=self.conf_paths[1],
+            path=self.paths[1],
             conf=Configuration(self.conf['B']),
             driver=configurable._drivers.split(',')[1]
         )

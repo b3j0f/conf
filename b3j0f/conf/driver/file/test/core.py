@@ -25,6 +25,7 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+"""conf file driver UTs."""
 
 from logging import getLogger
 
@@ -35,7 +36,7 @@ from unittest import main
 from ....model.configuration import Configuration
 from ....model.category import Category
 from ....model.parameter import Parameter
-from ....model.parser import boolparser, intparser
+from ....model.parser import boolparser
 from ..core import FileConfDriver
 
 from pickle import loads, dump
@@ -44,80 +45,52 @@ from os import remove
 
 
 class TestConfDriver(FileConfDriver):
-    """Configuration Manager for test."""
+    """Configuration file driver for test."""
 
-    __register__ = True
+    def _cnames(self, resource, *args, **kwargs):
 
-    def _has_category(
-        self, conf_resource, category, logger, *args, **kwargs
+        return resource.keys()
+
+    def _params(
+            self, resource, cname, *args, **kwargs
     ):
 
-        return category in conf_resource
+        result = [
+            (pname, resource[cname][pname]) for pname in resource[cname]
+        ]
 
-    def _has_parameter(
-        self, conf_resource, category, param, logger,
-        *args, **kwargs
+        return result
+
+    def _resource(
+        self, logger, rscpath, *args, **kwargs
     ):
 
-        return param.name in conf_resource[category.name]
+        result = None
 
-    def _get_categories(self, conf_resource, *args, **kwargs):
-
-        return conf_resource.keys()
-
-    def _get_pnames(
-            self, conf_resource, category, *args, **kwargs
-    ):
-        return conf_resource[category.name].keys()
-
-    def _get_conf_resource(
-        self, logger, conf_path=None, *args, **kwargs
-    ):
-
-        result = dict()
-
-        if conf_path is not None:
-
-            with open(conf_path, 'rb') as handle:
+        try:
+            with open(rscpath, 'rb') as handle:
 
                 try:
                     result = loads(handle.read())
 
-                except Exception:
+                except TypeError:
                     pass
+
+        except OSError:
+            pass
 
         return result
 
-    def _get_value(
-        self, conf_resource, category, param,
-        *args, **kwargs
+    def _set_conf(
+        self, resource, rscpath, *args, **kwargs
     ):
 
-        return conf_resource[category.name][param.name]
-
-    def _set_category(
-        self, conf_resource, category, *args, **kwargs
-    ):
-
-        conf_resource.setdefault(category.name, dict())
-
-    def _set_parameter(
-        self, conf_resource, category, param,
-        *args, **kwargs
-    ):
-
-        conf_resource[category.name][param.name] = param.value
-
-    def _update_conf_resource(
-        self, conf_resource, conf_path, *args, **kwargs
-    ):
-
-        with open(conf_path, 'wb') as handle:
+        with open(rscpath, 'wb') as handle:
 
             try:
-                dump(conf_resource, handle)
+                dump(resource, handle)
 
-            except Exception:
+            except TypeError:
                 pass
 
 
@@ -135,17 +108,17 @@ class FileConfDriverTest(UTCase):
         self.conf = Configuration(
             Category(
                 'A',
-                Parameter('a', value=0, parser=intparser),  # a is 0
+                Parameter('a', value=0, parser=int),  # a is 0
                 Parameter('b', value=True, parser=boolparser)
             ),  # b is overriden
             Category(
                 'B',
-                Parameter('b', value=1, parser=intparser),  # b is 1
-                Parameter('c', parser=intparser, svalue='er')   # error
+                Parameter('b', value=1, parser=int),  # b is 1
+                Parameter('c', parser=int, svalue='er')   # error
             )
         )
 
-        self.conf_path = self.get_conf_file()
+        self.path = self.get_conf_file()
 
     def get_conf_file(self):
 
@@ -153,14 +126,14 @@ class FileConfDriverTest(UTCase):
 
     def _remove(self):
         try:
-            remove(self.conf_path)
+            remove(self.path)
         except OSError:
             pass
 
     def _open(self):
 
         try:
-            open(self.conf_path, 'wb').close()
+            open(self.path, 'wb').close()
         except OSError:
             pass
 
@@ -170,7 +143,7 @@ class FileConfDriverTest(UTCase):
         self._remove()
 
         conf = self.manager.get_conf(
-            conf_path=self.conf_path,
+            path=self.path,
             logger=self.logger
         )
 
@@ -180,7 +153,7 @@ class FileConfDriverTest(UTCase):
         self._open()
 
         conf = self.manager.get_conf(
-            conf_path=self.conf_path,
+            path=self.path,
             logger=self.logger
         )
 
@@ -188,7 +161,7 @@ class FileConfDriverTest(UTCase):
 
         # get full conf
         self.manager.set_conf(
-            conf_path=self.conf_path,
+            rscpath=self.path,
             conf=self.conf,
             logger=self.logger
         )
@@ -196,7 +169,7 @@ class FileConfDriverTest(UTCase):
         self.conf.resolve()
 
         conf = self.manager.get_conf(
-            conf_path=self.conf_path,
+            path=self.path,
             conf=self.conf,
             logger=self.logger
         )
@@ -222,7 +195,7 @@ class FileConfDriverTest(UTCase):
         conf = Configuration(self.conf['B'])
 
         conf = self.manager.get_conf(
-            conf_path=self.conf_path,
+            path=self.path,
             conf=conf,
             logger=self.logger
         )

@@ -39,7 +39,7 @@ from b3j0f.utils.property import addproperties
 from ..model.configuration import Configuration
 from ..model.category import Category
 from ..model.parameter import Parameter
-from ..model.parser import arrayparser, boolparser
+from ..model.parser import boolparser
 
 from ..driver.core import ConfDriver
 
@@ -76,8 +76,8 @@ class ConfigurableError(Exception):
     """Handle Configurable errors."""
 
 
-def _updatelogger(self, value, name):
-
+def _updatelogger(self, kwargsvalue, name):
+    """Renew self logger."""
     self._logger = self.newlogger()
 
 
@@ -100,9 +100,9 @@ class Configurable(object):
         'b3j0f.conf.driver.file.ini.INIConfDriver'
     )
 
-    INIT_CAT = 'init_cat'  #: initialization category
+    INIT_CAT = 'init_cat'  #: initialization category.
 
-    CONF_PATH = 'b3j0fconf-configurable.conf'  #: default conf path/
+    CONF_PATH = 'b3j0fconf-configurable.conf'  #: default conf path.
 
     #: configurable storing attribute in configured objects.
     STORE_ATTR = '__configurable__'
@@ -112,17 +112,17 @@ class Configurable(object):
 
     AUTO_CONF = 'auto_conf'  #: auto_conf attribute name.
     RECONF_ONCE = 'reconf_once'  #: reconf_once attribute name.
-    CONF_PATHS = 'conf_paths'  #: conf_paths attribute name.
+    CONF_PATHS = 'paths'  #: paths attribute name.
     DRIVERS = 'drivers'  #: drivers attribute name.
 
-    LOG_NAME = 'log_name'  #: logger name property name
-    LOG_LVL = 'log_lvl'  #: logging level property name
-    LOG_PATH = 'log_path'  #: logging path property name
-    LOG_DEBUG_FORMAT = 'log_debug_format'  #: debug log format property name
-    LOG_INFO_FORMAT = 'log_info_format'  #: info log format property name
+    LOG_NAME = 'log_name'  #: logger name property name.
+    LOG_LVL = 'log_lvl'  #: logging level property name.
+    LOG_PATH = 'log_path'  #: logging path property name.
+    LOG_DEBUG_FORMAT = 'log_debug_format'  #: debug log format property name.
+    LOG_INFO_FORMAT = 'log_info_format'  #: info log format property name.
     LOG_WARNING_FORMAT = 'log_warning_format'  #: warn log format property name
-    LOG_ERROR_FORMAT = 'log_error_format'  #: error log format property name
-    LOG_CRITICAL_FORMAT = 'log_critical_format'  #: crit log format property
+    LOG_ERROR_FORMAT = 'log_error_format'  #: error log format property name.
+    LOG_CRITICAL_FORMAT = 'log_critical_format'  #: crit log format property.
 
     DEFAULT_AUTO_CONF = True  #: default auto conf.
     DEFAULT_RECONF_ONCE = False  #: default reconf once.
@@ -141,7 +141,7 @@ class Configurable(object):
             self,
             conf=None, usecls_conf=True, unified_conf=True,
             to_configure=None, store=False,
-            conf_paths=None, drivers=DEFAULT_DRIVERS,
+            paths=None, drivers=DEFAULT_DRIVERS,
             auto_conf=DEFAULT_AUTO_CONF, reconf_once=DEFAULT_RECONF_ONCE,
             log_lvl='INFO', log_name=None, log_path='.',
             log_info_format=INFO_FORMAT,
@@ -160,9 +160,9 @@ class Configurable(object):
         :type to_configure: list or instance.
         :param bool store: if True (default False) and to_configure is given,
             store this instance into to_configure instance with the attribute
-            STORE_ATTR.
-        :param conf_paths: conf_paths to parse.
-        :type conf_paths: Iterable or str
+            ``STORE_ATTR``.
+        :param paths: paths to parse.
+        :type paths: Iterable or str
         :param bool auto_conf: True (default) force auto conf as soon as param
             change.
         :param bool reconf_once: True (default) force auto conf reconf_once as
@@ -183,9 +183,9 @@ class Configurable(object):
         # init protected attributes
         self._auto_conf = auto_conf
         self._reconf_once = reconf_once
-        self._conf_paths = None
+        self._paths = None
         self._drivers = None
-        self._conf_paths = None
+        self._paths = None
         self._to_configure = None
         self._conf = None
 
@@ -201,7 +201,7 @@ class Configurable(object):
         self.reconf_once = reconf_once
 
         # set conf files
-        self._init_conf_paths(conf_paths)
+        self._init_paths(paths)
 
         # set drivers
         self.drivers = drivers
@@ -313,9 +313,9 @@ class Configurable(object):
             Category(
                 Configurable.CONF,
                 Parameter(name=Configurable.AUTO_CONF, parser=boolparser),
-                Parameter(name=Configurable.DRIVERS, parser=arrayparser),
+                Parameter(name=Configurable.DRIVERS, _type=tuple),
                 Parameter(name=Configurable.RECONF_ONCE, parser=boolparser),
-                Parameter(name=Configurable.CONF_PATHS, parser=arrayparser)
+                Parameter(name=Configurable.CONF_PATHS, _type=tuple)
             ),
             Category(
                 Configurable.LOG,
@@ -434,42 +434,45 @@ class Configurable(object):
         self._logger.setLevel(self._log_name)
 
     @property
-    def conf_paths(self):
+    def paths(self):
         """Get all type conf files and user files.
 
         :return: self conf files
         :rtype: tuple
         """
 
-        result = self._conf_paths
+        result = self._paths
 
         return result
 
-    @conf_paths.setter
-    def conf_paths(self, value):
-        """Change of conf_paths in adding it in watching list."""
+    @paths.setter
+    def paths(self, value):
+        """Change of paths in adding it in watching list."""
 
-        self._conf_paths = tuple(value)
+        self._paths = tuple(value)
 
     def apply_configuration(
-            self, conf=None, conf_paths=None, drivers=None, logger=None,
-            override=True, to_configure=None
+            self, conf=None, paths=None, drivers=None, logger=None,
+            override=True, to_configure=None, _locals=None, _globals=None
     ):
-        """Apply conf on a destination in 5 phases:
+        """Apply conf on a destination in those phases:
 
-        1. identify the right driver to use with conf_paths to parse.
-        2. for all conf_paths, get conf which match
-            with input conf.
-        3. apply parsing rules on conf_path params.
-        4. put values and parsing errors in two different dictionaries.
-        5. returns both dictionaries of param values and errors.
+        1. identify the right driver to use with paths to parse.
+        2. for all paths, get conf which matches input conf.
+        3. apply parsing rules on path parameters.
+        4. fill input conf with resolved parameters.
+        5. apply filled conf on to_configure.
 
         :param Configuration conf: conf from where get conf
-        :param conf_paths: conf files to parse. If
-            conf_paths is a str, it is automatically putted into a list
-        :type conf_paths: list of str
+        :param paths: conf files to parse. If
+            paths is a str, it is automatically putted into a list
+        :type paths: list of str
         :param bool override: if True (by default), override self configuration
         :param to_configure: object to configure. self by default.
+        :param dict _locals: local variable to use for local python expression
+            resolution.
+        :param dict _globals: global variable to use for local python
+            expression resolution.
         """
 
         if conf is None:
@@ -482,37 +485,36 @@ class Configurable(object):
 
             for to_conf in to_configure:
                 self.apply_configuration(
-                    conf=conf, conf_paths=conf_paths, drivers=drivers,
+                    conf=conf, paths=paths, drivers=drivers,
                     logger=logger, override=override, to_configure=to_conf
                 )
 
         else:
-
+            # get conf from drivers and paths
             conf = self.get_conf(
-                conf=conf, conf_paths=conf_paths, logger=logger,
+                conf=conf, paths=paths, logger=logger,
                 drivers=drivers, override=override
             )
-
+            # resolve all values
+            conf.resolve(configurable=self, _globals=_globals, _locals=_locals)
+            # configure resolved configuration
             self.configure(conf=conf, to_configure=to_configure)
 
     def get_conf(
             self,
-            conf=None, conf_paths=None, drivers=None, logger=None,
-            override=True
+            conf=None, paths=None, drivers=None, logger=None, override=True
     ):
-        """Get a dictionary of params by name from conf, conf_paths and drivers
-        .
+        """Get a configuration from paths.
 
-        :param Configuration conf: conf to update. If None, use self.conf
-        :param conf_paths: list of conf files. If None, use self.conf_paths
-        :type conf_paths: list of str
+        :param Configuration conf: conf to update. Default this conf.
+        :param str(s) paths: list of conf files. Default this paths.
         :param Logger logger: logger to use for logging info/error messages.
-            If None, use self.logger
-        :param list drivers: ConfDriver to use. If None, use self
-            drivers.
+            Default self logger.
+        :param list drivers: ConfDriver to use. Default this drivers.
         :param bool override: if True (by default), override self configuration
-        :param to_configure: object to configure. self by default.
         """
+
+        result = None
 
         # start to initialize input params
         if logger is None:
@@ -521,48 +523,51 @@ class Configurable(object):
         if conf is None:
             conf = self.conf
 
-        if conf_paths is None:
-            conf_paths = self._conf_paths
+        if paths is None:
+            paths = self._paths
 
-        if isinstance(conf_paths, basestring):
-            conf_paths = [conf_paths]
+        if isinstance(paths, basestring):
+            paths = [paths]
 
         if drivers is None:
             drivers = self.drivers
 
-        # iterate on all conf_paths
-        for conf_path in conf_paths:
+        # iterate on all paths
+        for path in paths:
 
-            conf_driver = self._get_driver(
-                conf_path=conf_path, logger=logger, drivers=drivers
-            )
+            for driver in drivers:
 
-            # if a config_resource is not None
-            if conf_driver is not None:
-                conf = conf_driver.get_conf(
-                    conf=conf, logger=logger,
-                    conf_path=conf_path, override=override
-                )
+                try:
+                    result = driver.get_conf(
+                        path=path, conf=conf, logger=logger, override=override
+                    )
 
-            else:
-                # if no conf_driver, display a warning log message
-                self.logger.warning(
+                except ConfDriver.Error:
+                    pass
+
+                else:
+                    if result is None or len(result) > 0:
+                        break
+
+            if result is None or len(result) == 0:
+                # if no conf found, display a warning log message
+                logger.warning(
                     'No driver found among {0} for processing {1}'.format(
-                        drivers, conf_path
+                        drivers, path
                     )
                 )
 
-        return conf
+        return result
 
-    def set_conf(self, conf_path, conf=None, driver=None, logger=None):
-        """Set params on input conf_path.
+    def set_conf(self, driver, rscpath, conf=None, logger=None):
+        """Set params on input path.
 
-        :param str conf_paths: conf_path to udate with params
-        :param dict parameter_by_categories: (dict(str: dict(str: object))
-        :param Logger logger: logger to use to set params.
+        :param ConfDriver driver: specific driver to use.
+        :param str rscpath: specific driver resource path to use.
+        :param Configuration conf: configuration to save in resource. Default
+            this conf.
+        :param Logger logger: logger to use to set params. Default this logger.
         """
-
-        result = None
 
         if conf is None:
             conf = self.conf
@@ -570,64 +575,9 @@ class Configurable(object):
         if logger is None:
             logger = self.logger
 
-        # first get content of input conf_path
-        prev_driver = self._get_driver(
-            conf_path=conf_path,
-            logger=logger,
-            drivers=self.drivers
-        )
+        driver.set_conf(conf=conf, rscpath=rscpath, logger=logger)
 
-        if prev_driver is not None:
-            prev_conf = prev_driver.get_conf(
-                conf_path=conf_path, logger=logger
-            )
-
-        # try to find a good driver if driver is None
-        if driver is None:
-            driver = self._get_driver(
-                conf_path=conf_path,
-                logger=logger,
-                drivers=self.drivers
-            )
-
-        elif isclass(driver):
-            driver = driver()
-
-        else:
-            driver = self._get_driver(
-                conf_path=None,
-                logger=logger,
-                drivers=driver)
-
-        # if prev driver is not the new driver
-        if (
-            prev_conf is not None
-            and type(driver) is not type(prev_driver)
-        ):
-            # update prev_conf with input conf
-            prev_conf.update(conf)
-            conf = prev_conf
-
-        if driver is not None:
-            driver.set_conf(
-                conf_path=conf_path,
-                conf=conf,
-                logger=logger
-            )
-
-        else:
-            self.logger.error(
-                'No ConfDriver found for conf resource {0}'.format(
-                    conf_path
-                )
-            )
-
-        return result
-
-    def configure(
-            self, conf=None, logger=None, to_configure=None,
-            _locals=None, _globals=None
-    ):
+    def configure(self, conf=None, logger=None, to_configure=None):
         """Update self properties with input params only if:
 
         - self.configure is True
@@ -640,10 +590,6 @@ class Configurable(object):
         :param Configuration conf: configuration model to configure. Default is
             this conf.
         :param to_configure: object to configure. self if equals None.
-        :param dict _locals: local variable to use for local python expression
-            resolution.
-        :param dict _globals: global variable to use for local python
-            expression resolution.
         :raises: Parameter.Error for any raised exception.
         """
 
@@ -662,10 +608,6 @@ class Configurable(object):
                 logger = self.logger
 
             unified_conf = conf.unify()
-
-            unified_conf.resolve(
-                configurable=self, _locals=_locals, _globals=_globals
-            )
 
             values = unified_conf[Configuration.VALUES]
 
@@ -808,42 +750,16 @@ class Configurable(object):
 
         return result
 
-    def _init_conf_paths(self, conf_paths):
+    def _init_paths(self, paths):
 
-        if conf_paths is None:
-            self.conf_paths = self._get_conf_paths()
+        if paths is None:
+            self.paths = self._get_paths()
 
         else:
-            self.conf_paths = conf_paths
+            self.paths = paths
 
-    def _get_conf_paths(self):
+    def _get_paths(self):
 
         result = [Configurable.CONF_PATH]
-
-        return result
-
-    @staticmethod
-    def _get_driver(conf_path, drivers, logger):
-        """Get the first driver able to handle input conf_path.
-        None if no driver is able to handle input conf_path.
-
-        :return: first ConfDriver able to handle conf_path.
-        :rtype: ConfDriver
-        """
-
-        result = None
-
-        for driver in drivers.split(','):
-            driver = ConfDriver.get_driver(driver)
-            driver = driver()
-
-            handle = (
-                conf_path is None
-                or driver.handle(conf_path=conf_path, logger=logger)
-            )
-
-            if handle:
-                result = driver
-                break
 
         return result
