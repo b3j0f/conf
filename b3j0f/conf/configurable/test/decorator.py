@@ -25,10 +25,12 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+from __future__ import absolute_import
+
 
 from unittest import main, TestCase
 
-from b3j0f.utils.version import range
+from builtins import range
 
 from ...model import Parameter, Category
 from ..core import Configurable

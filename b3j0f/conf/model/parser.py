@@ -26,19 +26,54 @@
 
 """Parameter parser module.
 
-A parser is able to transform a serialized parameter value to a python object.
+The parser transform a serialization parameter value to a parameter value,
+related to parameter properties (_type, _globals, _locals, etc.).
 
-A parser is a callable object which takes in parameter :
+It takes in parameter :
 
 - svalue: the serialized value.
 - configuration: the configuration.
 - configurable: the configurable.
 - logger: a logger.
-- _locals and _globals respective dictionaries of local/global variables.
+- _locals and _globals respective dictionaries of local/global variables for python expressions.
 - _type: final value type to check.
+
+There are two kind of values:
+
+- simple values: like in most system configuration files, such values are string by default.
+- expression values: contains a python expression.
+
+Simple value
+-------------
+
+Expression value
+----------------
+
+Expression values are evaluated in a safe context (without I/O functions).
+
+For example:
+
+- ``2``: default integer value.
+- ``true``: default boolean value.
+- ``test``: default string value.
+- ``:="test".capitalize()``: expression value which result in a string value.
+- ``:=3**4: expression value which result in an integer value.
+
+expression values accept three keywords which does not exist in the python language.
+
+- '#'{path}: get a python object given by the ``path`` value.
+- '@'({r}'/')?({c}?'.')?{p}: use a parameter value specified in the same scope than the input configuration, where ``r``, ``c`` and ``p`` designate respectively the resource, the category and the parameter to retrieve.
+
+.. csv-table::
+    :header: expr, description
+
+    - @r/c.p, "parameter p, from the category c in the configuration resource r"
+    - @c.p, "parameter value from the category c in the same configurable scope"
+    - @.p, "parameter value from the current category"
+    - @p, "last parameter value of the configurable object"
 """
 
-__all__ = ['boolparser', 'getexprparser', 'exprparser', 'ParserError']
+__all__ = ['parser', 'ParserError', 'getscope']
 
 
 from b3j0f.utils.path import lookup
@@ -51,125 +86,147 @@ class ParserError(Exception):
     """Handle parser errors."""
 
 
-EVAL_PARAM = r'\$([a-zA-Z_]\w*)(\.[a-zA-Z_]\w*)+?'  #: local param regex.
-EVAL_FOREIGN = r'\@([.^\/]+)\/([a-zA-Z_]\w*)\.([a-zA-Z_]\w*)'  #: foreign param re.
-EVAL_LOOKUP = r'\#([a-zA-Z_]\w*\.?)+'  #: lookup param regex.
+REF_PREFIX = '@'
+LOOKUP_PREFIX = '#'
 
-REGEX = '({0})|({1})|({2})'.format(EVAL_PARAM, EVAL_LOOKUP, EVAL_FOREIGN)
+#: ref parameter.
+EVAL_REF = r'{0}([.^\/]+\/){1}?([a-zA-Z_]\w*){1}?(\.)?([a-zA-Z_]\w*)'
+EVAL_REF = EVAL_REF.format(REF_PREFIX, '{1}')
+#: lookup param regex.
+EVAL_LOOKUP = r'{0}([a-zA-Z_]\w*\.?)+'.format(LOOKUP_PREFIX)
+
+REGEX = r'({0})|({1})'.format(EVAL_LOOKUP, EVAL_REF)
 COMPILED_REGEX = re_compile(REGEX)
 
-
-def getexprparser(_globals=None, _locals=None):
-    """Generate an expression parser from input parameters."""
-
-    def _exprparser(
-            svalue, configuration=None, configurable=None, _type=object,
-            _locals=None, _globals=None, __locals=_locals, __globals=_globals,
-            *args, **kwargs
-    ):
-        """Expression parser.
-
-        Evaluate safely input svalue.
-
-        Value is a lambda body expression evaluated in a safely scope (only
-        builtin is loaded) where configuration categories/parameters are
-        prefixed by the character '$'.
-
-        For example, ``$cat.param`` designates the svalue of the category named
-        ``cat`` and the parameter named ``param``. And ``$param`` designates
-        the final svalue of the parameter named ``param``.
-        """
-
-        result = None
-
-        compilation = COMPILED_REGEX.sub(repl, svalue)
-
-        if compilation:
-
-            if _locals is None:
-                _locals = {}
-
-            if __locals is not None:
-                _locals.update(__locals)
-
-            _locals.update(
-                {
-                    'resolve': _resolve,
-                    'configurable': configurable,
-                    'lookup': lookup,
-                    'configuration': configuration
-                }
-            )
-
-            if _globals is None:
-                _globals = {}
-
-            if __globals is not None:
-                _globals.update(__globals)
-
-            result = safe_eval(compilation, _globals, _locals)
-
-            if not isinstance(result, _type):
-
-                # try to convert to _type
-                try:
-                    result = _type(result)
-
-                except Exception:
-                    pass
-
-                if not isinstance(result, _type):
-
-                    raise ParserError(
-                        'Wrong svalue {0}. {1} expected.'.format(svalue, _type)
-                    )
-
-        return result
-
-    return _exprparser
+EXPR_PREFIX = ':='  #: expression prefix
 
 
-def repl(match):
+def parser(
+        svalue, configuration=None, configurable=None, _type=object,
+        _locals=None, _globals=None, *args, **kwargs
+):
+    """Expression parser.
+
+    Evaluate safely input svalue.
+
+    Value is a lambda body expression evaluated in a safely scope (only
+    builtin is loaded) where configuration categories/parameters are
+    prefixed by the character '$'.
+
+    For example, ``$cat.param`` designates the svalue of the category named
+    ``cat`` and the parameter named ``param``. And ``$param`` designates
+    the final svalue of the parameter named ``param``.
+    """
+
+    result = None
+
+    if svalue.startswith(EXPR_PREFIX):
+        value = _exprparser(
+            svalue=svalue[len(EXPR_PREFIX):], configuration=configuration,
+            configurable=configurable, _locals=_locals, _globals=_globals
+        )
+
+    else:
+        value = _simpleparser(svalue=svalue, _type=_type)
+
+    result = value
+
+    # try to cast value in _type
+    if not isinstance(result, _type):
+        try:
+            result = _type(svalue)
+
+        except TypeError:
+            result = value
+
+    return result
+
+
+def _simpleparser(svalue, _type):
+    """Execute a simple parsing.
+
+    :param str svalue: serialized value to parse.
+    :param type _type: expected value type.
+    """
+
+    result = svalue
+
+    if issubclass(_type, bool):
+        result = result in ('1', 'True', 'true')
+
+    return result
+
+
+def _exprparser(
+        svalue, configuration=None, configurable=None,
+        _locals=None, _globals=None
+):
+    """Parse input serialized value such as an expression."""
+
+    compilation = COMPILED_REGEX.sub(_repl, svalue)
+
+    if compilation:
+
+        default_locals = {
+            'resolve': _resolve,
+            'configurable': configurable,
+            'lookup': lookup,
+            'configuration': configuration
+        }
+
+        final_locals = getscope(_locals, default_locals)
+
+        default_locals = {}
+
+        final_globals = getscope(_globals)
+
+        result = safe_eval(compilation, final_globals, final_locals)
+
+    return result
+
+
+def _repl(match):
     """Replace matching expression in input match with corresponding
     conf accessor."""
 
     result = match
 
-    if match[0] == '`':
+    if match[0]:  # is a lookup ?
 
-        result = 'lookup(path={0})'.format(match[1:])
+        result = 'lookup(path=\'{0}\')'.format(match[1:])
 
-    elif match[0] == '@':
+    else:  # is a reference
 
-        result = '_resolve(match={0}, configurable=configurable)'.format(
-            match[1:]
+        path, cname, rel, pname = match[1]  # get path, cname and pname
+
+        params = 'path=\'{0}\', cname=\'{1}\', pname=\'{2}\', rel={3}'.format(
+            path, cname, pname, rel
         )
-
-    elif match[1]:
-        result = 'configuration[{0}][{1}].value'.format(*match)
-
-    else:
-        result = 'configuration.getvparam({0}).value'.format(match[0])
+        conf = 'configurable=configurable, configuration=configuration'
+        result = '_resolve({0}, {1}, {2})'.format(conf, params, rel)
 
     return result
 
 
-def _resolve(match, configurable):
+def _resolve(path, cname, pname, rel, configurable, configuration):
     """Resolve a foreign parameter value."""
 
     result = None
 
-    path, cat, param = match
-
     conf = configurable.get_conf(paths=path)
 
-    category = conf.get(cat)
+    if cname is None:
+        parameter = configuration.getparam(pname)
 
-    if category is not None:
-        parameter = category.get(param)
+    else:
 
-        if parameter is not None:
-            result = parameter.value
+        category = conf.get(cname)
+
+        if category is not None:
+            parameter = category.get(pname)
+
+    if parameter is not None:
+        result = parameter.value
 
     if result is None:
         raise ParserError(
@@ -179,19 +236,13 @@ def _resolve(match, configurable):
     return result
 
 
-exprparser = getexprparser()  #: default expr parser.
+def getscope(*scopes):
+    """Construct a scope from less specific to more specific scopes."""
 
+    result = {}
 
-def boolparser(*args, **kwargs):
-    """Boolean value parser.
+    for scope in scopes:
+        if scope is not None:
+            result.update(scope)
 
-    :param str svalue: serialized value to parse.
-    :return: True if svalue in [True, true, 1]. False Otherwise.
-    :rtype: bool
-    """
-
-    _locals = {
-        'true': True
-    }
-
-    return exprparser(_type=bool, _locals=_locals, *args, **kwargs)
+    return result

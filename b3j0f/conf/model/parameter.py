@@ -31,11 +31,11 @@ __all__ = ['Parameter']
 
 from .base import ModelElement
 
-from b3j0f.utils.version import basestring
+from six import string_types, reraise
 
 from re import compile as re_compile
 
-from .parser import exprparser
+from .parser import parser, getscope
 
 
 class Parameter(ModelElement):
@@ -61,7 +61,8 @@ class Parameter(ModelElement):
 
     __slots__ = (
         '_name', 'vtype', 'parser', '_svalue', '_value', '_error', 'conf',
-        'critical', 'local', 'asitem'
+        'critical', 'local', 'asitem', 'name', 'value', '_globals', '_locals',
+        'svalue'
     ) + ModelElement.__slots__
 
     CONF_SUFFIX = '::conf'  #: parameter configuration name.
@@ -74,8 +75,9 @@ class Parameter(ModelElement):
         """Handle Parameter errors."""
 
     def __init__(
-            self, name, vtype=object, svalue=None, parser=exprparser,
+            self, name, vtype=object, svalue=None, parser=parser,
             value=None, conf=None, critical=False, local=True, asitem=None,
+            _globals=None, _locals=None,
             *args, **kwargs
     ):
         """
@@ -108,7 +110,7 @@ class Parameter(ModelElement):
         self._svalue = None
 
         # init public attributes
-        self.parser = exprparser
+        self.parser = parser
         self.name = name
         self.vtype = vtype
         self.conf = conf
@@ -117,6 +119,8 @@ class Parameter(ModelElement):
         self.asitem = asitem
         self.svalue = svalue
         self.value = value
+        self._globals = _globals
+        self._locals = _locals
 
     def __eq__(self, other):
 
@@ -155,7 +159,7 @@ class Parameter(ModelElement):
         :param str value: name value.
         """
 
-        if isinstance(value, basestring):
+        if isinstance(value, string_types):
 
             if not Parameter._PARAM_NAME_COMPILER.match(value):
                 value = re_compile(value)
@@ -188,7 +192,7 @@ class Parameter(ModelElement):
             pass
 
         else:
-            if isinstance(value, basestring):
+            if isinstance(value, string_types):
                 result = '"{0}"'.format(self._svalue)
 
         return result
@@ -208,7 +212,8 @@ class Parameter(ModelElement):
 
     def resolve(
             self,
-            configurable=None, configuration=None, _locals=None, _globals=None
+            configurable=None, configuration=None, _locals=None, _globals=None,
+            parser=None
     ):
         """Resolve this parameter value related to a configurable and a
         configuration.
@@ -221,6 +226,7 @@ class Parameter(ModelElement):
             resolution.
         :param dict _globals: global variable to use for local python
             expression resolution.
+        :param parser: specific parser to use. Default this parser.
         :return: newly resolved value.
         :raises: Parameter.Error for any raised exception.
         """
@@ -232,13 +238,20 @@ class Parameter(ModelElement):
 
             self._error = None  # nonify error.
 
-            if self.parser is None:
+            if parser is None:
+                parser = self.parser
+
+            if parser is None:
                 result = self.value = self._svalue
 
             else:
+
+                _locals = getscope(self._locals, _locals)
+                _globals = getscope(self._globals, _globals)
+
                 # parse value if str and if parser exists
                 try:
-                    finalvalue = self.parser(
+                    finalvalue = parser(
                         svalue=self._svalue, configuration=configuration,
                         configurable=configurable, _type=self.vtype,
                         _locals=_locals, _globals=_globals
@@ -246,11 +259,10 @@ class Parameter(ModelElement):
 
                 except Exception as ex:
                     self._error = ex
-                    raise Parameter.Error(
-                        'Impossible to parse value "{0}" with {1}.'.format(
-                            self._svalue, self.parser
-                        )
-                    ).with_traceback(ex.__traceback__)
+                    msg = 'Impossible to parse value "{0}" with {1}.'.format(
+                        self._svalue, self.parser
+                    )
+                    reraise(Parameter.Error, Parameter.Error(msg))
 
                 else:
                     # try to apply conf
@@ -263,10 +275,10 @@ class Parameter(ModelElement):
 
                         except Exception as ex:
                             self._error = ex
-                            raise Parameter.Error(
-                                'Error while calling param conf {0} on ({1}).'
-                                .format(self.conf, finalvalue)
-                            ).with_traceback(ex.__traceback__)
+                            msg = 'while calling param conf {0} on {1}.'.format(
+                                self.conf, finalvalue
+                            )
+                            reraise(Parameter.Error, Parameter.Error(msg))
 
         return result
 

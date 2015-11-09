@@ -25,6 +25,8 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+"""b3j0f.conf building script."""
+
 from setuptools import setup, find_packages
 
 from os.path import abspath, dirname, join, expanduser
@@ -55,7 +57,7 @@ KEYWORDS = [
     'reflectivity'
 ]
 
-dependencies = ['b3j0f.utils', 'b3j0f.annotation']
+dependencies = ['b3j0f.utils', 'b3j0f.annotation', 'six']
 
 DESCRIPTION = 'python class configuration tools useful in python projects.'
 
@@ -95,7 +97,7 @@ setup(
     keywords=KEYWORDS,
     data_files=[
         (
-            expanduser('~/etc/'),
+            expanduser('~/.config/'),
             ['etc/b3j0fconf-configurable.conf']
         )
     ]

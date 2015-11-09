@@ -29,7 +29,7 @@
 __all__ = ['Category']
 
 
-from b3j0f.utils.version import basestring
+from six import string_types
 
 from .base import CompositeModelElement
 from .parameter import Parameter
@@ -59,7 +59,7 @@ class Category(CompositeModelElement):
 
         result = []
 
-        if isinstance(pname, basestring):
+        if isinstance(pname, string_types):
 
             if pname in self._content:
                 result = [self._content[pname]]

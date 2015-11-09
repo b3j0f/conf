@@ -31,17 +31,16 @@ from logging import Formatter, getLogger, FileHandler, Filter
 
 from os.path import join, sep
 
-from inspect import isclass
+from six import string_types
 
-from b3j0f.utils.version import basestring
 from b3j0f.utils.property import addproperties
 
 from ..model.configuration import Configuration
 from ..model.category import Category
 from ..model.parameter import Parameter
-from ..model.parser import boolparser
 
 from ..driver.core import ConfDriver
+from ..driver.file import JSONConfDriver, INIConfDriver
 
 
 class MetaConfigurable(type):
@@ -95,10 +94,7 @@ class Configurable(object):
     __metaclass__ = MetaConfigurable
 
     # default drivers which are json and ini.
-    DEFAULT_DRIVERS = '{0},{1}'.format(
-        'b3j0f.conf.driver.file.json_.JSONConfDriver',
-        'b3j0f.conf.driver.file.ini.INIConfDriver'
-    )
+    DEFAULT_DRIVERS = [JSONConfDriver(), INIConfDriver()]
 
     INIT_CAT = 'init_cat'  #: initialization category.
 
@@ -312,9 +308,9 @@ class Configurable(object):
         result = Configuration(
             Category(
                 Configurable.CONF,
-                Parameter(name=Configurable.AUTO_CONF, parser=boolparser),
+                Parameter(name=Configurable.AUTO_CONF, _type=bool),
                 Parameter(name=Configurable.DRIVERS, _type=tuple),
-                Parameter(name=Configurable.RECONF_ONCE, parser=boolparser),
+                Parameter(name=Configurable.RECONF_ONCE, _type=bool),
                 Parameter(name=Configurable.CONF_PATHS, _type=tuple)
             ),
             Category(
@@ -526,7 +522,7 @@ class Configurable(object):
         if paths is None:
             paths = self._paths
 
-        if isinstance(paths, basestring):
+        if isinstance(paths, string_types):
             paths = [paths]
 
         if drivers is None:

@@ -37,7 +37,7 @@ from ..parameter import Parameter
 from ...configurable.core import Configurable
 
 
-from ..parser import getexprparser, ParserError
+from ..parser import ParserError
 
 
 class ConfigurationTest(UTCase):

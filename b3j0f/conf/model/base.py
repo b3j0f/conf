@@ -26,11 +26,11 @@
 
 """Configuration definition objects."""
 
+from __future__ import absolute_import
+
 __all__ = ['ModelElement', 'CompositeModelElement']
 
-from collections import Iterable
-
-from b3j0f.utils.version import OrderedDict
+from collections import Iterable, OrderedDict
 
 
 class ModelElement(object):

@@ -26,7 +26,11 @@
 
 """JSON configuration file driver."""
 
+from __future__ import absolute_import
+
 __all__ = ['JSONConfDriver']
+
+from builtins import open
 
 try:
     from json import load, dump
@@ -35,6 +39,10 @@ except ImportError:
     from simplejson import load, dump
 
 from .core import FileConfDriver
+
+from six import reraise
+
+from sys import exc_info
 
 
 class JSONConfDriver(FileConfDriver):
@@ -51,15 +59,13 @@ class JSONConfDriver(FileConfDriver):
                 try:
                     result = load(fpr)
 
-                except ValueError as ve:
-                    logger.error('{0} {1}: {2}'.format(
-                        msg, ve, ve.__traceback__)
-                    )
-                    raise self.Error(msg).with_traceback(ve.__traceback__)
+                except ValueError as vex:
+                    logger.error('{0} {1}: {2}'.format(msg, vex, exc_info()[2]))
+                    reraise(self.Error, self.Error(msg))
 
-        except OSError as oe:
-            logger.error('{0} {1}: {2}'.format(msg, oe, oe.__traceback__))
-            raise self.Error(msg).with_traceback(oe.__traceback__)
+        except OSError as oex:
+            logger.error('{0} {1}: {2}'.format(msg, oex, exc_info()[2]))
+            reraise(self.Error, self.Error(msg))
 
         return result
 
@@ -94,12 +100,11 @@ class JSONConfDriver(FileConfDriver):
             with open(rscpath, 'wb') as fpw:
                 try:
                     dump(fpw, resource)
-                except ValueError as ve:
-                    logger.error(
-                        '{0} {1}: {2}'.format(msg, ve, ve.__traceback__)
-                    )
-                    raise self.Error(msg).with_traceback(ve.__traceback__)
 
-        except OSError as oe:
-            logger.error('{0} {1}: {2}'.format(msg, oe, oe.__traceback__))
-            raise self.Error(msg).with_traceback(oe.__traceback__)
+                except ValueError as vex:
+                    logger.error('{0} {1}: {2}'.format(msg, vex, exc_info()[2]))
+                    reraise(self.Error, self.Error(msg))
+
+        except OSError as oex:
+            logger.error('{0} {1}: {2}'.format(msg, oex, exc_info()[2]))
+            reraise(self.Error, self.Error(msg))

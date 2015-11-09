@@ -36,7 +36,7 @@ from unittest import main
 from ....model.configuration import Configuration
 from ....model.category import Category
 from ....model.parameter import Parameter
-from ....model.parser import boolparser
+
 from ..core import FileConfDriver
 
 from pickle import loads, dump
@@ -108,13 +108,13 @@ class FileConfDriverTest(UTCase):
         self.conf = Configuration(
             Category(
                 'A',
-                Parameter('a', value=0, parser=int),  # a is 0
-                Parameter('b', value=True, parser=boolparser)
+                Parameter('a', value=0, _type=int),  # a is 0
+                Parameter('b', value=True, _type=bool)
             ),  # b is overriden
             Category(
                 'B',
-                Parameter('b', value=1, parser=int),  # b is 1
-                Parameter('c', parser=int, svalue='er')   # error
+                Parameter('b', value=1, _type=int),  # b is 1
+                Parameter('c', _type=int, svalue='er')   # error
             )
         )
 

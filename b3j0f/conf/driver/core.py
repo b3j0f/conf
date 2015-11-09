@@ -45,6 +45,10 @@ from ..model.configuration import Configuration
 from ..model.category import Category
 from ..model.parameter import Parameter
 
+from six import reraise
+
+from sys import exc_info
+
 
 class ConfDriver(object):
     """Base class for managing conf."""
@@ -102,7 +106,7 @@ class ConfDriver(object):
             msg = 'Error while getting resource from {0}. {1}: {2}.'.format(
                 rscpath
             )
-            logger.warning(msg, ex, ex.__traceback__)
+            logger.warning(msg, ex, exc_info()[2])
 
         else:
             for cname in self._cnames(resource):
@@ -164,12 +168,10 @@ class ConfDriver(object):
                 msg = 'Error while getting configuration from {0}.'.format(
                     rscpath
                 )
-                full_msg = '{0} {1}: {2}'.format(msg, ex, ex.__traceback__)
+                full_msg = '{0} {1}: {2}'.format(msg, ex, exc_info()[2])
                 logger.warning(full_msg)
                 if error:
-                    raise ConfDriver.Error(msg).with_traceback(
-                        ex.__traceback__
-                    )
+                    reraise(ConfDriver.Error, ConfDriver.Error(msg))
 
             else:
                 if pathconf is None:  # do something only if pathconf exists
@@ -185,18 +187,16 @@ class ConfDriver(object):
 
         else:
             try:
-                conf.fill(pathconf, override=override, svalueonly=True)
+                conf.fill(conf=pathconf, override=override, svalueonly=True)
 
             except Parameter.Error as pex:
-                msg = 'Error while filling {0} from rscpath {1}.'.format(
-                    pex, rscpath
+                msg = 'Error while filling {0} from path {1}.'.format(
+                    pex, path
                 )
-                full_msg = '{0} {1}: {2}'.format(msg, pex, pex.__traceback__)
+                full_msg = '{0} {1}: {2}'.format(msg, pex, exc_info()[2])
                 logger.warning(full_msg)
                 if error:
-                    raise ConfDriver.Error(msg).with_traceback(
-                        pex.__traceback__
-                    )
+                    reraise(ConfDriver.Error, ConfDriver.Error(msg))
 
             result = conf
 
@@ -211,12 +211,12 @@ class ConfDriver(object):
         """
 
         try:
-            resource = self._resource(rscpath=rscpath)
+            resource = self._resource(rscpath=rscpath, logger=logger)
 
-        except Exception as e:
+        except Exception as ex:
             msg = 'Error while getting resource from {0}'.format(rscpath)
-            logger.warning('{0} {1}: {2}.'.format(msg, e, e.__traceback__))
-            self.Error(msg).with_traceback(e.__traceback__)
+            logger.warning('{0} {1}: {2}.'.format(msg, ex, exc_info()[2]))
+            reraise(self.Error, self.Error(msg))
 
         else:
             self._set_conf(

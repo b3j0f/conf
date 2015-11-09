@@ -26,11 +26,19 @@
 
 """Ini configuration file driver."""
 
+from __future__ import absolute_import
+
 __all__ = ['INIConfDriver']
 
-from b3j0f.utils.version import configparser
+from configparser import RawConfigParser, MissingSectionHeaderError
 
 from .core import FileConfDriver
+
+from builtins import open
+
+from sys import exc_info
+
+from six import reraise
 
 
 class INIConfDriver(FileConfDriver):
@@ -38,17 +46,17 @@ class INIConfDriver(FileConfDriver):
 
     def _resource(self, rscpath, logger):
 
-        result = configparser.RawConfigParser()
+        result = RawConfigParser()
 
         try:
             result.read(rscpath)
 
-        except configparser.MissingSectionHeaderError as mshe:
+        except MissingSectionHeaderError as mshe:
             msg = 'Missing section header in {0}.'.format(rscpath)
             logger.error(
-                '{0} {1}: {2}'.format(msg, mshe, mshe.__traceback__)
+                '{0} {1}: {2}'.format(msg, mshe, exc_info()[2])
             )
-            raise self.Error(msg).with_traceback(mshe.__traceback__)
+            reraise(self.Error, self.Error(msg))
 
         return result
 
@@ -82,8 +90,6 @@ class INIConfDriver(FileConfDriver):
 
         except OSError as ose:
             msg = 'Error while putting resource to {0}'.format(rscpath)
-            full_msg = '{0} {1}: {2}'.format(
-                msg, ose, ose.__traceback__
-            )
+            full_msg = '{0} {1}: {2}'.format(msg, ose, exc_info()[2])
             logger.error(full_msg)
-            raise self.Error(msg).with_traceback(ose.__traceback__)
+            reraise(self.Error, self.Error(msg))

@@ -30,7 +30,7 @@ from unittest import main
 
 from .core import FileConfDriverTest
 
-from ..json_ import JSONConfDriver
+from ..json import JSONConfDriver
 
 
 class JSONConfDriverTest(FileConfDriverTest):
