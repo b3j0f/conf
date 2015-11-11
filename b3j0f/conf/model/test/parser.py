@@ -37,58 +37,65 @@ from ..parameter import Parameter
 from ...configurable.core import Configurable
 
 
-from ..parser import ParserError
+from ..parser import ParserError, _simpleparser, _exprparser
 
 
-class ParserTest(UTCase):
-    """Test exprparser."""
+class SimpleParserTest(UTCase):
+    """Test the function _simpleparser."""
 
-    def setUp(self):
+    def test_bool_empty(self):
+        """Test bool type with an empty string."""
 
-        self.configuration = Configuration(
-            Category(
-                'ctest',
-                Parameter('ptest')
-            )
-        )
+        value = _simpleparser(svalue='', _type=bool)
 
-        self.configurable = Configurable()
+        self.assertFalse(value)
 
-    def _assertValue(
-        self, svalue, _type=object, _globals=None, _locals=None, exp=False
-    ):
-        """Assert value with input _type."""
+    def test_bool_1(self):
+        """Test bool type with 1."""
 
-        exprparser = getexprparser()
+        value = _simpleparser(svalue='1', _type=bool)
 
-        if exp:
+        self.assertTrue(value)
 
-            self.assertRaises(
-                ParserError, exprparser,
-                svalue=svalue, _type=_type, _globals=_globals, _locals=_locals
-            )
+    def test_bool_true(self):
+        """Test bool type with true."""
 
-        value = exprparser(
-            svalue=svalue, _type=_type, _globals=_globals, _locals=_locals
-        )
+        value = _simpleparser(svalue='true', _type=bool)
 
-        self.assertIsInstance(value, _type)
+        self.assertTrue(value)
 
-    def test_int(self):
-        """Test exprparser with int _type."""
+    def test_bool_True(self):
+        """Test bool type with True value."""
 
-        exprparser = getexprparser()
+        value = _simpleparser(svalue='True', _type=bool)
 
-        value = exprparser(svalue="1", _type=int)
+        self.assertTrue(value)
 
-        self.assertIsInstance(value, int)
+    def test_bool_wrong(self):
+        """Test bool type with false value."""
 
-    def test_default(self):
-        """Test getexprparser with default parameters."""
+        value = _simpleparser(svalue='TrUe', _type=bool)
 
-        exprparser = getexprparser()
+        self.assertFalse(value)
 
-        self.assertIsNotNone(exprparser)
+    def test_string(self):
+        """Test default with string type."""
+
+        value = _simpleparser(svalue='test')
+
+        self.assertEqual(value, 'test')
+
+
+class ExprParser(UTCase):
+    """Test the function _exprparser."""
+
+    def test(self):
+        """Test default value."""
+
+        value = _exprparser(svalue='')
+
+        self.assertFalse(value, '')
+
 
 if __name__ == '__main__':
     main()

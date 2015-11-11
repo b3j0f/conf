@@ -61,8 +61,7 @@ class Parameter(ModelElement):
 
     __slots__ = (
         '_name', 'vtype', 'parser', '_svalue', '_value', '_error', 'conf',
-        'critical', 'local', 'asitem', 'name', 'value', '_globals', '_locals',
-        'svalue'
+        'critical', 'local', 'asitem', '_globals', '_locals'
     ) + ModelElement.__slots__
 
     CONF_SUFFIX = '::conf'  #: parameter configuration name.

@@ -67,10 +67,10 @@ expression values accept three keywords which does not exist in the python langu
 .. csv-table::
     :header: expr, description
 
-    - @r/c.p, "parameter p, from the category c in the configuration resource r"
-    - @c.p, "parameter value from the category c in the same configurable scope"
-    - @.p, "parameter value from the current category"
-    - @p, "last parameter value of the configurable object"
+    "@r/c.p", "parameter p, from the category c in the configuration resource r"
+    "@c.p", "parameter value from the category c in the same configurable scope"
+    "@.p", "parameter value from the current category"
+    "@p", "last parameter value of the configurable object"
 """
 
 __all__ = ['parser', 'ParserError', 'getscope']
@@ -81,9 +81,7 @@ from b3j0f.utils.runtime import safe_eval
 
 from re import compile as re_compile
 
-
-class ParserError(Exception):
-    """Handle parser errors."""
+from parser import ParserError
 
 
 REF_PREFIX = '@'
@@ -142,7 +140,7 @@ def parser(
     return result
 
 
-def _simpleparser(svalue, _type):
+def _simpleparser(svalue, _type=str):
     """Execute a simple parsing.
 
     :param str svalue: serialized value to parse.
@@ -162,6 +160,8 @@ def _exprparser(
         _locals=None, _globals=None
 ):
     """Parse input serialized value such as an expression."""
+
+    result = None
 
     compilation = COMPILED_REGEX.sub(_repl, svalue)
 
