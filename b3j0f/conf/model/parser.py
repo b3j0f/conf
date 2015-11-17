@@ -83,6 +83,8 @@ from re import compile as re_compile
 
 from parser import ParserError
 
+from six import reraise
+
 
 REF_PREFIX = '@'
 LOOKUP_PREFIX = '#'
@@ -197,41 +199,40 @@ def _repl(match):
 
     else:  # is a reference
 
-        path, cname, rel, pname = match[1]  # get path, cname and pname
+        path, cname, pname = match[1]  # get path, cname and pname
 
-        params = 'path=\'{0}\', cname=\'{1}\', pname=\'{2}\', rel={3}'.format(
-            path, cname, pname, rel
+        params = 'path=\'{0}\', cname=\'{1}\', pname=\'{2}\''.format(
+            path, cname, pname
         )
         conf = 'configurable=configurable, configuration=configuration'
-        result = '_resolve({0}, {1}, {2})'.format(conf, params, rel)
+        result = '_resolve({0}, {1})'.format(conf, params)
 
     return result
 
 
-def _resolve(path, cname, pname, rel, configurable, configuration):
-    """Resolve a foreign parameter value."""
+def _resolve(pname, conf=None, configurable=None, cname=None, path=None):
+    """Resolve a foreign parameter value.
+
+    :param Configuration conf: configuration to use.
+    :param str pname: parameter name.
+    :param Configurable configurable: configurable.
+    :param str cname: category name.
+    :param str path: conf path.
+    :return: parameter
+    """
 
     result = None
 
-    conf = configurable.get_conf(paths=path)
+    if configurable is not None:
+        kwargs = {}
+        if conf is not None:
+            kwargs['conf'] = conf
+        if path is not None:
+            kwargs['paths'] = path
 
-    if cname is None:
-        parameter = configuration.getparam(pname)
+        conf = configurable.get_conf(**kwargs)
 
-    else:
-
-        category = conf.get(cname)
-
-        if category is not None:
-            parameter = category.get(pname)
-
-    if parameter is not None:
-        result = parameter.value
-
-    if result is None:
-        raise ParserError(
-            'Foreign value ({0}) does not exist.'.format(match)
-        )
+    result = conf.pvalue(pname=pname, cname=cname)
 
     return result
 

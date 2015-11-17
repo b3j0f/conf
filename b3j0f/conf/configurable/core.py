@@ -34,6 +34,7 @@ from os.path import join, sep
 from six import string_types
 
 from b3j0f.utils.property import addproperties
+from b3j0f.utils.iterable import ensureiterable
 
 from ..model.configuration import Configuration
 from ..model.category import Category
@@ -75,6 +76,19 @@ class ConfigurableError(Exception):
     """Handle Configurable errors."""
 
 
+def _updatedrivers(self, *_):
+    """Ensure drivers is a list of drivers."""
+
+    drivers = self._drivers
+
+    drivers = ensureiterable(drivers)
+
+    self._drivers = [
+        driver if isinstance(driver, ConfDriver) else driver()
+        for driver in drivers
+    ]
+
+
 def _updatelogger(self, kwargsvalue, name):
     """Renew self logger."""
     self._logger = self.newlogger()
@@ -87,6 +101,7 @@ def _updatelogger(self, kwargsvalue, name):
     ], afset=_updatelogger
 )
 @addproperties(names=['auto_conf', 'reconf_once', 'drivers', 'logger'])
+@addproperties(names=['drivers'], afset=_updatedrivers)
 class Configurable(object):
     """Manage class conf synchronisation with conf resources."""
 

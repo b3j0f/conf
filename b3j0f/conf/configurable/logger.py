@@ -33,7 +33,6 @@ from os.path import join, sep
 
 from b3j0f.utils.property import addproperties
 
-from ..model.configuration import Configuration
 from ..model.category import Category
 from ..model.parameter import Parameter
 

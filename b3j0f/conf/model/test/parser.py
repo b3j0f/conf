@@ -25,6 +25,7 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+"""parser UTs"""
 
 from unittest import main
 
@@ -37,7 +38,9 @@ from ..parameter import Parameter
 from ...configurable.core import Configurable
 
 
-from ..parser import ParserError, _simpleparser, _exprparser
+from ..parser import (
+    ParserError, _simpleparser, _exprparser, _resolve
+)
 
 
 class SimpleParserTest(UTCase):
@@ -84,6 +87,45 @@ class SimpleParserTest(UTCase):
         value = _simpleparser(svalue='test')
 
         self.assertEqual(value, 'test')
+
+
+class Resolve(UTCase):
+    """Test _resolve."""
+
+    def setUp(self):
+
+        self.cnames = ['cfirst', 'csecond']
+
+        self.conf = Configuration(
+            Category(self.cnames[0], Parameter('param', value=1)),
+            Category(self.cnames[1], Parameter('param', value=2))
+        )
+
+    def test_default(self):
+        """Test default params."""
+
+        value = _resolve(conf=self.conf, pname='param')
+
+        self.assertEqual(value, 2)
+
+    def test_cname(self):
+        """Test with cname."""
+
+        value = _resolve(conf=self.conf, cname=self.cnames[0], pname='param')
+
+        self.assertEqual(value, 1)
+
+    def test_nocname(self):
+        """Test when category name does not exist."""
+
+        self.assertRaises(
+            KeyError, _resolve, cname='test', pname='param', conf=self.conf
+        )
+
+    def test_nopname(self):
+        """Test when parameter name does not exist."""
+
+        self.assertRaises(KeyError, _resolve, pname='test', conf=self.conf)
 
 
 class ExprParser(UTCase):

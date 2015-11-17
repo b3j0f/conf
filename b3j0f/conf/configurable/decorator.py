@@ -29,7 +29,7 @@ __all__ = ['confpaths', 'add_category']
 from b3j0f.annotation import PrivateInterceptor, Annotation
 
 from .core import Configurable
-from ..model import Category
+from ..model.category import Category
 
 
 def confpaths(*paths):

@@ -39,6 +39,9 @@ class ModelElement(object):
     Use a name and a provide a python value in ordr to ease serialization.
     """
 
+    class Error(Exception):
+        """Handle ModelElement errors."""
+
     __slots__ = ()
 
     def clean(self):

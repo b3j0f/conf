@@ -44,9 +44,9 @@ class Configuration(CompositeModelElement):
 
     __slots__ = CompositeModelElement.__slots__
 
-    ERRORS = '_ERRORS'  #: category name which contains errors.
-    VALUES = '_VALUES'  #: category name which contains local param values.
-    FOREIGNS = '_FOREIGN'  #: category name which contains foreign params vals.
+    ERRORS = ':ERRORS'  #: category name which contains errors.
+    VALUES = ':VALUES'  #: category name which contains local param values.
+    FOREIGNS = ':FOREIGN'  #: category name which contains foreign params vals.
 
     def resolve(self, configurable=None, _locals=None, _globals=None):
         """Resolve all category parameters.
@@ -152,27 +152,33 @@ class Configuration(CompositeModelElement):
 
         self += category
 
-    def get_vparam(self, pname):
+    def pvalue(self, pname, cname=None):
         """Get final parameter value, from the category "VALUES" or
-        from a calculated."""
+        from a calculated.
+
+        :param str pname: parameter name.
+        :param str cname: category name.
+        :raises: NameError if pname or cname do not exist."""
 
         result = None
 
-        if Configuration.VALUES in self.content:
+        if cname is None:
+            if Configuration.VALUES in self._content:
+                category = self._content[Configuration.VALUES]
 
-            categories = [self._content[Configuration.VALUES]]
+            else:
+                unified = self.unify()
+                category = unified[Configuration.VALUES]
 
         else:
+            category = self[cname]
 
-            categories = self._content.values()
+        if category is None:
+            raise NameError('Category {0} does not exist.'.format(cname))
 
-        for category in categories:
+        param = category[pname]
 
-            param = category.get(pname)
-
-            if param is not None:
-
-                result = param.value
+        result = param.value
 
         return result
 
