@@ -30,6 +30,7 @@
 from unittest import main
 
 from b3j0f.utils.ut import UTCase
+from b3j0f.utils.path import getpath
 
 from ..configuration import Configuration
 from ..category import Category
@@ -183,6 +184,22 @@ class ExprParser(ConfigurationTest):
 
     def test_confpath_cname(self):
         """Test with a conf path and a cname."""
+
+    def test_lookup(self):
+        """Test lookup parameter."""
+
+        svalue = '#{0}'.format(getpath(getpath))
+
+        value = _exprparser(svalue=svalue, _globals={'getpath': getpath})
+
+        self.assertIs(value, getpath)
+
+    def test_error_lookup(self):
+        """Test a lookup parameter without referencing the python object."""
+
+        svalue = '#{0}'.format(getpath(getpath))
+
+        self.assertRaises(ImportError, _exprparser, svalue=svalue)
 
 
 if __name__ == '__main__':
