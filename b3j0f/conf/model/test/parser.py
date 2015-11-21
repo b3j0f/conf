@@ -38,9 +38,7 @@ from ..parameter import Parameter
 from ...configurable.core import Configurable
 
 
-from ..parser import (
-    ParserError, _simpleparser, _exprparser, _resolve
-)
+from ..parser import (ParserError, _simpleparser, _exprparser, _resolve)
 
 
 class SimpleParserTest(UTCase):
@@ -89,37 +87,53 @@ class SimpleParserTest(UTCase):
         self.assertEqual(value, 'test')
 
 
-class Resolve(UTCase):
-    """Test _resolve."""
+class ConfigurationTest(UTCase):
+    """Base class of test which uses a local configuration."""
 
     def setUp(self):
 
-        self.cnames = ['cfirst', 'csecond']
+        self.count = 5
 
-        self.conf = Configuration(
-            Category(self.cnames[0], Parameter('param', value=1)),
-            Category(self.cnames[1], Parameter('param', value=2))
-        )
+        self.cnames = [None] * self.count
+        self.pname = 'param'
+        self.pvalues = [None] * self.count
+
+        self.conf = Configuration()
+
+        for i in range(self.count):
+            self.cnames[i] = 'c{0}'.format(i)
+            self.pvalues[i] = i + 1
+            category = Category(
+                self.cnames[i], Parameter('param', value=self.pvalues[i])
+            )
+            self.conf += category
+
+
+class Resolve(ConfigurationTest):
 
     def test_default(self):
         """Test default params."""
 
-        value = _resolve(conf=self.conf, pname='param')
+        value = _resolve(conf=self.conf, pname=self.pname)
 
-        self.assertEqual(value, 2)
+        self.assertEqual(value, self.pvalues[-1])
 
     def test_cname(self):
         """Test with cname."""
 
-        value = _resolve(conf=self.conf, cname=self.cnames[0], pname='param')
+        for i in range(self.count):
 
-        self.assertEqual(value, 1)
+            value = _resolve(
+                conf=self.conf, cname=self.cnames[i], pname=self.pname
+            )
+
+            self.assertEqual(value, self.pvalues[i])
 
     def test_nocname(self):
         """Test when category name does not exist."""
 
         self.assertRaises(
-            KeyError, _resolve, cname='test', pname='param', conf=self.conf
+            KeyError, _resolve, cname='test', pname=self.pname, conf=self.conf
         )
 
     def test_nopname(self):
@@ -128,15 +142,47 @@ class Resolve(UTCase):
         self.assertRaises(KeyError, _resolve, pname='test', conf=self.conf)
 
 
-class ExprParser(UTCase):
+class ExprParser(ConfigurationTest):
     """Test the function _exprparser."""
 
-    def test(self):
+    def test_empty(self):
         """Test default value."""
 
         value = _exprparser(svalue='')
 
-        self.assertFalse(value, '')
+        self.assertIsNone(value, '')
+
+    def test_pname(self):
+        """Test parameter value."""
+
+        value = _exprparser(svalue='@{0}'.format(self.pname), conf=self.conf)
+
+        self.assertEqual(value, self.pvalues[-1])
+
+    def test_cname(self):
+        """Test with a resolve argument."""
+
+        svalue = ''
+        for i in range(self.count):
+            svalue += '@{0}.{1} +'.format(self.cnames[i], self.pname)
+
+        svalue = svalue[:-2]  # remove the last '+'
+        value = _exprparser(svalue=svalue, conf=self.conf)
+
+        self.assertEqual(value, sum(self.pvalues))
+
+    def test_confpath(self):
+        """Test with a conf path."""
+
+        svalue = '@://test/param'
+
+        value = _exprparser(
+            svalue=svalue, conf=self.conf, configurable=self.configurable
+        )
+
+
+    def test_confpath_cname(self):
+        """Test with a conf path and a cname."""
 
 
 if __name__ == '__main__':

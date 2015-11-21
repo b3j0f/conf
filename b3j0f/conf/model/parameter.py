@@ -26,16 +26,69 @@
 
 """Configuration definition objects."""
 
-__all__ = ['Parameter']
+__all__ = ['Parameter', 'PType']
 
 
 from .base import ModelElement
+from .parser import parser, getscope
 
 from six import string_types, reraise
 
 from re import compile as re_compile
 
-from .parser import parser, getscope
+from collections import Iterable
+
+
+class PType(object):
+    """Dedicated to embed a specific type such as a parameter type in order to
+    instanciate easily this embedded type from a parameter serialized value.
+
+    Instanciation depends on type of serialiazed value (by order):
+
+    - dict: it is given such as a kwargs to this _type.
+    - iterable: it is given such as an args to this _type.
+    - object: it is given such as the only one argument to this _type.
+    """
+
+    __slots__ = ('_type')
+
+    def __init__(self, _type, *args, **kwargs):
+
+        super(PType, self).__init__(*args, **kwargs)
+
+        self._type = _type
+
+    def __instancecheck__(self, instance):
+        """Check instance such as this instance or self _type instance."""
+
+        return isinstance(instance, (PType, self._type))
+
+    def __subclasscheck__(self, subclass):
+        """Check subclass such as this subclass or self _type subclass."""
+
+        return issubclass(subclass, (PType, self._type))
+
+    def __call__(self, value):
+        """Instantiate a new instance of this _type related to input value.
+
+        :param value: Instanciation depends on type of serialiazed value (by order):
+
+        - dict: it is given such as a kwargs to this _type.
+        - iterable: it is given such as an args to this _type.
+        - object: it is given such as the only one argument to this _type."""
+
+        result = None
+
+        if isinstance(value, dict):
+            result = self._type(**value)
+
+        elif isinstance(value, Iterable):
+            result = self._type(*value)
+
+        else:
+            result = self._type(value)
+
+        return result
 
 
 class Parameter(ModelElement):
@@ -60,7 +113,7 @@ class Parameter(ModelElement):
     """
 
     __slots__ = (
-        '_name', 'vtype', 'parser', '_svalue', '_value', '_error', 'conf',
+        '_name', 'vtype', '_parser', '_svalue', '_value', '_error', 'conf',
         'critical', 'local', 'asitem', '_globals', '_locals'
     ) + ModelElement.__slots__
 
@@ -74,7 +127,7 @@ class Parameter(ModelElement):
         """Handle Parameter errors."""
 
     def __init__(
-            self, name, vtype=object, svalue=None, parser=parser,
+            self, name, vtype=object, svalue=None, _parser=parser,
             value=None, conf=None, critical=False, local=True, asitem=None,
             _globals=None, _locals=None,
             *args, **kwargs
@@ -100,7 +153,7 @@ class Parameter(ModelElement):
             ParamList.
         """
 
-        super(Parameter, self).__init__()
+        super(Parameter, self).__init__(*args, **kwargs)
 
         # init private attributes
         self._name = None
@@ -109,7 +162,7 @@ class Parameter(ModelElement):
         self._svalue = None
 
         # init public attributes
-        self.parser = parser
+        self._parser = _parser
         self.name = name
         self.vtype = vtype
         self.conf = conf
@@ -132,7 +185,7 @@ class Parameter(ModelElement):
     def __repr__(self):
 
         return 'Parameter({0}, {1}, {2})'.format(
-            self.name, self.value, self.parser
+            self.name, self.value, self._parser
         )
 
     @property
@@ -212,7 +265,7 @@ class Parameter(ModelElement):
     def resolve(
             self,
             configurable=None, configuration=None, _locals=None, _globals=None,
-            parser=None
+            _parser=None
     ):
         """Resolve this parameter value related to a configurable and a
         configuration.
@@ -237,8 +290,8 @@ class Parameter(ModelElement):
 
             self._error = None  # nonify error.
 
-            if parser is None:
-                parser = self.parser
+            if _parser is None:
+                _parser = self._parser
 
             if parser is None:
                 result = self.value = self._svalue
@@ -250,7 +303,7 @@ class Parameter(ModelElement):
 
                 # parse value if str and if parser exists
                 try:
-                    finalvalue = parser(
+                    finalvalue = _parser(
                         svalue=self._svalue, configuration=configuration,
                         configurable=configurable, _type=self.vtype,
                         _locals=_locals, _globals=_globals
@@ -259,7 +312,7 @@ class Parameter(ModelElement):
                 except Exception as ex:
                     self._error = ex
                     msg = 'Impossible to parse value "{0}" with {1}.'.format(
-                        self._svalue, self.parser
+                        self._svalue, self._parser
                     )
                     reraise(Parameter.Error, Parameter.Error(msg))
 
@@ -349,7 +402,7 @@ class Parameter(ModelElement):
 
         kwargs = {
             'name': name,
-            'parser': self.parser,
+            '_parser': self._parser,
             'local': self.local,
             'critical': self.critical,
             'vtype': self.vtype,

@@ -68,7 +68,7 @@ setup(
     version=VERSION,
     packages=find_packages(exclude=['test.*', '*.test.*']),
     author='b3j0f',
-    author_email='jlabejof@yahoo.fr',
+    author_email='ib3j0f@gmail.com',
     install_requires=dependencies,
     description=DESCRIPTION,
     long_description=DESC,

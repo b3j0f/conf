@@ -56,24 +56,25 @@ For example:
 - ``2``: default integer value.
 - ``true``: default boolean value.
 - ``test``: default string value.
-- ``:="test".capitalize()``: expression value which result in a string value.
-- ``:=3**4: expression value which result in an integer value.
+- ``="test".capitalize()``: expression value which result in a string value.
+- ``=3**4: expression value which result in an integer value.
 
-expression values accept three keywords which does not exist in the python language.
+expressions accept those keywords which does not exist in the python language.
 
 - '#'{path}: get a python object given by the ``path`` value.
-- '@'({r}'/')?({c}?'.')?{p}: use a parameter value specified in the same scope than the input configuration, where ``r``, ``c`` and ``p`` designate respectively the resource, the category and the parameter to retrieve.
+- '@'[{confpath}][{cat}.]{param}: param value from optionnally cat and confpath.
 
 .. csv-table::
     :header: expr, description
 
     "@r/c.p", "parameter p, from the category c in the configuration resource r"
     "@c.p", "parameter value from the category c in the same configurable scope"
-    "@.p", "parameter value from the current category"
     "@p", "last parameter value of the configurable object"
 """
 
-__all__ = ['parser', 'ParserError', 'getscope']
+from __future__ import absolute_import
+
+__all__ = ['parser', 'ParserError', 'getscope', 'EXPR_PREFIX']
 
 
 from b3j0f.utils.path import lookup
@@ -83,27 +84,22 @@ from re import compile as re_compile
 
 from parser import ParserError
 
-from six import reraise
+WORD = r'[a-zA-Z_]\w*'
 
+EVAL_REF = r'@(:\/\/[^\/@]+\/)?({0}\.)?({0})'.format(WORD)  #: ref parameter.
 
-REF_PREFIX = '@'
-LOOKUP_PREFIX = '#'
+EVAL_LOOKUP = r'#({0}\.?)+'.format(WORD)  #: lookup param regex.
 
-#: ref parameter.
-EVAL_REF = r'{0}([.^\/]+\/){1}?([a-zA-Z_]\w*){1}?(\.)?([a-zA-Z_]\w*)'
-EVAL_REF = EVAL_REF.format(REF_PREFIX, '{1}')
-#: lookup param regex.
-EVAL_LOOKUP = r'{0}([a-zA-Z_]\w*\.?)+'.format(LOOKUP_PREFIX)
+EVAL_REGEX = '{0}|{1}'.format(EVAL_REF, EVAL_LOOKUP)  #: all regex.
 
-REGEX = r'({0})|({1})'.format(EVAL_LOOKUP, EVAL_REF)
-COMPILED_REGEX = re_compile(REGEX)
+REGEX_COMP = re_compile(EVAL_REGEX)  #: final regex compiler.
 
-EXPR_PREFIX = ':='  #: expression prefix
+EXPR_PREFIX = '='  #: expression prefix
 
 
 def parser(
-        svalue, configuration=None, configurable=None, _type=object,
-        _locals=None, _globals=None, *args, **kwargs
+        svalue, conf=None, configurable=None, _type=object,
+        _locals=None, _globals=None
 ):
     """Expression parser.
 
@@ -122,7 +118,7 @@ def parser(
 
     if svalue.startswith(EXPR_PREFIX):
         value = _exprparser(
-            svalue=svalue[len(EXPR_PREFIX):], configuration=configuration,
+            svalue=svalue[len(EXPR_PREFIX):], conf=conf,
             configurable=configurable, _locals=_locals, _globals=_globals
         )
 
@@ -134,7 +130,7 @@ def parser(
     # try to cast value in _type
     if not isinstance(result, _type):
         try:
-            result = _type(svalue)
+            result = _type(value)
 
         except TypeError:
             result = value
@@ -158,14 +154,13 @@ def _simpleparser(svalue, _type=str):
 
 
 def _exprparser(
-        svalue, configuration=None, configurable=None,
-        _locals=None, _globals=None
+        svalue, conf=None, configurable=None, _locals=None, _globals=None
 ):
     """Parse input serialized value such as an expression."""
 
     result = None
 
-    compilation = COMPILED_REGEX.sub(_repl, svalue)
+    compilation = REGEX_COMP.sub(_repl, svalue)
 
     if compilation:
 
@@ -173,7 +168,7 @@ def _exprparser(
             'resolve': _resolve,
             'configurable': configurable,
             'lookup': lookup,
-            'configuration': configuration
+            'conf': conf
         }
 
         final_locals = getscope(_locals, default_locals)
@@ -191,21 +186,27 @@ def _repl(match):
     """Replace matching expression in input match with corresponding
     conf accessor."""
 
-    result = match
+    result = None
 
-    if match[0]:  # is a lookup ?
+    confpath, cname, pname, path = match.groups()
 
-        result = 'lookup(path=\'{0}\')'.format(match[1:])
+    if path:
+        result = 'lookup(path=\'{0}\')'.format(path)
 
-    else:  # is a reference
+    else:
 
-        path, cname, pname = match[1]  # get path, cname and pname
+        params = 'pname=\'{0}\''.format(pname)
 
-        params = 'path=\'{0}\', cname=\'{1}\', pname=\'{2}\''.format(
-            path, cname, pname
-        )
-        conf = 'configurable=configurable, configuration=configuration'
-        result = '_resolve({0}, {1})'.format(conf, params)
+        if confpath:
+            confpath = confpath[3:-1]
+            params += ', path=\'{0}\''.format(confpath)
+
+        if cname:
+            cname = cname[:-1]
+            params += ', cname=\'{0}\''.format(cname)
+
+        conf = 'configurable=configurable, conf=conf'
+        result = 'resolve({0}, {1})'.format(conf, params)
 
     return result
 
