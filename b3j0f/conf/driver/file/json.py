@@ -38,7 +38,7 @@ try:
 except ImportError:
     from simplejson import load, dump
 
-from .core import FileConfDriver
+from .base import FileConfDriver
 
 from six import reraise
 

@@ -32,7 +32,7 @@ __all__ = ['INIConfDriver']
 
 from configparser import RawConfigParser, MissingSectionHeaderError
 
-from .core import FileConfDriver
+from .base import FileConfDriver
 
 from builtins import open
 

@@ -40,8 +40,9 @@ from ..model.configuration import Configuration
 from ..model.category import Category
 from ..model.parameter import Parameter
 
-from ..driver.core import ConfDriver
-from ..driver.file import JSONConfDriver, INIConfDriver
+from ..driver.base import ConfDriver
+from ..driver.file.json import JSONConfDriver
+from ..driver.file.ini import INIConfDriver
 
 
 class MetaConfigurable(type):
@@ -323,10 +324,10 @@ class Configurable(object):
         result = Configuration(
             Category(
                 Configurable.CONF,
-                Parameter(name=Configurable.AUTO_CONF, _type=bool),
-                Parameter(name=Configurable.DRIVERS, _type=tuple),
-                Parameter(name=Configurable.RECONF_ONCE, _type=bool),
-                Parameter(name=Configurable.CONF_PATHS, _type=tuple)
+                Parameter(name=Configurable.AUTO_CONF, vtype=bool),
+                Parameter(name=Configurable.DRIVERS, vtype=tuple),
+                Parameter(name=Configurable.RECONF_ONCE, vtype=bool),
+                Parameter(name=Configurable.CONF_PATHS, vtype=tuple)
             ),
             Category(
                 Configurable.LOG,

@@ -25,10 +25,11 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+"""JSON ConfDriver UTs."""
 
 from unittest import main
 
-from .core import FileConfDriverTest
+from .base import FileConfDriverTest
 
 from ..json import JSONConfDriver
 

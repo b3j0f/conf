@@ -264,7 +264,7 @@ class Parameter(ModelElement):
 
     def resolve(
             self,
-            configurable=None, configuration=None, _locals=None, _globals=None,
+            configurable=None, conf=None, _locals=None, _globals=None,
             _parser=None
     ):
         """Resolve this parameter value related to a configurable and a
@@ -272,7 +272,7 @@ class Parameter(ModelElement):
 
         :param Configurable configurable: configurable to use for foreign
             parameter resolution.
-        :param Configuration configuration: configuration to use for
+        :param Configuration conf: configuration to use for
             cross-value resolution.
         :param dict _locals: local variable to use for local python expression
             resolution.
@@ -304,7 +304,7 @@ class Parameter(ModelElement):
                 # parse value if str and if parser exists
                 try:
                     finalvalue = _parser(
-                        svalue=self._svalue, configuration=configuration,
+                        svalue=self._svalue, conf=conf,
                         configurable=configurable, _type=self.vtype,
                         _locals=_locals, _globals=_globals
                     )

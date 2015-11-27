@@ -35,7 +35,7 @@ directory given by the environment variable ``B3J0F_CONF_DIR``.
 from os import environ, getenv
 from os.path import exists, join, expanduser
 
-from ..core import ConfDriver
+from ..base import ConfDriver
 
 CONF_DIRS = []  #: all config directories
 

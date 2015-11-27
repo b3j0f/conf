@@ -37,7 +37,7 @@ from ....model.configuration import Configuration
 from ....model.category import Category
 from ....model.parameter import Parameter
 
-from ..core import FileConfDriver
+from ..base import FileConfDriver
 
 from pickle import loads, dump
 

@@ -128,55 +128,77 @@ class CompositeModelElement(ModelElement):
 
         return len(self._content)
 
-    def __iadd__(self, other):
-        """Add content or conf content in self."""
+    def __i(self, other, func):
+        """Process input other with input func.
 
-        if isinstance(other, type(self)):
-            self._content.update(other.content)
+        :param ModelElement(s) other: other ModelElement(s) to process.
+        :param func: function to apply on a ModelElement.
+        :return: self.
+        :raise: TypeError if other is not a ModelElement(s)."""
+
+        if isinstance(other, self.__class__):
+            other = tuple(other.content)
 
         elif isinstance(other, self.__contenttype__):
-            self._content[other.name] = other
+            other = (other, )
 
-        else:
-            if isinstance(other, Iterable):
-                for modelelt in other:
-                    self += modelelt
+        for melt in other:
+            if not isinstance(melt, self.__contenttype__):
+                raise TypeError('Wrong element {0}'.format(melt))
+
+            else:
+                func(melt)
 
         return self
+
+    def __iadd__(self, other):
+        """Put ModelElement(s) in this content.
+
+        :param ModelElement(s) other: other element(s) to put to this.
+        :return: self.
+        :raise: TypeError if other is not a ModelElement(s)."""
+
+        return self.__i(
+            other=other,
+            func=lambda melt: self._content.__setitem__(melt.name, melt)
+        )
 
     def __isub__(self, other):
+        """Remove a set of ModelElement in this content.
 
-        if isinstance(other, ModelElement):
-            other = (ModelElement)
+        :param ModelElement(s) other: ModelElement(s) to remove from this.
+        :return: self.
+        :raise: TypeError if other is not a ModelElement(s)."""
 
-        for modelelt in other:
-
-            name = modelelt.name
-
-            if name in self._content:
-                del self._content[name]
-
-        return self
+        return self.__i(
+            other=other,
+            func=lambda melt: self._content.pop(melt.name)
+        )
 
     def __ixor__(self, other):
+        """Put other element(s) which are not registered in this.
 
-        if isinstance(other, ModelElement):
-            other = (ModelElement)
+        :param ModelElement(s) other: element(s) to put in this content.
+        :return: self.
+        :raise: TypeError if other is not a ModelElement(s)."""
 
-        for modelelt in other:
-
-            name = modelelt.name
-
-            if name not in self._content:
-                self._content[name] = modelelt
-
-        return self
+        return self.__i(
+            other=other,
+            func=lambda melt: melt.name not in self and self._content.__setitem__(
+                melt.name, melt
+            )
+        )
 
     def __repr__(self):
 
-        result = '{0}({1})'.format(type(self).__name__, self._content)
+        result = '{0}({1})'.format(self.__class__.__name__, self._content)
 
         return result
+
+    def names(self):
+        """Get content names."""
+
+        return tuple(self._content.keys())
 
     @property
     def content(self):
@@ -194,16 +216,9 @@ class CompositeModelElement(ModelElement):
         :param ModelElement(s) value: new content to use.
         """
 
-        if value is None:
-            self._content.clear()
+        self._content.clear()
 
-        else:
-
-            if isinstance(value, ModelElement):
-                value = (value, )
-
-            for modelelt in value:
-                self._content[modelelt.name] = modelelt
+        self += value
 
     def put(self, value):
         """Put a content value and return the previous one if exist.
@@ -215,7 +230,7 @@ class CompositeModelElement(ModelElement):
 
         result = self.get(value.name)
 
-        self[value.name] = value
+        self += value
 
         return result
 
@@ -234,6 +249,17 @@ class CompositeModelElement(ModelElement):
             result += content.copy(cleaned)
 
         return result
+
+    def pop(self, name):
+        """Remove an element by name and return it.
+
+        :param str name: corresponding element name to remove.
+        :return: corresponding element name.
+        :rtype: ModelElement
+
+        :raises: KeyError if name is not registered in this."""
+
+        return self._content.pop(name)
 
     def get(self, key, default=None):
         """Get a content value by its name.
@@ -262,3 +288,31 @@ class CompositeModelElement(ModelElement):
         """Clear this composite model element from this content."""
 
         self._content.clear()
+
+    def update(self, other, copy=False):
+        """Update this CompositeModelElement with another CompositeModelElement.
+
+        :param CompositeModelElement other: other element from where get
+            elements. Must be of the same type of self.
+        :param bool copy: if True (False by default) copy content to update.
+        """
+
+        # ensure other is an instance of self.__class__
+        if not isinstance(other, self.__class__):
+            raise TypeError('Wrong type to update: {0}'.format(other.__class__))
+
+        for othercontent in other:
+
+            if copy:
+                othercontent = othercontent.copy()
+
+            selfcontent = self._content.get(othercontent.name)
+
+            if (
+                selfcontent is None or
+                not isinstance(othercontent, CompositeModelElement)
+            ):
+                self._content[othercontent.name] = othercontent
+
+            else:
+                selfcontent.update(othercontent, copy=False)

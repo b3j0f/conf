@@ -62,12 +62,12 @@ For example:
 expressions accept those keywords which does not exist in the python language.
 
 - '#'{path}: get a python object given by the ``path`` value.
-- '@'[{confpath}][{cat}.]{param}: param value from optionnally cat and confpath.
+- '@'[://{confpath}/][{cat}.]{param}: param value from optionnally cat and confpath.
 
 .. csv-table::
     :header: expr, description
 
-    "@r/c.p", "parameter p, from the category c in the configuration resource r"
+    "@://r/c.p", "parameter p, from the category c in the configuration resource r"
     "@c.p", "parameter value from the category c in the same configurable scope"
     "@p", "last parameter value of the configurable object"
 """

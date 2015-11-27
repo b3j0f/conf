@@ -56,7 +56,19 @@ class ConfDriver(object):
     class Error(Exception):
         """Handle conf driver errors."""
 
-    def _resource(self, rscpath, logger):
+    @staticmethod
+    def _log(logger, msg, kind='info'):
+        """Private logging function.
+
+        :param Logger logger: logger to use if not None.
+        :param str msg: message to log.
+        :param str kind: logger method name to use.
+        """
+
+        if logger is not None:
+            getattr(logger, kind)(msg)
+
+    def _resource(self, rscpath, logger=None):
         """Get configuration resource from resource path.
 
         :param str rscpath: resource path.
@@ -65,7 +77,7 @@ class ConfDriver(object):
 
         raise NotImplementedError()
 
-    def _cnames(self, resource, logger):
+    def _cnames(self, resource, logger=None):
         """Get resource category names.
 
         :param resource: resource from where get category names.
@@ -76,7 +88,7 @@ class ConfDriver(object):
 
         raise NotImplementedError()
 
-    def _params(self, resource, cname, logger):
+    def _params(self, resource, cname, logger=None):
         """Get list of (parameter name, parameter value) from a category name
         and a specific configuration resource.
 
@@ -89,7 +101,7 @@ class ConfDriver(object):
 
         raise NotImplementedError()
 
-    def _get_conf(self, rscpath, logger):
+    def _get_conf(self, rscpath, logger=None):
         """Get specific conf from one driver path.
 
         :param str path: relative path from where driver paths are calculated.
@@ -104,12 +116,12 @@ class ConfDriver(object):
 
         except Exception as ex:
             msg = 'Error while getting resource from {0}. {1}: {2}.'.format(
-                rscpath
+                rscpath, ex, exc_info()[2]
             )
-            logger.warning(msg, ex, exc_info()[2])
+            self._log(logger=logger, msg=msg, kind='warning')
 
         else:
-            for cname in self._cnames(resource):
+            for cname in self._cnames(resource=resource, logger=logger):
 
                 category = Category(name=cname)
 
@@ -119,7 +131,7 @@ class ConfDriver(object):
                 result += category
 
                 for pname, value in self._params(
-                    resource=resource, category=cname
+                        resource=resource, cname=cname, logger=logger
                 ):
 
                     parameter = Parameter(name=pname, svalue=value)
@@ -128,7 +140,7 @@ class ConfDriver(object):
 
         return result
 
-    def rscpaths(self, path, logger):
+    def rscpaths(self, path, logger=None):
         """Get resource paths related to input configuration path.
 
         :param str path: configuration path.
@@ -137,7 +149,7 @@ class ConfDriver(object):
 
         raise NotImplementedError()
 
-    def get_conf(self, path, logger, conf=None, override=True, error=False):
+    def get_conf(self, path, logger=None, conf=None, override=True, error=False):
         """Parse a configuration path with input conf and returns
         parameters by param name.
 
@@ -153,7 +165,7 @@ class ConfDriver(object):
         :rtype: Configuration
         """
 
-        result = None
+        result = conf
 
         pathconf = None
 
@@ -169,7 +181,7 @@ class ConfDriver(object):
                     rscpath
                 )
                 full_msg = '{0} {1}: {2}'.format(msg, ex, exc_info()[2])
-                logger.warning(full_msg)
+                self._log(logger=logger, msg=full_msg, kind='warning')
                 if error:
                     reraise(ConfDriver.Error, ConfDriver.Error(msg))
 
@@ -177,32 +189,15 @@ class ConfDriver(object):
                 if pathconf is None:  # do something only if pathconf exists
                     continue
 
-                if result is None:
-                    result = Configuration()
+                elif result is None:
+                    result = pathconf
 
-                result.fill(conf=pathconf, override=True, svalueonly=False)
-
-        if conf is None:
-            result = pathconf
-
-        else:
-            try:
-                conf.fill(conf=pathconf, override=override, svalueonly=True)
-
-            except Parameter.Error as pex:
-                msg = 'Error while filling {0} from path {1}.'.format(
-                    pex, path
-                )
-                full_msg = '{0} {1}: {2}'.format(msg, pex, exc_info()[2])
-                logger.warning(full_msg)
-                if error:
-                    reraise(ConfDriver.Error, ConfDriver.Error(msg))
-
-            result = conf
+                else:
+                    result.update(other=pathconf)
 
         return result
 
-    def set_conf(self, conf, rscpath, logger):
+    def set_conf(self, conf, rscpath, logger=None):
         """Set input conf in input path.
 
         :param Configuration conf: conf to write to path.
@@ -215,7 +210,8 @@ class ConfDriver(object):
 
         except Exception as ex:
             msg = 'Error while getting resource from {0}'.format(rscpath)
-            logger.warning('{0} {1}: {2}.'.format(msg, ex, exc_info()[2]))
+            log_msg = '{0} {1}: {2}.'.format(msg, ex, exc_info()[2])
+            self._log(logger=logger, msg=log_msg, kind='warning')
             reraise(self.Error, self.Error(msg))
 
         else:
@@ -223,7 +219,7 @@ class ConfDriver(object):
                 conf=conf, resource=resource, rscpath=rscpath, logger=logger
             )
 
-    def _set_conf(self, conf, resource, rscpath, logger):
+    def _set_conf(self, conf, resource, rscpath, logger=None):
         """Set input conf to input resource.
 
         :param Configuration conf: conf to write to path.

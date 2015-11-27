@@ -24,7 +24,8 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+"""Conf driver package with the ConfDriver definition."""
+
 __all__ = ['ConfDriver']
 
-
-from .core import ConfDriver
+from .base import ConfDriver

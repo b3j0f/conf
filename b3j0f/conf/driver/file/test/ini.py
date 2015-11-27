@@ -25,15 +25,17 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+"""INI ConfDriver UTs."""
 
 from unittest import main
 
-from .core import FileConfDriverTest
+from .base import FileConfDriverTest
 
 from ..ini import INIConfDriver
 
 
 class INIConfDriverTest(FileConfDriverTest):
+    """Test the INIConfDriver."""
 
     def _get_manager(self):
 

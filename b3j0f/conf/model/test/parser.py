@@ -35,10 +35,8 @@ from b3j0f.utils.path import getpath
 from ..configuration import Configuration
 from ..category import Category
 from ..parameter import Parameter
-
 from ...configurable.core import Configurable
-
-
+from ...driver.test.base import TestConfDriver
 from ..parser import (ParserError, _simpleparser, _exprparser, _resolve)
 
 
@@ -66,7 +64,7 @@ class SimpleParserTest(UTCase):
 
         self.assertTrue(value)
 
-    def test_bool_True(self):
+    def test_bool_ptrue(self):
         """Test bool type with True value."""
 
         value = _simpleparser(svalue='True', _type=bool)
@@ -146,6 +144,14 @@ class Resolve(ConfigurationTest):
 class ExprParser(ConfigurationTest):
     """Test the function _exprparser."""
 
+    def setUp(self):
+
+        super(ExprParser, self).setUp()
+
+        self.configurable = Configurable(
+            drivers=[TestConfDriver()]
+        )
+
     def test_empty(self):
         """Test default value."""
 
@@ -180,7 +186,6 @@ class ExprParser(ConfigurationTest):
         value = _exprparser(
             svalue=svalue, conf=self.conf, configurable=self.configurable
         )
-
 
     def test_confpath_cname(self):
         """Test with a conf path and a cname."""

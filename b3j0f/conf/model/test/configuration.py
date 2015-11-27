@@ -45,50 +45,43 @@ class ConfigurationTest(UTCase):
 
     def setUp(self):
 
-        self.configuration = Configuration(
-            Category(
-                'ctest',
-                Parameter('ptest')
-            )
-        )
+        self.count = 5
 
-        self.configurable = Configurable()
+        self.conf = Configuration()
 
-    def _assertValue(
-        self, svalue, _type=object, _globals=None, _locals=None, exp=False
-    ):
-        """Assert value with input _type."""
+        for count in range(self.count):
 
-        exprparser = getexprparser()
+            cat = Category('{0}'.format(count))
+            self.conf += cat
 
-        if exp:
+            for index in range(count):
 
-            self.assertRaises(
-                ParserError, exprparser,
-                svalue=svalue, _type=_type, _globals=_globals, _locals=_locals
-            )
+                param = Parameter('{0}'.format(index), value=count + index)
 
-        value = exprparser(
-            svalue=svalue, _type=_type, _globals=_globals, _locals=_locals
-        )
+                if (index + count) % 2 == 0:  # add errors
+                    param._error = True
 
-        self.assertIsInstance(value, _type)
+                cat += param
 
-    def test_int(self):
-        """Test exprparser with int _type."""
+    def test_resolve(self):
+        """Test the function resolve."""
 
-        exprparser = getexprparser()
+    def test_unify(self):
+        """Test the function unify."""
 
-        value = exprparser(svalue="1", _type=int)
+        unifiedconf = self.conf.unify()
 
-        self.assertIsInstance(value, int)
+        self.assertNotIn(Configuration.ERRORS, self.conf)
+        self.assertIn(Configuration.ERRORS, unifiedconf)
 
-    def test_default(self):
-        """Test getexprparser with default parameters."""
+        errors = unifiedconf[Configuration.ERRORS]
+        self.assertEqual(len(errors), self.count * 2)
 
-        exprparser = getexprparser()
+        self.assertNotIn(Configuration.VALUES, self.conf)
+        self.assertIn(Configuration.VALUES, unifiedconf)
 
-        self.assertIsNotNone(exprparser)
+        self.assertNotIn(Configuration.FOREIGNS, self.conf)
+        self.assertIn(Configuration.FOREIGNS, unifiedconf)
 
 if __name__ == '__main__':
     main()
