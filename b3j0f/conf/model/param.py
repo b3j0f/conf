@@ -24,13 +24,13 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-"""Configuration definition objects."""
+"""Parameter definition objects."""
 
 __all__ = ['Parameter', 'PType']
 
 
 from .base import ModelElement
-from .parser import parser, getscope
+from .parser import parser, getscope, ParserError
 
 from six import string_types, reraise
 
@@ -68,10 +68,10 @@ class PType(object):
 
         return issubclass(subclass, (PType, self._type))
 
-    def __call__(self, value):
+    def __call__(self, svalue):
         """Instantiate a new instance of this _type related to input value.
 
-        :param value: Instanciation depends on type of serialiazed value (by order):
+        :param ssvalue: Instanciation depends on type of serialiazed value (by order):
 
         - dict: it is given such as a kwargs to this _type.
         - iterable: it is given such as an args to this _type.
@@ -79,14 +79,20 @@ class PType(object):
 
         result = None
 
-        if isinstance(value, dict):
-            result = self._type(**value)
+        if isinstance(svalue, string_types):
+            result = self._type(svalue)
 
-        elif isinstance(value, Iterable):
-            result = self._type(*value)
+        elif isinstance(svalue, dict):
+            result = self._type(**svalue)
+
+        elif isinstance(svalue, Iterable):
+            result = self._type(*svalue)
 
         else:
-            result = self._type(value)
+            raise ParserError(
+                'Wrong serialized value {0}. str, dict or iterable expected.'.
+                format(svalue)
+            )
 
         return result
 
@@ -309,9 +315,9 @@ class Parameter(ModelElement):
                         _locals=_locals, _globals=_globals
                     )
 
-                except Exception as ex:
+                except ParserError as ex:
                     self._error = ex
-                    msg = 'Impossible to parse value "{0}" with {1}.'.format(
+                    msg = 'Impossible to parse value ({0}) with {1}.'.format(
                         self._svalue, self._parser
                     )
                     reraise(Parameter.Error, Parameter.Error(msg))
@@ -325,7 +331,7 @@ class Parameter(ModelElement):
                         try:
                             result = self.value = finalvalue(**self.conf)
 
-                        except Exception as ex:
+                        except TypeError as ex:
                             self._error = ex
                             msg = 'while calling param conf {0} on {1}.'.format(
                                 self.conf, finalvalue
@@ -388,7 +394,7 @@ class Parameter(ModelElement):
             self._error = error
             raise error
 
-    def copy(self, name=None, cleaned=False):
+    def copy(self, cleaned=False):
         """Get a copy of the parameter with specified name and new value if
         cleaned.
 
@@ -397,11 +403,8 @@ class Parameter(ModelElement):
         :return: new parameter.
         """
 
-        if name is None:
-            name = self.name
-
         kwargs = {
-            'name': name,
+            'name': self.name,
             '_parser': self._parser,
             'local': self.local,
             'critical': self.critical,
@@ -411,8 +414,8 @@ class Parameter(ModelElement):
         }
 
         if not cleaned:  # add value and svalue if not cleaned
-            kwargs['value'] = self.value
-            kwargs['svalue'] = self.svalue
+            kwargs['value'] = self._value
+            kwargs['svalue'] = self._svalue
 
         result = Parameter(**kwargs)
 

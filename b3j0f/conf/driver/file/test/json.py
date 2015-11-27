@@ -35,6 +35,7 @@ from ..json import JSONConfDriver
 
 
 class JSONConfDriverTest(FileConfDriverTest):
+    """Test JSONConfDriver."""
 
     def _get_manager(self):
 

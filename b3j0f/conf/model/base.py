@@ -30,7 +30,7 @@ from __future__ import absolute_import
 
 __all__ = ['ModelElement', 'CompositeModelElement']
 
-from collections import Iterable, OrderedDict
+from collections import OrderedDict
 
 
 class ModelElement(object):

@@ -25,19 +25,16 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+"""Configuration UTs."""
 
 from unittest import main
 
 from b3j0f.utils.ut import UTCase
 
-from ..configuration import Configuration
-from ..category import Category
-from ..parameter import Parameter
+from ..conf import Configuration
+from ..cat import Category
+from ..param import Parameter
 
-from ...configurable.core import Configurable
-
-
-from ..parser import ParserError
 
 
 class ConfigurationTest(UTCase):
@@ -82,6 +79,7 @@ class ConfigurationTest(UTCase):
 
         self.assertNotIn(Configuration.FOREIGNS, self.conf)
         self.assertIn(Configuration.FOREIGNS, unifiedconf)
+
 
 if __name__ == '__main__':
     main()

@@ -41,9 +41,9 @@ In order to implement your self drivers, you have to implement those methods:
 
 __all__ = ['ConfDriver']
 
-from ..model.configuration import Configuration
-from ..model.category import Category
-from ..model.parameter import Parameter
+from ..model.conf import Configuration
+from ..model.cat import Category
+from ..model.param import Parameter
 
 from six import reraise
 

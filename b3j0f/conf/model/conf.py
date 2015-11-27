@@ -30,8 +30,8 @@ __all__ = ['Configuration']
 
 
 from .base import CompositeModelElement
-from .category import Category
-from .parameter import Parameter
+from .cat import Category
+from .param import Parameter
 
 
 class Configuration(CompositeModelElement):

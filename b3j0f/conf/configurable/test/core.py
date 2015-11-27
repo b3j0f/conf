@@ -31,9 +31,9 @@ from unittest import main
 from b3j0f.utils.ut import UTCase
 
 from ..core import Configurable
-from ...model.configuration import Configuration
-from ...model.category import Category
-from ...model.parameter import Parameter
+from ...model.conf import Configuration
+from ...model.cat import Category
+from ...model.param import Parameter
 
 from tempfile import NamedTemporaryFile
 

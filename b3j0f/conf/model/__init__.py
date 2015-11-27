@@ -1,6 +1,6 @@
 
 __all__ = ['Configuration', 'Category', 'Parameter']
 
-from .configuration import Configuration
-from .category import Category
-from .parameter import Parameter
+from .conf import Configuration
+from .cat import Category
+from .param import Parameter

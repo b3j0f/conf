@@ -25,6 +25,7 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+"""model.base UTs."""
 
 from unittest import main
 

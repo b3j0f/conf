@@ -24,7 +24,7 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-"""Configuration definition objects."""
+"""Category definition objects."""
 
 __all__ = ['Category']
 
@@ -32,7 +32,7 @@ __all__ = ['Category']
 from six import string_types
 
 from .base import CompositeModelElement
-from .parameter import Parameter
+from .param import Parameter
 
 
 class Category(CompositeModelElement):

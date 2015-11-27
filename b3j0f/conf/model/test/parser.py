@@ -32,9 +32,9 @@ from unittest import main
 from b3j0f.utils.ut import UTCase
 from b3j0f.utils.path import getpath
 
-from ..configuration import Configuration
-from ..category import Category
-from ..parameter import Parameter
+from ..conf import Configuration
+from ..cat import Category
+from ..param import Parameter
 from ...configurable.core import Configurable
 from ...driver.test.base import TestConfDriver
 from ..parser import (ParserError, _simpleparser, _exprparser, _resolve)

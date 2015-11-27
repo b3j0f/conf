@@ -36,9 +36,9 @@ from six import string_types
 from b3j0f.utils.property import addproperties
 from b3j0f.utils.iterable import ensureiterable
 
-from ..model.configuration import Configuration
-from ..model.category import Category
-from ..model.parameter import Parameter
+from ..model.conf import Configuration
+from ..model.cat import Category
+from ..model.param import Parameter
 
 from ..driver.base import ConfDriver
 from ..driver.file.json import JSONConfDriver
@@ -370,7 +370,7 @@ class Configurable(object):
 
             value = [self]
 
-        elif type(value) is not list:
+        elif value.__class__ is not list:
 
             value = [value]
 
@@ -611,7 +611,7 @@ class Configurable(object):
         if to_configure is None:  # init to_configure
             to_configure = self.to_configure
 
-        if type(to_configure) is list:
+        if to_configure.__class__ is list:
             for to_conf in to_configure:
                 self.configure(conf=conf, logger=logger, to_configure=to_conf)
 
@@ -666,7 +666,7 @@ class Configurable(object):
         if to_configure is None:  # init to_configure
             to_configure = self._to_configure
 
-        if type(to_configure) is list:
+        if to_configure.__class__ is list:
             for to_conf in to_configure:
                 self._configure(
                     unified_conf=unified_conf, logger=logger,
@@ -738,7 +738,7 @@ class Configurable(object):
         if to_configure is None:  # init to_configure
             to_configure = self._to_configure
 
-        if type(to_configure) is list:
+        if to_configure.__class__ is list:
             for to_conf in to_configure:
                 self.restart(criticals=criticals, to_configure=to_conf)
 

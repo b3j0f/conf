@@ -24,7 +24,7 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-__all__ = ['MetaConfigurable', 'Configurable', 'ConfigurableError']
+__all__ = ['Configurable']
 
 
 from logging import Formatter, getLogger, FileHandler, Filter
@@ -33,8 +33,8 @@ from os.path import join, sep
 
 from b3j0f.utils.property import addproperties
 
-from ..model.category import Category
-from ..model.parameter import Parameter
+from ..model.cat import Category
+from ..model.param import Parameter
 
 from .core import Configurable
 
