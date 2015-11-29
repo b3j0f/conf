@@ -49,12 +49,10 @@ class Configuration(CompositeModelElement):
     FOREIGNS = ':FOREIGN'  #: category name which contains foreign params vals.
 
     def resolve(self, configurable=None, _locals=None, _globals=None):
-        """Resolve all category parameters.
+        """Resolve all parameters.
 
         :param Configurable configurable: configurable to use for foreign
             parameter resolution.
-        :param Configuration configuration: configuration to use for
-            cross-value resolution.
         :param dict _locals: local variable to use for local python expression
             resolution.
         :param dict _globals: global variable to use for local python
@@ -67,11 +65,11 @@ class Configuration(CompositeModelElement):
             for param in category:
 
                 param.resolve(
-                    configurable=configurable, configuration=self,
+                    configurable=configurable, conf=self,
                     _locals=_locals, _globals=_globals
                 )
 
-    def unify(self, copy=False):
+    def unify(self):
         """Get a conf which contains only two categories:
 
         - VALUES where params are all self params where values are not
@@ -79,7 +77,6 @@ class Configuration(CompositeModelElement):
         - ERRORS where params are all self params where values are
             exceptions
 
-        :param bool copy: copy self params (default False).
         :return: two categories named respectivelly VALUES and ERRORS and
             contain respectivelly self param values and parsing errors.
         :rtype: Configuration
@@ -114,7 +111,7 @@ class Configuration(CompositeModelElement):
                         to_update = final_values
                         to_delete = errors
 
-                    to_update.put(param.copy() if copy else param)
+                    to_update += param
 
                     if param.name in to_delete:
                         del to_delete[param.name]
@@ -125,32 +122,19 @@ class Configuration(CompositeModelElement):
 
         return result
 
-    def get_unified_category(self, name, copy=False):
-        """Add a category with input name which takes all params provided
-        by other categories.
+    def get_unified_category(self, name):
+        """Add a category with input name which takes all this parameters.
 
         :param str name: new category name.
-
-        :param bool copy: copy self params (default False).
         """
 
         result = Category(name)
 
-        for category in self._content.values():
-            for param in category:
-                result.put(param.copy() if copy else param)
+        for cat in self._content.values():
+            for param in cat:
+                result.put(param)
 
         return result
-
-    def add_unified_category(self, name=VALUES, copy=False, new_content=None):
-        """Add a unified category to self and add new_content if not None."""
-
-        category = self.get_unified_category(name=name, copy=copy)
-
-        if new_content is not None:
-            category += new_content
-
-        self += category
 
     def pvalue(self, pname, cname=None):
         """Get final parameter value, from the category "VALUES" or
@@ -171,7 +155,7 @@ class Configuration(CompositeModelElement):
                 category = unified[Configuration.VALUES]
 
         else:
-            category = self[cname]
+            category = self._content[cname]
 
         if category is None:
             raise NameError('Category {0} does not exist.'.format(cname))
@@ -197,13 +181,14 @@ class Configuration(CompositeModelElement):
 
                     paramstoupdate = selfcat.getparams(param=param)
 
-                    for paramtoupdate in paramstoupdate:
-                        paramtoupdate.svalue = param.svalue
-                        paramtoupdate.value = param.value
+                    if paramstoupdate:
+                        for paramtoupdate in paramstoupdate:
+                            paramtoupdate.svalue = param.svalue
+                            paramtoupdate.value = param.value
 
                     else:
-                        if not paramstoupdate:
-                            selfcat += param
+                        selfcat += param
+                        param.local = False  # mark the param such as foreign
 
             else:
                 self += cat

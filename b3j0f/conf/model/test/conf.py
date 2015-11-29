@@ -52,15 +52,29 @@ class ConfigurationTest(UTCase):
 
             for index in range(count):
 
-                param = Parameter('{0}'.format(index), value=count + index)
+                param = Parameter(
+                    name='{0}{1}'.format(count, index),
+                    value=count + index
+                )
 
                 if (index + count) % 2 == 0:  # add errors
                     param._error = True
+                    param.value = None
 
                 cat += param
 
     def test_resolve(self):
-        """Test the function resolve."""
+        """Test the method resolve."""
+
+        for cat in self.conf:
+            for param in cat:
+                param.svalue = '=1'
+
+        self.conf.resolve()
+
+        for cat in self.conf:
+            for param in cat:
+                self.assertEqual(param.value, 1)
 
     def test_unify(self):
         """Test the function unify."""
@@ -71,13 +85,75 @@ class ConfigurationTest(UTCase):
         self.assertIn(Configuration.ERRORS, unifiedconf)
 
         errors = unifiedconf[Configuration.ERRORS]
-        self.assertEqual(len(errors), self.count * 2)
+        self.assertEqual(len(errors), (self.count * (self.count + 1) // 8) + 1)
 
         self.assertNotIn(Configuration.VALUES, self.conf)
         self.assertIn(Configuration.VALUES, unifiedconf)
 
         self.assertNotIn(Configuration.FOREIGNS, self.conf)
         self.assertIn(Configuration.FOREIGNS, unifiedconf)
+
+    def test_get_unified_category(self):
+        """Test the method get_unified_category."""
+
+        cat = self.conf.get_unified_category(name='test')
+
+        self.assertEqual(len(cat), self.count * 2)
+
+    def test_pvalue(self):
+        """Test the method pvalue."""
+
+        for cat in self.conf:
+            for param in cat:
+
+                value = param.value
+
+                if value is None:
+                    continue
+
+                pvalue = self.conf.pvalue(pname=param.name)
+
+                self.assertEqual(value, pvalue)
+
+                pvalue = self.conf.pvalue(pname=param.name, cname=cat.name)
+
+                self.assertEqual(value, pvalue)
+
+    def test_update(self):
+        """Test the method update."""
+
+        copiedcat = self.conf['0'].copy()
+        copiedcat += Parameter('test', value=-1)
+
+        for param in copiedcat:
+            param.value = -1
+
+        conf = Configuration(
+            Category('test', Parameter('test')),
+            copiedcat
+        )
+
+        self.conf.update(conf)
+
+        self.assertIs(self.conf['test'], conf['test'])
+
+        for cat in conf:
+            if cat.name == 'test':
+                self.assertIs(self.conf['test'], cat)
+
+            else:
+                for param in cat:
+
+                    if cat.name == '0':
+                        self.assertIn('test', cat)
+
+                        self.assertEqual(param.value, -1)
+
+                    elif param._error is None:
+
+                        self.assertEqual(
+                            param.value, int(cat.name) + int(param.name)
+                        )
 
 
 if __name__ == '__main__':
