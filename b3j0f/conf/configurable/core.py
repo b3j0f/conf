@@ -370,7 +370,7 @@ class Configurable(object):
 
             value = [self]
 
-        elif value.__class__ is not list:
+        elif type(value) is not list:
 
             value = [value]
 
@@ -611,7 +611,7 @@ class Configurable(object):
         if to_configure is None:  # init to_configure
             to_configure = self.to_configure
 
-        if to_configure.__class__ is list:
+        if type(to_configure) is list:
             for to_conf in to_configure:
                 self.configure(conf=conf, logger=logger, to_configure=to_conf)
 
@@ -666,7 +666,7 @@ class Configurable(object):
         if to_configure is None:  # init to_configure
             to_configure = self._to_configure
 
-        if to_configure.__class__ is list:
+        if type(to_configure) is list:
             for to_conf in to_configure:
                 self._configure(
                     unified_conf=unified_conf, logger=logger,
@@ -738,7 +738,7 @@ class Configurable(object):
         if to_configure is None:  # init to_configure
             to_configure = self._to_configure
 
-        if to_configure.__class__ is list:
+        if type(to_configure) is list:
             for to_conf in to_configure:
                 self.restart(criticals=criticals, to_configure=to_conf)
 

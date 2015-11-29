@@ -136,7 +136,7 @@ class CompositeModelElement(ModelElement):
         :return: self.
         :raise: TypeError if other is not a ModelElement(s)."""
 
-        if isinstance(other, self.__class__):
+        if isinstance(other, type(self)):
             other = tuple(other.content)
 
         elif isinstance(other, self.__contenttype__):
@@ -184,14 +184,15 @@ class CompositeModelElement(ModelElement):
 
         return self.__i(
             other=other,
-            func=lambda melt: melt.name not in self and self._content.__setitem__(
+            func=lambda melt:
+            melt.name not in self and self._content.__setitem__(
                 melt.name, melt
             )
         )
 
     def __repr__(self):
 
-        result = '{0}({1})'.format(self.__class__.__name__, self._content)
+        result = '{0}({1})'.format(type(self).__name__, self._content)
 
         return result
 
@@ -298,8 +299,8 @@ class CompositeModelElement(ModelElement):
         """
 
         # ensure other is an instance of self.__class__
-        if not isinstance(other, self.__class__):
-            raise TypeError('Wrong type to update: {0}'.format(other.__class__))
+        if not isinstance(other, type(self)):
+            raise TypeError('Wrong type to update: {0}'.format(type(other)))
 
         for othercontent in other:
 

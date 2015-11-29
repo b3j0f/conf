@@ -29,6 +29,8 @@
 
 from unittest import main
 
+from six import string_types
+
 from b3j0f.utils.ut import UTCase
 
 from ..param import Parameter, PType
@@ -70,7 +72,7 @@ class PTypeTest(UTCase):
     def test_notissubclass(self):
         """Test is not subclass."""
 
-        self.assertFalse(issubclass(None.__class__, self.ptype))
+        self.assertFalse(issubclass(type(None), self.ptype))
 
     def test_instanciate(self):
         """Test to instanciate a parameter."""
@@ -102,11 +104,216 @@ class PTypeTest(UTCase):
         self.assertIsInstance(param, Parameter)
         self.assertEqual(value[0], param.name)
 
+    def test_instanciate_object(self):
+        """Test to instanciate a parameter with an object such as name."""
+
+        svalue = 1
+
+        value = PType(str)(svalue)
+
+        self.assertIsInstance(value, str)
+        self.assertEqual(value, str(1))
+
     def test_instanciateerror(self):
         """Test to instanciate with an error."""
 
-        self.assertRaises(ParserError, self.ptype, 2)
+        self.assertRaises(ParserError, self.ptype, {'': None})
 
+
+class ParameterTest(UTCase):
+    """Test a parameter."""
+
+    def setUp(self):
+
+        self.param = Parameter('test')
+
+    def test___eq__strstr(self):
+        """Test parameter comparison between str."""
+
+        param = self.param.copy()
+
+        self.assertIsInstance(param.name, string_types)
+        self.assertEqual(param, self.param)
+
+        param.name = param.name.upper()
+
+        self.assertIsInstance(param.name, string_types)
+        self.assertNotEqual(param, self.param)
+
+    def test___eq__restr(self):
+        """Test parameter comparison between regex and string."""
+
+        param = Parameter('tes.')
+
+        self.assertNotIsInstance(param.name, string_types)
+
+        self.assertEqual(self.param, param)
+        self.assertEqual(param, self.param)
+
+        param.name = self.param.name + '.'
+
+        self.assertNotIsInstance(param.name, string_types)
+        self.assertNotEqual(self.param, param)
+        self.assertNotEqual(param, self.param)
+
+    def test___eq__rere(self):
+        """Test parameter comparison between two regex."""
+
+        self.param.name = '.*'
+        param = self.param.copy()
+
+        self.assertNotIsInstance(param.name, string_types)
+        self.assertEqual(self.param, param)
+
+        param.name = '.'
+        self.assertNotIsInstance(param.name, string_types)
+        self.assertNotEqual(self.param, param)
+
+    def test_hash(self):
+        """Test the method hash."""
+
+        param = Parameter('test', )
+
+        self.assertEqual(hash(param), hash(self.param))
+
+        paramset = set((self.param, self.param.copy(), param))
+
+        self.assertEqual(len(paramset), 1)
+
+    def test_repr(self):
+        """Test the method repr."""
+
+        paramrepr = repr(self.param)
+        cparamrepr = repr(self.param.copy())
+
+        self.assertEqual(cparamrepr, paramrepr)
+
+    def test_conf_name(self):
+        """Test the method conf_name."""
+
+        conf_name = self.param.conf_name
+
+        self.assertEqual(
+            conf_name, '{0}{1}'.format(self.param.name, Parameter.CONF_SUFFIX)
+        )
+
+    def test_svalue(self):
+        """Test the property svalue."""
+
+        self.assertIsNone(self.param.svalue)
+
+        # check if parameter clean it protected attributes
+        self.param._value = 1
+        self.param._error = 1
+        self.param.svalue = ''
+
+        self.assertIsNone(self.param._error)
+        self.assertIsNone(self.param._value)
+        self.assertEqual(self.param.svalue, '')
+
+    def test_svalue_from_value(self):
+        """Test to set svalue from value."""
+
+        self.assertIsNone(self.param.svalue)
+
+        # check if parameter clean it protected attributes
+        self.param.value = '1'
+
+        self.assertEqual(self.param.svalue, self.param.value)
+
+    def test_svalue_nonify(self):
+        """Test to nonify svalue."""
+
+        self.param.value = 1
+        self.param._error = 1
+        self.param.svalue = None
+
+        self.assertIsNotNone(self.param._value)
+        self.assertIsNotNone(self.param._error)
+
+        # nonify only if svalue exist
+        self.param.svalue = '=1'
+        self.assertIsNone(self.param._value)
+        self.assertIsNone(self.param._error)
+
+    def test_value(self):
+        """Test the property value."""
+
+        self.assertIsNone(self.param.value)
+
+        self.param.value = 1
+
+        self.assertEqual(self.param.value, 1)
+
+    def test_value_from_svalue(self):
+        """Test to set value from svalue."""
+
+        self.param.svalue = '=1'
+
+        value = self.param.value
+
+        self.assertEqual(value, 1)
+
+    def test_value_error_vtype(self):
+        """Test to set value with wrong type."""
+
+        self.param.vtype = int
+
+        self.assertRaises(
+            TypeError, lambda x: setattr(self.param, 'value', x), '3'
+        )
+
+        self.assertIsInstance(self.param.error, TypeError)
+
+        self.param.svalue = ''
+
+        self.assertRaises(Parameter.Error, lambda: getattr(self.param, 'value'))
+
+    def test_copy(self):
+        """Test the method copy."""
+
+        param = Parameter(
+            name='test',
+            local=not Parameter.DEFAULT_LOCAL,
+            critical=not Parameter.DEFAULT_CRITICAL,
+            vtype=int,
+            conf=1,
+            value=1,
+            svalue='=1'
+        )
+
+        cparam = param.copy()
+
+        self.assertEqual(param.name, cparam.name)
+        self.assertEqual(param.local, cparam.local)
+        self.assertEqual(param.critical, cparam.critical)
+        self.assertEqual(param.vtype, cparam.vtype)
+        self.assertEqual(param.conf, cparam.conf)
+        self.assertEqual(param.value, cparam.value)
+        self.assertEqual(param.svalue, cparam.svalue)
+
+    def test_copy_cleaned(self):
+        """Test the method copy with cleaned as True."""
+
+        param = Parameter(
+            name='test',
+            local=not Parameter.DEFAULT_LOCAL,
+            critical=not Parameter.DEFAULT_CRITICAL,
+            vtype=int,
+            conf=1,
+            value=1,
+            svalue='=1'
+        )
+
+        cparam = param.copy(cleaned=True)
+
+        self.assertEqual(param.name, cparam.name)
+        self.assertEqual(param.local, cparam.local)
+        self.assertEqual(param.critical, cparam.critical)
+        self.assertEqual(param.vtype, cparam.vtype)
+        self.assertEqual(param.conf, cparam.conf)
+        self.assertIsNone(cparam.value)
+        self.assertIsNone(cparam.svalue)
 
 if __name__ == '__main__':
     main()

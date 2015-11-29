@@ -74,7 +74,7 @@ expressions accept those keywords which does not exist in the python language.
 
 from __future__ import absolute_import
 
-__all__ = ['parser', 'ParserError', 'getscope', 'EXPR_PREFIX']
+__all__ = ['parser', 'ParserError', 'EXPR_PREFIX']
 
 
 from b3j0f.utils.path import lookup
@@ -171,11 +171,11 @@ def _exprparser(
             'conf': conf
         }
 
-        final_locals = getscope(_locals, default_locals)
+        final_locals = _getscope(_locals, default_locals)
 
         default_locals = {}
 
-        final_globals = getscope(_globals)
+        final_globals = _getscope(_globals)
 
         result = safe_eval(compilation, final_globals, final_locals)
 
@@ -238,7 +238,7 @@ def _resolve(pname, conf=None, configurable=None, cname=None, path=None):
     return result
 
 
-def getscope(*scopes):
+def _getscope(*scopes):
     """Construct a scope from less specific to more specific scopes."""
 
     result = {}

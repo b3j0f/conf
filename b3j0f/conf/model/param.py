@@ -30,7 +30,7 @@ __all__ = ['Parameter', 'PType']
 
 
 from .base import ModelElement
-from .parser import parser, getscope, ParserError
+from .parser import parser as _parser, _getscope, ParserError
 
 from six import string_types, reraise
 
@@ -45,6 +45,7 @@ class PType(object):
 
     Instanciation depends on type of serialiazed value (by order):
 
+    - str: first arg to this _type.
     - dict: it is given such as a kwargs to this _type.
     - iterable: it is given such as an args to this _type.
     - object: it is given such as the only one argument to this _type.
@@ -79,20 +80,23 @@ class PType(object):
 
         result = None
 
-        if isinstance(svalue, string_types):
-            result = self._type(svalue)
+        args, kwargs = [], {}
+
+        if isinstance(svalue, string_types) or not isinstance(svalue, Iterable):
+            args = [svalue]
 
         elif isinstance(svalue, dict):
-            result = self._type(**svalue)
-
-        elif isinstance(svalue, Iterable):
-            result = self._type(*svalue)
+            kwargs = svalue
 
         else:
-            raise ParserError(
-                'Wrong serialized value {0}. str, dict or iterable expected.'.
-                format(svalue)
-            )
+            args = svalue
+
+        try:
+            result = self._type(*args, **kwargs)
+
+        except TypeError:
+            msg = 'Wrong value ({0}) with ({1}).'.format(svalue, self._type)
+            reraise(ParserError, ParserError(msg))
 
         return result
 
@@ -119,22 +123,27 @@ class Parameter(ModelElement):
     """
 
     __slots__ = (
-        '_name', 'vtype', '_parser', '_svalue', '_value', '_error', 'conf',
-        'critical', 'local', 'asitem', '_globals', '_locals'
+        '_name', 'vtype', 'parser', '_svalue', '_value', '_error', 'conf',
+        'critical', 'local', 'asitem', '_globals', '_locals', 'configurable'
     ) + ModelElement.__slots__
+
+    class Error(Exception):
+        """Handle Parameter errors."""
 
     CONF_SUFFIX = '::conf'  #: parameter configuration name.
 
     PARAM_NAME_REGEX = r'[a-zA-Z_]\w*'  #: simple name validation.
     #: simple name regex compiler.
-    _PARAM_NAME_COMPILER = re_compile(PARAM_NAME_REGEX)
+    _PARAM_NAME_COMPILER_MATCHER = re_compile(PARAM_NAME_REGEX).match
 
-    class Error(Exception):
-        """Handle Parameter errors."""
+    DEFAULT_VTYPE = object  #: default vtype.
+    DEFAULT_CRITICAL = False  #: default critical value.
+    DEFAULT_LOCAL = True  #: default local value.
 
     def __init__(
-            self, name, vtype=object, svalue=None, _parser=parser,
-            value=None, conf=None, critical=False, local=True, asitem=None,
+            self, name, vtype=DEFAULT_VTYPE, svalue=None, parser=_parser,
+            value=None, conf=None, configurable=None,
+            critical=DEFAULT_CRITICAL, local=DEFAULT_LOCAL,
             _globals=None, _locals=None,
             *args, **kwargs
     ):
@@ -151,52 +160,81 @@ class Parameter(ModelElement):
         :param dict conf: parameter configuration used to init the parameter
             value if not None. In this case, the parameter value must be
             callable.
+        :param Configurable configurable: specific configuable.
         :param bool critical: True if this parameter is critical. A critical
             parameter can require to restart a component for example.
         :param bool local: distinguish local parameters from those found in
             configuration resources.
-        :param Category asitem: distinguish parameters from those in a
-            ParamList.
         """
 
         super(Parameter, self).__init__(*args, **kwargs)
 
-        # init private attributes
+        # init protected attributes
         self._name = None
         self._value = None
         self._error = None
         self._svalue = None
 
         # init public attributes
-        self._parser = _parser
+        self.parser = parser
         self.name = name
         self.vtype = vtype
         self.conf = conf
+        self.configurable = configurable
         self.critical = critical
         self.local = local
-        self.asitem = asitem
         self.svalue = svalue
         self.value = value
         self._globals = _globals
         self._locals = _locals
 
     def __eq__(self, other):
+        """
+        :return: True iif other is a parameter and has the same name than
+            this.
+        :rtype: bool"""
 
-        return isinstance(other, Parameter) and other.name == self.name
+        result = isinstance(other, Parameter)
+
+        if result:
+            if isinstance(self.name, string_types):
+                if isinstance(other.name, string_types):
+                    result = self.name == other.name
+
+                else:
+                    result = other.name.match(self.name)
+
+            else:
+                if isinstance(other.name, string_types):
+                    result = self.name.match(other.name)
+
+                else:
+                    result = self.name.pattern == other.name.pattern
+
+        return result
 
     def __hash__(self):
+        """Get parameter hash value.
 
-        return hash(self.name)
+        :return:hash(self.name)+hash(self._value)+hash(self._svalue)
+        :rtype: int"""
+
+        return hash(self.name) + hash(Parameter)
 
     def __repr__(self):
+        """Display self name, value, svalue, vtype and error.
 
-        return 'Parameter({0}, {1}, {2})'.format(
-            self.name, self.value, self._parser
+        :rtype: str"""
+
+        return 'Parameter({0}, {1}, {2}, {3}, {4})'.format(
+            self.name, self._value, self._svalue, self.vtype, self.error
         )
 
     @property
     def error(self):
-        """Get encountered error."""
+        """Get encountered error.
+
+        :rtype: Exception"""
 
         return self._error
 
@@ -219,7 +257,9 @@ class Parameter(ModelElement):
 
         if isinstance(value, string_types):
 
-            if not Parameter._PARAM_NAME_COMPILER.match(value):
+            match = Parameter._PARAM_NAME_COMPILER_MATCHER(value)
+
+            if match is None or match.group() != value:
                 value = re_compile(value)
 
         self._name = value
@@ -243,15 +283,17 @@ class Parameter(ModelElement):
 
         result = self._svalue
 
-        try:
-            value = self.value
+        if result is None:  # try to get svalue from value if svalue is None
 
-        except Parameter.Error:
-            pass
+            try:
+                value = self.value
 
-        else:
-            if isinstance(value, string_types):
-                result = '"{0}"'.format(self._svalue)
+            except Parameter.Error:
+                pass
+
+            else:
+                if isinstance(value, string_types):
+                    result = self._svalue = value
 
         return result
 
@@ -264,17 +306,20 @@ class Parameter(ModelElement):
         :param str value: serialized value to use.
         """
 
-        self._value = None  # nonify this value
-        self._error = None  # nonify this error
+        if value is not None:  # if value is not None
+            self.clean()  # clean this parameter
+
         self._svalue = value  # set svalue
 
     def resolve(
             self,
             configurable=None, conf=None, _locals=None, _globals=None,
-            _parser=None
+            parser=None, error=True
     ):
         """Resolve this parameter value related to a configurable and a
         configuration.
+
+        Save error in this attribute `error` in case of failure.
 
         :param Configurable configurable: configurable to use for foreign
             parameter resolution.
@@ -285,6 +330,7 @@ class Parameter(ModelElement):
         :param dict _globals: global variable to use for local python
             expression resolution.
         :param parser: specific parser to use. Default this parser.
+        :param bool error: raise an error if True (False by default).
         :return: newly resolved value.
         :raises: Parameter.Error for any raised exception.
         """
@@ -296,46 +342,41 @@ class Parameter(ModelElement):
 
             self._error = None  # nonify error.
 
-            if _parser is None:
-                _parser = self._parser
-
             if parser is None:
-                result = self.value = self._svalue
+                parser = self.parser
 
-            else:
+            _locals = _getscope(self._locals, _locals)
+            _globals = _getscope(self._globals, _globals)
 
-                _locals = getscope(self._locals, _locals)
-                _globals = getscope(self._globals, _globals)
+            # parse value if str and if parser exists
+            try:
+                finalvalue = parser(
+                    svalue=self._svalue, conf=conf,
+                    configurable=configurable, _type=self.vtype,
+                    _locals=_locals, _globals=_globals
+                )
 
-                # parse value if str and if parser exists
-                try:
-                    finalvalue = _parser(
-                        svalue=self._svalue, conf=conf,
-                        configurable=configurable, _type=self.vtype,
-                        _locals=_locals, _globals=_globals
-                    )
-
-                except ParserError as ex:
-                    self._error = ex
-                    msg = 'Impossible to parse value ({0}) with {1}.'.format(
-                        self._svalue, self._parser
-                    )
+            except Exception as ex:
+                self._error = ex
+                if error:
+                    msg = 'Impossible to parse value ({0}) with {1}.'
+                    msg = msg.format(self._svalue, self.parser)
                     reraise(Parameter.Error, Parameter.Error(msg))
 
-                else:
-                    # try to apply conf
-                    if finalvalue is None or self.conf is None:
-                        result = self.value = finalvalue
+            else:
+                # try to apply conf
+                if finalvalue is None or self.conf is None:
+                    result = self.value = finalvalue
 
-                    else:  # apply conf
-                        try:
-                            result = self.value = finalvalue(**self.conf)
+                else:  # apply conf
+                    try:
+                        result = self.value = finalvalue(**self.conf)
 
-                        except TypeError as ex:
-                            self._error = ex
-                            msg = 'while calling param conf {0} on {1}.'.format(
-                                self.conf, finalvalue
-                            )
+                    except Exception as ex:
+                        self._error = ex
+                        if error:
+                            msg = 'while calling param conf {0} on {1}.'
+                            msg = msg.format(self.conf, finalvalue)
                             reraise(Parameter.Error, Parameter.Error(msg))
 
         return result
@@ -354,16 +395,16 @@ class Parameter(ModelElement):
 
         result = self._value
 
-        if self._value is None and self._svalue is not None:
+        if result is None and self._svalue is not None:
 
             try:
                 result = self.resolve()
 
-            except Exception as ex:
-
-                raise Parameter.Error(
-                    'Call the method "resolve" first.'
-                ).with_traceback(ex.__traceback__)
+            except Exception:
+                reraise(
+                    Parameter.Error,
+                    Parameter.Error('Call the method "resolve" first.')
+                )
 
         return result
 
@@ -381,13 +422,12 @@ class Parameter(ModelElement):
         if value is None or (
                 self.vtype is not None and isinstance(value, self.vtype)
         ):
-
             self._value = value
 
         else:
             # raise wrong type error
             error = TypeError(
-                'Wrong value type of {0}. {1} expected.'.format(
+                'Wrong value type of ({0}). {1} expected.'.format(
                     value, self.vtype
                 )
             )
@@ -405,12 +445,11 @@ class Parameter(ModelElement):
 
         kwargs = {
             'name': self.name,
-            '_parser': self._parser,
+            'parser': self.parser,
             'local': self.local,
             'critical': self.critical,
             'vtype': self.vtype,
-            'conf': self.conf,
-            'asitem': self.asitem,
+            'conf': self.conf
         }
 
         if not cleaned:  # add value and svalue if not cleaned
@@ -426,3 +465,4 @@ class Parameter(ModelElement):
 
         self._value = None
         self._svalue = None
+        self._error = None

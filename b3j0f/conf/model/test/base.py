@@ -350,7 +350,7 @@ class CompositeModelElementTest(UTCase):
 
         self.assertEqual(
             assertrepr,
-            '{0}({1})'.format(self.cme.__class__.__name__, self.cme._content)
+            '{0}({1})'.format(type(self.cme).__name__, self.cme._content)
         )
 
     def test_keys(self):

@@ -24,7 +24,7 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-"""Category definition objects."""
+"""Category module."""
 
 __all__ = ['Category']
 
@@ -36,14 +36,16 @@ from .param import Parameter
 
 
 class Category(CompositeModelElement):
-    """Parameter category which contains a dictionary of params.
-    """
+    """Parameter category which contains a dictionary of params."""
 
     __contenttype__ = Parameter  #: content type.
 
     __slots__ = ('name', ) + CompositeModelElement.__slots__
 
     def __init__(self, name, *args, **kwargs):
+        """
+        :param str name: category name to use.
+        """
 
         super(Category, self).__init__(*args, **kwargs)
 
