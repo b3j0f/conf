@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # --------------------------------------------------------------------
@@ -24,37 +25,42 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-"""model.cat module."""
+"""model.cat UTs."""
 
-__all__ = ['Category']
+from unittest import main
 
-from .base import CompositeModelElement
-from .param import Parameter
+from b3j0f.utils.ut import UTCase
+
+from ..cat import Category
+from ..param import Parameter
 
 
-class Category(CompositeModelElement):
-    """Parameter category which contains a dictionary of params."""
+class CategoryTest(UTCase):
+    """Test exprparser."""
 
-    __contenttype__ = Parameter  #: content type.
+    def setUp(self):
 
-    __slots__ = ('name', ) + CompositeModelElement.__slots__
+        self.name = 'test'
+        self.cat = Category(name=self.name)
 
-    def __init__(self, name, *args, **kwargs):
-        """
-        :param str name: category name to use.
-        """
+        for i in range(len(self.name)):
+            param = Parameter(self.name[:i])
+            rparam = Parameter('^{0}.*'.format(self.name[:i]))
+            self.cat += param, rparam
 
-        super(Category, self).__init__(*args, **kwargs)
+    def test_name(self):
+        """Test name."""
 
-        self.name = name
+        self.assertEqual(self.cat.name, self.name)
 
-    def getparams(self, param):
-        """Get parameters which match with input param.
+    def test_getparams(self):
+        """Test the method getparams."""
 
-        :param Parameter param: parameter to compare with this parameters.
-        :rtype: list
-        """
+        param = Parameter(self.name)
 
-        return list(
-            cparam for cparam in self._content.values() if cparam == param
-        )
+        params = self.cat.getparams(param=param)
+
+        self.assertEqual(len(self.name) + 1, len(params))
+
+if __name__ == '__main__':
+    main()

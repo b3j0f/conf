@@ -289,31 +289,3 @@ class CompositeModelElement(ModelElement):
         """Clear this composite model element from this content."""
 
         self._content.clear()
-
-    def update(self, other, copy=False):
-        """Update this CompositeModelElement with another CompositeModelElement.
-
-        :param CompositeModelElement other: other element from where get
-            elements. Must be of the same type of self.
-        :param bool copy: if True (False by default) copy content to update.
-        """
-
-        # ensure other is an instance of self.__class__
-        if not isinstance(other, type(self)):
-            raise TypeError('Wrong type to update: {0}'.format(type(other)))
-
-        for othercontent in other:
-
-            if copy:
-                othercontent = othercontent.copy()
-
-            selfcontent = self._content.get(othercontent.name)
-
-            if (
-                selfcontent is None or
-                not isinstance(othercontent, CompositeModelElement)
-            ):
-                self._content[othercontent.name] = othercontent
-
-            else:
-                selfcontent.update(othercontent, copy=False)

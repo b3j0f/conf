@@ -89,10 +89,11 @@ class ConfDriver(object):
         raise NotImplementedError()
 
     def _params(self, resource, cname, logger=None):
-        """Get list of (parameter name, parameter value) from a category name
-        and a specific configuration resource.
+        """Get list of (parameter name, parameter serialized value) from a
+        category name and a specific configuration resource.
 
-        :param resource: resource from where get parameter names and values.
+        :param resource: resource from where get parameter names and serialized
+            values.
         :param str cname: related category name.
         :param Logger logger: logger to use.
         :return: list of resource parameter
@@ -133,7 +134,6 @@ class ConfDriver(object):
                 for pname, value in self._params(
                         resource=resource, cname=cname, logger=logger
                 ):
-
                     parameter = Parameter(name=pname, svalue=value)
 
                     category += parameter
@@ -149,7 +149,7 @@ class ConfDriver(object):
 
         raise NotImplementedError()
 
-    def get_conf(self, path, logger=None, conf=None, override=True, error=False):
+    def get_conf(self, path, logger=None, conf=None, error=False):
         """Parse a configuration path with input conf and returns
         parameters by param name.
 
@@ -158,8 +158,6 @@ class ConfDriver(object):
             conf param names.
         :param Logger logger: logger to use in order to trace
             information/error.
-        :param bool override: if True (by default), override self
-            configuration.
         :param bool error: if True (default: False), stop to get conf when a
             first error is catched.
         :rtype: Configuration
@@ -172,7 +170,6 @@ class ConfDriver(object):
         rscpaths = self.rscpaths(path=path, logger=logger)
 
         for rscpath in rscpaths:
-
             try:
                 pathconf = self._get_conf(rscpath=rscpath, logger=logger)
 
@@ -182,6 +179,7 @@ class ConfDriver(object):
                 )
                 full_msg = '{0} {1}: {2}'.format(msg, ex, exc_info()[2])
                 self._log(logger=logger, msg=full_msg, kind='warning')
+
                 if error:
                     reraise(ConfDriver.Error, ConfDriver.Error(msg))
 

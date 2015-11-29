@@ -473,38 +473,6 @@ class CompositeModelElementTest(UTCase):
 
         self.assertFalse(self.cme)
 
-    def test_update(self):
-        """Test the method update."""
-
-        ccme = self.cme.copy(cleaned=True)
-
-        for i in range(self.count):
-
-            name = str(i)
-            mod = i % 3
-
-            if mod == 0:
-
-                del self.cme[name]
-
-            elif mod == 1:
-
-                del ccme[name]
-
-        self.cme.update(ccme)
-
-        for i in range(self.count):
-
-            name = str(i)
-            elt = self.cme[name]
-            mod = i % 3
-
-            if mod in (0, 2):
-                self.assertTrue(elt.cleaned)
-
-            elif mod == 1:
-                self.assertFalse(elt.cleaned)
-
 
 if __name__ == '__main__':
     main()

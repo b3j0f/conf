@@ -90,7 +90,7 @@ def _updatedrivers(self, *_):
     ]
 
 
-def _updatelogger(self, kwargsvalue, name):
+def _updatelogger(self, **_):
     """Renew self logger."""
     self._logger = self.newlogger()
 
@@ -104,7 +104,12 @@ def _updatelogger(self, kwargsvalue, name):
 @addproperties(names=['auto_conf', 'reconf_once', 'drivers', 'logger'])
 @addproperties(names=['drivers'], afset=_updatedrivers)
 class Configurable(object):
-    """Manage class conf synchronisation with conf resources."""
+    """Manage class conf synchronisation with conf resources.
+
+    According to critical parameter updates, this class uses a dirty state.
+
+    In such situation, it is possible to go back to a stable state in calling
+    the method `restart`. Without failure, the dirty status is canceled."""
 
     #: ensure to applyconfiguration after instanciation of the configurable.
     __metaclass__ = MetaConfigurable
@@ -200,6 +205,7 @@ class Configurable(object):
         self._paths = None
         self._to_configure = None
         self._conf = None
+        self._isdirty = False
 
         self.store = store
 
@@ -246,13 +252,14 @@ class Configurable(object):
             """
 
             class _Filter(Filter):
-                """Ensure message will be given for specific lvl
-                """
+                """Ensure message will be given for specific lvl"""
+
                 def filter(self, record):
+
                     return record.levelname == lvl
 
             # get the rights formatter and filter to set on a file handler
-            handler = FileHandler(path)
+            handler = FileHandler(path, mode='a+')
             handler.addFilter(_Filter())
             handler.setLevel(lvl)
             formatter = Formatter(_format)
@@ -276,6 +283,16 @@ class Configurable(object):
         sethandler(result, 'CRITICAL', path, self.log_critical_format)
 
         return result
+
+    @property
+    def isdirty(self):
+        """True iif this configurable requires a reconfiguration.
+
+        i.e. if critical parameters are different than this attributes.
+
+        :rtype: bool"""
+
+        return self._isdirty
 
     @property
     def conf(self):
@@ -380,6 +397,7 @@ class Configurable(object):
                 if to_configure not in value:
                     try:  # remove old configurable storing
                         delattr(to_configure, Configurable.STORE_ATTR)
+
                     except AttributeError:
                         pass
 
@@ -389,6 +407,7 @@ class Configurable(object):
 
                 try:
                     setattr(to_configure, Configurable.STORE_ATTR, self)
+
                 except AttributeError:
                     self.logger.warning(
                         'Impossible to store configurable in {0}.'.format(
@@ -465,7 +484,7 @@ class Configurable(object):
 
     def apply_configuration(
             self, conf=None, paths=None, drivers=None, logger=None,
-            override=True, to_configure=None, _locals=None, _globals=None
+            to_configure=None, _locals=None, _globals=None
     ):
         """Apply conf on a destination in those phases:
 
@@ -476,10 +495,9 @@ class Configurable(object):
         5. apply filled conf on to_configure.
 
         :param Configuration conf: conf from where get conf
-        :param paths: conf files to parse. If
-            paths is a str, it is automatically putted into a list
+        :param paths: conf files to parse. If paths is a str, it is
+            automatically putted into a list.
         :type paths: list of str
-        :param bool override: if True (by default), override self configuration
         :param to_configure: object to configure. self by default.
         :param dict _locals: local variable to use for local python expression
             resolution.
@@ -498,24 +516,20 @@ class Configurable(object):
             for to_conf in to_configure:
                 self.apply_configuration(
                     conf=conf, paths=paths, drivers=drivers,
-                    logger=logger, override=override, to_configure=to_conf
+                    logger=logger, to_configure=to_conf
                 )
 
         else:
             # get conf from drivers and paths
             conf = self.get_conf(
-                conf=conf, paths=paths, logger=logger,
-                drivers=drivers, override=override
+                conf=conf, paths=paths, logger=logger, drivers=drivers
             )
             # resolve all values
             conf.resolve(configurable=self, _globals=_globals, _locals=_locals)
             # configure resolved configuration
             self.configure(conf=conf, to_configure=to_configure)
 
-    def get_conf(
-            self,
-            conf=None, paths=None, drivers=None, logger=None, override=True
-    ):
+    def get_conf(self, conf=None, paths=None, drivers=None, logger=None):
         """Get a configuration from paths.
 
         :param Configuration conf: conf to update. Default this conf.
@@ -523,7 +537,6 @@ class Configurable(object):
         :param Logger logger: logger to use for logging info/error messages.
             Default self logger.
         :param list drivers: ConfDriver to use. Default this drivers.
-        :param bool override: if True (by default), override self configuration
         """
 
         result = None
@@ -551,7 +564,7 @@ class Configurable(object):
 
                 try:
                     result = driver.get_conf(
-                        path=path, conf=conf, logger=logger, override=override
+                        path=path, conf=conf, logger=logger
                     )
 
                 except ConfDriver.Error:

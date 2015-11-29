@@ -181,3 +181,29 @@ class Configuration(CompositeModelElement):
         result = param.value
 
         return result
+
+    def update(self, conf):
+        """Update this configuration with other configuration parameter values
+        and svalues.
+
+        :param Configuration conf: configuration from where get parameter values
+            and svalues."""
+
+        for cat in conf:
+            if cat.name in self:
+                selfcat = self._content[cat.name]
+
+                for param in cat:
+
+                    paramstoupdate = selfcat.getparams(param=param)
+
+                    for paramtoupdate in paramstoupdate:
+                        paramtoupdate.svalue = param.svalue
+                        paramtoupdate.value = param.value
+
+                    else:
+                        if not paramstoupdate:
+                            selfcat += param
+
+            else:
+                self += cat

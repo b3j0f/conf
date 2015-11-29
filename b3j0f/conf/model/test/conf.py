@@ -36,7 +36,6 @@ from ..cat import Category
 from ..param import Parameter
 
 
-
 class ConfigurationTest(UTCase):
     """Test exprparser."""
 

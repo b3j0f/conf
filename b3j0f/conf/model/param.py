@@ -342,15 +342,21 @@ class Parameter(ModelElement):
 
             self._error = None  # nonify error.
 
-            if parser is None:
+            if parser is None:  # init parser
                 parser = self.parser
+
+            if conf is None:  # init conf
+                conf = self.conf
+
+            if configurable is None:  # init configurable
+                configurable = self.configurable
 
             _locals = _getscope(self._locals, _locals)
             _globals = _getscope(self._globals, _globals)
 
             # parse value if str and if parser exists
             try:
-                finalvalue = parser(
+                result = parser(
                     svalue=self._svalue, conf=conf,
                     configurable=configurable, _type=self.vtype,
                     _locals=_locals, _globals=_globals
@@ -362,22 +368,6 @@ class Parameter(ModelElement):
                     msg = 'Impossible to parse value ({0}) with {1}.'
                     msg = msg.format(self._svalue, self.parser)
                     reraise(Parameter.Error, Parameter.Error(msg))
-
-            else:
-                # try to apply conf
-                if finalvalue is None or self.conf is None:
-                    result = self.value = finalvalue
-
-                else:  # apply conf
-                    try:
-                        result = self.value = finalvalue(**self.conf)
-
-                    except Exception as ex:
-                        self._error = ex
-                        if error:
-                            msg = 'while calling param conf {0} on {1}.'
-                            msg = msg.format(self.conf, finalvalue)
-                            reraise(Parameter.Error, Parameter.Error(msg))
 
         return result
 
