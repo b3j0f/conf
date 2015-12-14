@@ -59,6 +59,7 @@ class ConfigurationTest(UTCase):
 
                 if (index + count) % 2 == 0:  # add errors
                     param._error = True
+                    param.value = None
 
                 cat += param
 
@@ -106,10 +107,10 @@ class ConfigurationTest(UTCase):
 
             for param in cat:
 
-                if param.error:
-                    continue
-
                 value = param.value
+
+                if value is None:
+                    continue
 
                 pvalue = self.conf.pvalue(pname=param.name)
 
@@ -119,9 +120,41 @@ class ConfigurationTest(UTCase):
 
                 self.assertEqual(value, pvalue)
 
-
     def test_update(self):
         """Test the method update."""
+
+        copiedcat = self.conf['0'].copy()
+        copiedcat += Parameter('test', value=-1)
+
+        for param in copiedcat:
+            param.value = -1
+
+        conf = Configuration(
+            Category('test', Parameter('test')),
+            copiedcat
+        )
+
+        self.conf.update(conf)
+
+        self.assertIs(self.conf['test'], conf['test'])
+
+        for cat in conf:
+            if cat.name == 'test':
+                self.assertIs(self.conf['test'], cat)
+
+            else:
+                for param in cat:
+
+                    if cat.name == '0':
+                        self.assertIn('test', cat)
+
+                        self.assertEqual(param.value, -1)
+
+                    elif param._error is None:
+
+                        self.assertEqual(
+                            param.value, int(cat.name) + int(param.name)
+                        )
 
 
 if __name__ == '__main__':
