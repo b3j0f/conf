@@ -47,7 +47,7 @@ class ConfigurationTest(UTCase):
 
         for count in range(self.count):
 
-            cat = Category('c{0}'.format(count))
+            cat = Category('{0}'.format(count))
             self.conf += cat
 
             for index in range(count):
