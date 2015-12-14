@@ -39,13 +39,17 @@ from ....model.param import Parameter
 
 from ..base import FileConfDriver
 
-from pickle import loads, dump
+from pickle import load, dump
 
 from os import remove
 
 
 class TestConfDriver(FileConfDriver):
     """Configuration file driver for test."""
+
+    def resource(self):
+
+        return {}
 
     def _cnames(self, resource, *args, **kwargs):
 
@@ -61,31 +65,23 @@ class TestConfDriver(FileConfDriver):
 
         return result
 
-    def _resource(
-        self, logger, rscpath, *args, **kwargs
-    ):
+    def _pathresource(self, rscpath):
 
         result = None
 
-        try:
-            with open(rscpath, 'rb') as handle:
+        with open(rscpath, 'r') as handle:
 
-                try:
-                    result = loads(handle.read())
-
-                except TypeError:
-                    pass
-
-        except OSError:
-            pass
+            result = load(handle)
 
         return result
 
-    def _set_conf(
-        self, resource, rscpath, *args, **kwargs
-    ):
+    def _set_conf(self, resource, rscpath, conf):
 
-        with open(rscpath, 'wb') as handle:
+        for cat in conf:
+            for param in cat:
+                resource.setdefault(cat.name, {})[param.name] = param.svalue
+
+        with open(rscpath, 'w') as handle:
 
             try:
                 dump(resource, handle)
@@ -108,13 +104,13 @@ class FileConfDriverTest(UTCase):
         self.conf = Configuration(
             Category(
                 'A',
-                Parameter('a', value=0, _type=int),  # a is 0
-                Parameter('b', value=True, _type=bool)
+                Parameter('a', value=0, vtype=int),  # a is 0
+                Parameter('b', value=True, vtype=bool)
             ),  # b is overriden
             Category(
                 'B',
-                Parameter('b', value=1, _type=int),  # b is 1
-                Parameter('c', _type=int, svalue='er')   # error
+                Parameter('b', value=1, vtype=int),  # b is 1
+                Parameter('c', vtype=int, svalue='er')   # error
             )
         )
 
@@ -158,15 +154,6 @@ class FileConfDriverTest(UTCase):
         )
 
         self.assertIsNone(conf)
-
-        # get full conf
-        self.manager.set_conf(
-            rscpath=self.path,
-            conf=self.conf,
-            logger=self.logger
-        )
-
-        self.conf.resolve()
 
         conf = self.manager.get_conf(
             path=self.path,

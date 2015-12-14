@@ -205,7 +205,6 @@ class Configurable(object):
         self._paths = None
         self._to_configure = None
         self._conf = None
-        self._isdirty = False
 
         self.store = store
 
@@ -285,16 +284,6 @@ class Configurable(object):
         return result
 
     @property
-    def isdirty(self):
-        """True iif this configurable requires a reconfiguration.
-
-        i.e. if critical parameters are different than this attributes.
-
-        :rtype: bool"""
-
-        return self._isdirty
-
-    @property
     def conf(self):
         """Get conf with parsers and self property values.
 
@@ -348,14 +337,14 @@ class Configurable(object):
             ),
             Category(
                 Configurable.LOG,
-                Parameter(name=Configurable.LOG_NAME, critical=True),
-                Parameter(name=Configurable.LOG_PATH, critical=True),
-                Parameter(name=Configurable.LOG_LVL, critical=True),
-                Parameter(name=Configurable.LOG_DEBUG_FORMAT, critical=True),
-                Parameter(name=Configurable.LOG_INFO_FORMAT, critical=True),
-                Parameter(name=Configurable.LOG_WARNING_FORMAT, critical=True),
-                Parameter(name=Configurable.LOG_ERROR_FORMAT, critical=True),
-                Parameter(name=Configurable.LOG_CRITICAL_FORMAT, critical=True)
+                Parameter(name=Configurable.LOG_NAME),
+                Parameter(name=Configurable.LOG_PATH),
+                Parameter(name=Configurable.LOG_LVL),
+                Parameter(name=Configurable.LOG_DEBUG_FORMAT),
+                Parameter(name=Configurable.LOG_INFO_FORMAT),
+                Parameter(name=Configurable.LOG_WARNING_FORMAT),
+                Parameter(name=Configurable.LOG_ERROR_FORMAT),
+                Parameter(name=Configurable.LOG_CRITICAL_FORMAT)
             )
         )
 
@@ -562,19 +551,14 @@ class Configurable(object):
 
             for driver in drivers:
 
-                try:
-                    result = driver.get_conf(
-                        path=path, conf=conf, logger=logger
-                    )
+                result = driver.get_conf(
+                    path=path, conf=conf, logger=logger
+                )
 
-                except ConfDriver.Error:
-                    pass
+                if result:
+                    break
 
-                else:
-                    if result is None or len(result) > 0:
-                        break
-
-            if result is None or len(result) == 0:
+            else:
                 # if no conf found, display a warning log message
                 logger.warning(
                     'No driver found among {0} for processing {1}'.format(
@@ -691,89 +675,18 @@ class Configurable(object):
             values = [p for p in unified_conf[Configuration.VALUES]]
             foreigns = [p for p in unified_conf[Configuration.FOREIGNS]]
 
-            criticals = []  # list of critical parameters
-
             for parameter in values + foreigns:
                 name = parameter.name
-                if not parameter.asitem:
-                    # if parameter is local, to_configure must a related name
-                    if self._is_local(to_configure, name):
-                        if hasattr(to_configure, name):
-                            pvalue = parameter.value
+                # if parameter is local, to_configure must a related name
+                if self._is_local(to_configure, name):
+                    if hasattr(to_configure, name):
 
-                            # in case of a critical parameter
-                            if parameter.critical:
-                                # check if current value != new val
-                                value = getattr(to_configure, name)
+                        pvalue = parameter.value
+                        setattr(to_configure, name, pvalue)
 
-                                if value != parameter.value:
-                                    # add it to list of criticals
-                                    criticals.append(parameter)
-                                    # set private name
-                                    privname = '_%s' % name
-
-                                    # if private name exists
-                                    if hasattr(to_configure, privname):
-                                        # change of value of private name
-                                        setattr(to_configure, privname, pvalue)
-
-                                    else:  # update public value
-                                        setattr(to_configure, name, pvalue)
-
-                            else:  # change public value
-                                setattr(to_configure, name, pvalue)
-
-                    else:  # else log the warning
-                        message = 'Param {0} does not exist in {1}.'
-                        self.logger.warning(message.format(name, to_configure))
-
-                else:
-                    value = getattr(to_configure, parameter.asitem.name)
-                    pvalue = parameter.value
-                    param_name = parameter.name
-
-                    if param_name not in value or pvalue != value[param_name]:
-                        criticals.append(parameter)
-
-                    value[parameter.name] = parameter.value
-
-            # if criticals
-            if criticals:
-                self.restart(to_configure=to_configure, criticals=criticals)
-
-    def restart(self, criticals, to_configure=None):
-        """Restart a configurable object with critical parameters.
-
-        :param to_configure: object to configure with critical parameters
-        :param tuple criticals: list of critical parameters
-        """
-
-        if to_configure is None:  # init to_configure
-            to_configure = self._to_configure
-
-        if type(to_configure) is list:
-            for to_conf in to_configure:
-                self.restart(criticals=criticals, to_configure=to_conf)
-
-        elif self._is_critical_category(Configurable.LOG, criticals):
-            self._logger = self.newlogger()
-            to_configure.logger = self.logger
-
-    def _is_critical_category(self, category, criticals):
-        """Check if input category parameters are among criticals."""
-
-        result = False
-
-        properties = (param.name for param in self.conf[category])
-
-        # if property is among criticals
-        for prop in properties:
-            for critical in criticals:
-                if critical.name == prop:
-                    result = True
-                    break
-
-        return result
+                else:  # else log the warning
+                    message = 'Param {0} does not exist in {1}.'
+                    self.logger.warning(message.format(name, to_configure))
 
     def _init_paths(self, paths):
 

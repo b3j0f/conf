@@ -81,7 +81,7 @@ if B3J0F_CONF_DIR in environ:  # add b3j0F_CONF_DIR if necessary
 class FileConfDriver(ConfDriver):
     """Conf Manager dedicated to files."""
 
-    def rscpaths(self, path, logger):
+    def rscpaths(self, path):
 
         result = list(
             join(conf_dir, path) for conf_dir in CONF_DIRS

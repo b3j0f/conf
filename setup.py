@@ -57,7 +57,7 @@ KEYWORDS = [
     'reflectivity'
 ]
 
-dependencies = ['b3j0f.utils', 'b3j0f.annotation', 'six']
+dependencies = ['b3j0f.utils', 'b3j0f.annotation', 'six', 'future']
 
 DESCRIPTION = 'python class configuration tools useful in python projects.'
 
@@ -91,7 +91,8 @@ setup(
         'Programming Language :: Python :: 3.1',
         'Programming Language :: Python :: 3.2',
         'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4'
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5'
     ],
     test_suite='b3j0f',
     keywords=KEYWORDS,

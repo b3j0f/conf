@@ -63,6 +63,49 @@ class ModelElement(object):
 
         return result
 
+    def __eq__(self, other):
+
+        result = isinstance(other, self.__class__)
+
+        if result:
+
+            result = True
+            for slot in self.__slots__:
+
+                selfattr = getattr(self, slot)
+                otherattr = getattr(other, slot)
+
+                result = selfattr == otherattr
+
+                if not result:
+                    break
+
+        return result
+
+    def __ne__(self, other):
+
+        return not self.__eq__(other)
+
+    def __repr__(self):
+
+        slotsrepr = ''
+
+        for __slot__ in self.__slots__:
+
+            if __slot__.startswith('_'):
+                continue
+
+            slotattr = getattr(self, __slot__)
+            slotsrepr = '{0}{1}, '.format(slotsrepr, slotattr)
+
+        else:
+            if slotsrepr:
+                slotsrepr = slotsrepr[:-2]
+
+        result = '{0}({1})'.format(type(self).__name__, slotsrepr)
+
+        return result
+
 
 class CompositeModelElement(ModelElement):
     """Model element composed of model elements."""
@@ -192,7 +235,9 @@ class CompositeModelElement(ModelElement):
 
     def __repr__(self):
 
-        result = '{0}({1})'.format(type(self).__name__, self._content)
+        result = super(CompositeModelElement, self).__repr__()
+
+        result = '{0}[{1}]'.format(result, self._content)
 
         return result
 
@@ -247,7 +292,7 @@ class CompositeModelElement(ModelElement):
 
         for content in self._content.values():
 
-            result += content.copy(cleaned)
+            result += content.copy(cleaned=cleaned)
 
         return result
 

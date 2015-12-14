@@ -58,3 +58,11 @@ class Category(CompositeModelElement):
         return list(
             cparam for cparam in self._content.values() if cparam == param
         )
+
+    def copy(self, cleaned=False, *args, **kwargs):
+
+        kwargs.setdefault('name', self.name)
+
+        result = super(Category, self).copy(cleaned=cleaned, *args, **kwargs)
+
+        return result

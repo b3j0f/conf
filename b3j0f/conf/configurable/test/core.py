@@ -54,14 +54,14 @@ class ConfigurableTest(UTCase):
         self.conf = Configuration(
             Category(
                 'A',
-                Parameter('a', value='a', _type=str),
-                Parameter('_', value=2, _type=int),
-                Parameter('error', _type=float, svalue='error')
+                Parameter('a', value='a', vtype=str),
+                Parameter('_', value=2, vtype=int),
+                Parameter('error', vtype=float, svalue='error')
             ),
             Category(
                 'B',
-                Parameter('a', value='b', _type=str),
-                Parameter('b', value='b', _type=str)
+                Parameter('a', value='b', vtype=str),
+                Parameter('b', value='b', vtype=str)
             )
         )
 
@@ -142,16 +142,16 @@ class ConfigurableTest(UTCase):
 
         # add first category in conf file[0]
         configurable.set_conf(
-            path=self.paths[0],
+            rscpath=self.paths[0],
             conf=Configuration(self.conf['A']),
-            driver=configurable._drivers.split(',')[0]
+            driver=configurable.drivers[0]
         )
 
         # add second category in conf file[1]
         configurable.set_conf(
-            path=self.paths[1],
+            rscpath=self.paths[1],
             conf=Configuration(self.conf['B']),
-            driver=configurable._drivers.split(',')[1]
+            driver=configurable.drivers[1]
         )
 
         conf = configurable.get_conf(conf=self.conf)

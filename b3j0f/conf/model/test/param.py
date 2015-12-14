@@ -275,7 +275,6 @@ class ParameterTest(UTCase):
         param = Parameter(
             name='test',
             local=not Parameter.DEFAULT_LOCAL,
-            critical=not Parameter.DEFAULT_CRITICAL,
             vtype=int,
             conf=1,
             value=1,
@@ -286,7 +285,6 @@ class ParameterTest(UTCase):
 
         self.assertEqual(param.name, cparam.name)
         self.assertEqual(param.local, cparam.local)
-        self.assertEqual(param.critical, cparam.critical)
         self.assertEqual(param.vtype, cparam.vtype)
         self.assertEqual(param.conf, cparam.conf)
         self.assertEqual(param.value, cparam.value)
@@ -298,7 +296,6 @@ class ParameterTest(UTCase):
         param = Parameter(
             name='test',
             local=not Parameter.DEFAULT_LOCAL,
-            critical=not Parameter.DEFAULT_CRITICAL,
             vtype=int,
             conf=1,
             value=1,
@@ -309,7 +306,6 @@ class ParameterTest(UTCase):
 
         self.assertEqual(param.name, cparam.name)
         self.assertEqual(param.local, cparam.local)
-        self.assertEqual(param.critical, cparam.critical)
         self.assertEqual(param.vtype, cparam.vtype)
         self.assertEqual(param.conf, cparam.conf)
         self.assertIsNone(cparam.value)

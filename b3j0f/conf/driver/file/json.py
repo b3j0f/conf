@@ -30,8 +30,6 @@ from __future__ import absolute_import
 
 __all__ = ['JSONConfDriver']
 
-from builtins import open
-
 try:
     from json import load, dump
 
@@ -40,40 +38,29 @@ except ImportError:
 
 from .base import FileConfDriver
 
-from six import reraise
-
-from sys import exc_info
-
 
 class JSONConfDriver(FileConfDriver):
     """Manage json resource configuration."""
 
-    def _resource(self, rscpath, logger):
+    def resource(self):
+
+        return {}
+
+    def _pathresource(self, rscpath):
 
         result = None
 
-        try:
-            msg = 'Error while getting resource from {0}.'.format(rscpath)
-            with open(rscpath, 'rb') as fpr:
+        with open(rscpath, 'r') as fpr:
 
-                try:
-                    result = load(fpr)
-
-                except ValueError as vex:
-                    logger.error('{0} {1}: {2}'.format(msg, vex, exc_info()[2]))
-                    reraise(self.Error, self.Error(msg))
-
-        except OSError as oex:
-            logger.error('{0} {1}: {2}'.format(msg, oex, exc_info()[2]))
-            reraise(self.Error, self.Error(msg))
+            result = load(fpr)
 
         return result
 
-    def _cnames(self, resource, logger):
+    def _cnames(self, resource):
 
         return resource.keys()
 
-    def _cparams(self, resource, cname, logger):
+    def _params(self, resource, cname):
 
         params = resource[cname]
 
@@ -83,7 +70,7 @@ class JSONConfDriver(FileConfDriver):
 
         return result
 
-    def _set_conf(self, conf, resource, rscpath, logger):
+    def _set_conf(self, conf, resource, rscpath):
 
         for category in conf:
 
@@ -93,18 +80,6 @@ class JSONConfDriver(FileConfDriver):
 
                 cat[parameter.name] = parameter.svalue
 
-        msg = 'Error while putting conf in {0}'.format(rscpath)
+        with open(rscpath, 'w') as fpw:
 
-        try:
-
-            with open(rscpath, 'wb') as fpw:
-                try:
-                    dump(fpw, resource)
-
-                except ValueError as vex:
-                    logger.error('{0} {1}: {2}'.format(msg, vex, exc_info()[2]))
-                    reraise(self.Error, self.Error(msg))
-
-        except OSError as oex:
-            logger.error('{0} {1}: {2}'.format(msg, oex, exc_info()[2]))
-            reraise(self.Error, self.Error(msg))
+            dump(fpw, resource)

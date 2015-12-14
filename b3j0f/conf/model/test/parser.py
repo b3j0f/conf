@@ -37,7 +37,7 @@ from ..cat import Category
 from ..param import Parameter
 from ...configurable.core import Configurable
 from ...driver.test.base import TestConfDriver
-from ..parser import (ParserError, _simpleparser, _exprparser, _resolve)
+from ..parser import _simpleparser, _exprparser, _resolve
 
 
 class SimpleParserTest(UTCase):

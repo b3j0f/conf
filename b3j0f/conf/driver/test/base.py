@@ -47,70 +47,34 @@ class TestConfDriver(ConfDriver):
 
         self.confbypath = {}
 
-        for i in range(self.count):
-            self.confbypath['{0}'.format(i)] = Configuration(
-                Category(
-                    'cat{0}'.format(i),
-                    Parameter(name='param', value=i))
-            )
+    def resource(self):
 
-    def _resource(self, rscpath, **_):
-        """Get configuration resource from resource path.
+        return {}
 
-        :param str rscpath: resource path.
-        :param Logger logger: logger to use.
-        """
+    def _pathresource(self, rscpath):
 
         return self.confbypath[rscpath]
 
-    def _cnames(self, resource, **_):
-        """Get resource category names.
+    def _cnames(self, resource):
 
-        :param resource: resource from where get category names.
-        :param Logger logger: logger to use.
-        :return: resource category names.
-        :rtype: list
-        """
+        return resource.names()
 
-        return resource.keys()
-
-    def _params(self, resource, cname, **_):
-        """Get list of (parameter name, parameter value) from a category name
-        and a specific configuration resource.
-
-        :param resource: resource from where get parameter names and values.
-        :param str cname: related category name.
-        :param Logger logger: logger to use.
-        :return: list of resource parameter
-        :rtype: list
-        """
+    def _params(self, resource, cname):
 
         result = []
 
         for pname in resource[cname]:
             parameter = resource[cname][pname]
             pvalue = parameter.value
-            result.append((pname, pvalue))
+            result.append((pname.name, pvalue))
 
         return result
 
-    def rscpaths(self, path, **_):
-        """Get resource paths related to input configuration path.
-
-        :param str path: configuration path.
-        :rtype: list
-        """
+    def rscpaths(self, path):
 
         return [path]
 
-    def _set_conf(self, conf, resource, rscpath, **_):
-        """Set input conf to input resource.
-
-        :param Configuration conf: conf to write to path.
-        :param resource: driver configuration resource.
-        :param str rscpath: specific resource path to use.
-        :param Logger logger: used to log info/errors
-        """
+    def _set_conf(self, conf, resource, rscpath):
 
         self.confbypath[rscpath] = conf
 
@@ -118,59 +82,65 @@ class TestConfDriver(ConfDriver):
 class ConfDriverTest(UTCase):
     """Test the conf driver class."""
 
+    __driverclass__ = TestConfDriver
+
     def setUp(self):
 
-        self.driver = TestConfDriver()
+        self.count = 5
+        self.driver = self.__driverclass__(count=self.count)
+        self.paths = ['test{0}'.format(count) for count in range(self.count)]
+        self.conf = Configuration(
+            Category(
+                'A',
+                Parameter('a', value=0, vtype=int),  # a is 0
+                Parameter('b', value=True, vtype=bool)
+            ),  # b is overriden
+            Category(
+                'B',
+                Parameter('b', value=1, vtype=int),  # b is 1
+            )
+        )
 
     def test_rscpaths(self):
         """Test the method rscpaths."""
 
-        for path in self.driver.confbypath:
+        for path in self.paths:
 
             rscpaths = self.driver.rscpaths(path=path)
 
-            self.assertEqual(rscpaths, [path])
+            for rscpath in rscpaths:
+                self.assertTrue(rscpath.endswith(path))
 
-    def test__get_conf(self):
-        """Test the method _get_conf."""
+    def test_scenario(self):
+        """Test a scenario of getting/putting configuration."""
 
-        for rscpath in self.driver.confbypath:
+        for path in self.paths:
 
-            conf = self.driver._get_conf(rscpath=rscpath)
+            conf = self.driver.get_conf(path=path)
 
-            self.assertEqual(self.driver.confbypath[rscpath], conf)
+            self.assertIsNone(conf)
 
-    def test_get_conf(self):
-        """Test the method get_conf."""
+            conf = self.driver.get_conf(path=path, conf=self.conf)
 
-        for rscpath in self.driver.confbypath:
+            self.assertEqual(conf, self.conf)
 
-            conf = self.driver.get_conf(path=rscpath)
+            rscpaths = self.driver.rscpaths(path=path)
 
-            print(conf, self.driver.confbypath[rscpath])
-            self.assertEqual(self.driver.confbypath[rscpath], conf)
+            for rscpath in rscpaths:
 
-    def test_get_conf_old(self):
-        """Test the method get_conf with an old conf."""
+                self.assertTrue(rscpath.endswith(path))
 
-        for rscpath in self.driver.confbypath:
+                conf = self.conf.copy()
+                conf += Category('test', Parameter('test'))
 
-            driverconf = self.driver.confbypath[rscpath]
+                self.driver.set_conf(rscpath=rscpath, conf=conf)
 
-            conf = Configuration(Category('test'))
+            conf = self.driver.get_conf(path=path)
 
-            self.assertEqual(len(conf), 1)
+            self.assertNotEqual(conf, self.conf)
 
-            self.driver.get_conf(path=rscpath, conf=conf)
-
-            self.assertEqual(len(conf), len(driverconf) + 1)
-
-    def test_empty_get_conf(self):
-        """Test the method get_conf with a not existing confpath."""
-
-        conf = self.driver.get_conf(path='notexist')
-
-        self.assertIsNone(conf)
+            self.assertIn('test', conf)
+            self.assertIn('test', conf['test'])
 
 
 if __name__ == '__main__':

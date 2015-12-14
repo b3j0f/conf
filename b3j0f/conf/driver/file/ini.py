@@ -30,51 +30,38 @@ from __future__ import absolute_import
 
 __all__ = ['INIConfDriver']
 
-from configparser import RawConfigParser, MissingSectionHeaderError
+from configparser import RawConfigParser
 
 from .base import FileConfDriver
-
-from builtins import open
-
-from sys import exc_info
-
-from six import reraise
 
 
 class INIConfDriver(FileConfDriver):
     """Manage ini resource configuration."""
 
-    def _resource(self, rscpath, logger):
+    def resource(self):
+
+        return RawConfigParser()
+
+    def _pathresource(self, rscpath):
 
         result = RawConfigParser()
 
-        try:
-            result.read(rscpath)
+        result.read(rscpath)
 
-        except MissingSectionHeaderError as mshe:
-            msg = 'Missing section header in {0}.'.format(rscpath)
-            logger.error(
-                '{0} {1}: {2}'.format(msg, mshe, exc_info()[2])
-            )
-            reraise(self.Error, self.Error(msg))
+        if not result.defaults():
+            result = None
 
         return result
 
-    def _cnames(self, resource, logger):
+    def _cnames(self, resource):
 
-        return resource.categories()
+        return resource.sections()
 
-    def _params(self, resource, cname, logger):
+    def _params(self, resource, cname):
 
-        pnames = resource.options(cname)
+        return resource.items(cname)
 
-        result = [
-            (pname, resource.get_option(cname, pname)) for pname in pnames
-        ]
-
-        return result
-
-    def _set_conf(self, conf, resource, rscpath, logger):
+    def _set_conf(self, conf, resource, rscpath):
 
         for category in conf:
 
@@ -84,12 +71,5 @@ class INIConfDriver(FileConfDriver):
             for param in category:
                 resource.set(category.name, param.name, param.svalue)
 
-        try:
-            with open(rscpath, 'wb') as fps:
-                resource.write(fps)
-
-        except OSError as ose:
-            msg = 'Error while putting resource to {0}'.format(rscpath)
-            full_msg = '{0} {1}: {2}'.format(msg, ose, exc_info()[2])
-            logger.error(full_msg)
-            reraise(self.Error, self.Error(msg))
+        with open(rscpath, 'w') as fps:
+            resource.write(fps)

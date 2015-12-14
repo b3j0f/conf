@@ -116,15 +116,13 @@ class Parameter(ModelElement):
     - parser: parameter value parser from configuration resources.
     - conf: parameter configuration if not None. If not None, the value must be
         a callable beceause the conf is used such as a kwargs.
-    - critical: if True (False by default), set a configurable property
     - local: distinguish local parameters from those found in configuration
         resources.
-    - asitem: distinguish parameters from those in a ParamList.
     """
 
     __slots__ = (
         '_name', 'vtype', 'parser', '_svalue', '_value', '_error', 'conf',
-        'critical', 'local', 'asitem', '_globals', '_locals', 'configurable'
+        'local', '_globals', '_locals', 'configurable'
     ) + ModelElement.__slots__
 
     class Error(Exception):
@@ -137,14 +135,12 @@ class Parameter(ModelElement):
     _PARAM_NAME_COMPILER_MATCHER = re_compile(PARAM_NAME_REGEX).match
 
     DEFAULT_VTYPE = object  #: default vtype.
-    DEFAULT_CRITICAL = False  #: default critical value.
     DEFAULT_LOCAL = True  #: default local value.
 
     def __init__(
             self, name, vtype=DEFAULT_VTYPE, svalue=None, parser=_parser,
             value=None, conf=None, configurable=None,
-            critical=DEFAULT_CRITICAL, local=DEFAULT_LOCAL,
-            _globals=None, _locals=None,
+            local=DEFAULT_LOCAL, _globals=None, _locals=None,
             *args, **kwargs
     ):
         """
@@ -161,8 +157,6 @@ class Parameter(ModelElement):
             value if not None. In this case, the parameter value must be
             callable.
         :param Configurable configurable: specific configuable.
-        :param bool critical: True if this parameter is critical. A critical
-            parameter can require to restart a component for example.
         :param bool local: distinguish local parameters from those found in
             configuration resources.
         """
@@ -181,7 +175,6 @@ class Parameter(ModelElement):
         self.vtype = vtype
         self.conf = conf
         self.configurable = configurable
-        self.critical = critical
         self.local = local
         self.svalue = svalue
         self.value = value
@@ -424,7 +417,7 @@ class Parameter(ModelElement):
             self._error = error
             raise error
 
-    def copy(self, cleaned=False):
+    def copy(self, cleaned=False, *args, **kwargs):
         """Get a copy of the parameter with specified name and new value if
         cleaned.
 
@@ -433,20 +426,15 @@ class Parameter(ModelElement):
         :return: new parameter.
         """
 
-        kwargs = {
-            'name': self.name,
-            'parser': self.parser,
-            'local': self.local,
-            'critical': self.critical,
-            'vtype': self.vtype,
-            'conf': self.conf
-        }
+        props = ('name', 'parser', 'local', 'vtype', 'conf')
+        for prop in props:
+            kwargs.setdefault(prop, getattr(self, prop))
 
         if not cleaned:  # add value and svalue if not cleaned
-            kwargs['value'] = self._value
-            kwargs['svalue'] = self._svalue
+            kwargs.setdefault('value', self._value)
+            kwargs.setdefault('svalue', self._svalue)
 
-        result = Parameter(**kwargs)
+        result = super(Parameter, self).copy(cleaned=cleaned, *args, **kwargs)
 
         return result
 

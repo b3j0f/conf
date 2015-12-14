@@ -343,16 +343,6 @@ class CompositeModelElementTest(UTCase):
 
         self.assertRaises(TypeError, self.cme.__ixor__, None)
 
-    def test___repr__(self):
-        """Test the method __repr__."""
-
-        assertrepr = repr(self.cme)
-
-        self.assertEqual(
-            assertrepr,
-            '{0}({1})'.format(type(self.cme).__name__, self.cme._content)
-        )
-
     def test_keys(self):
         """Test the method keys."""
 

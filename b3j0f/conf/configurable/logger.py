@@ -24,7 +24,7 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-__all__ = ['Configurable']
+__all__ = ['Logger']
 
 
 from logging import Formatter, getLogger, FileHandler, Filter

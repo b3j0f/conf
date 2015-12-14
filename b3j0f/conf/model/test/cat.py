@@ -62,5 +62,6 @@ class CategoryTest(UTCase):
 
         self.assertEqual(len(self.name) + 1, len(params))
 
+
 if __name__ == '__main__':
     main()

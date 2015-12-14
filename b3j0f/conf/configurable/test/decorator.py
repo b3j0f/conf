@@ -63,13 +63,13 @@ class DecoratorTest(TestCase):
         class TestConfigurable(Configurable):
             pass
 
-        tc = TestConfigurable()
+        tconf = TestConfigurable()
 
-        self.assertTrue(CATEGORY in tc.conf)
-        self.assertTrue(len(tc.conf) > 0)
-        self.assertTrue(len(tc.conf[CATEGORY]) > 0)
+        self.assertIn(CATEGORY, tconf.conf)
+        self.assertTrue(len(tconf.conf) > 0)
+        self.assertTrue(len(tconf.conf[CATEGORY]) > 0)
 
-        category_len = len(tc.conf[CATEGORY])
+        category_len = len(tconf.conf[CATEGORY])
 
         parameters = [Parameter('a'), Parameter('b')]
 
@@ -77,32 +77,32 @@ class DecoratorTest(TestCase):
         class TestConfigurable(Configurable):
             pass
 
-        tc = TestConfigurable()
+        tconf = TestConfigurable()
 
-        self.assertTrue(CATEGORY in tc.conf)
-        self.assertTrue(len(tc.conf) > 0)
+        self.assertIn(CATEGORY, tconf.conf)
+        self.assertTrue(len(tconf.conf) > 0)
         self.assertEqual(
-            len(tc.conf[CATEGORY]), category_len + len(parameters))
+            len(tconf.conf[CATEGORY]), category_len + len(parameters))
 
         @add_category(name=CATEGORY, unified=False)
         class TestConfigurable(Configurable):
             pass
 
-        tc = TestConfigurable()
+        tconf = TestConfigurable()
 
-        self.assertTrue(CATEGORY in tc.conf)
-        self.assertTrue(len(tc.conf) > 0)
-        self.assertEqual(len(tc.conf[CATEGORY]), 0)
+        self.assertIn(CATEGORY, tconf.conf)
+        self.assertTrue(len(tconf.conf) > 0)
+        self.assertEqual(len(tconf.conf[CATEGORY]), 0)
 
         @add_category(name=CATEGORY, unified=False, content=parameters)
         class TestConfigurable(Configurable):
             pass
 
-        tc = TestConfigurable()
+        tconf = TestConfigurable()
 
-        self.assertTrue(CATEGORY in tc.conf)
-        self.assertTrue(len(tc.conf) > 0)
-        self.assertEqual(len(tc.conf[CATEGORY]), len(parameters))
+        self.assertIn(CATEGORY, tconf.conf)
+        self.assertTrue(len(tconf.conf) > 0)
+        self.assertEqual(len(tconf.conf[CATEGORY]), len(parameters))
 
         category = Category(CATEGORY, *parameters)
 
@@ -110,11 +110,11 @@ class DecoratorTest(TestCase):
         class TestConfigurable(Configurable):
             pass
 
-        tc = TestConfigurable()
+        tconf = TestConfigurable()
 
-        self.assertTrue(CATEGORY in tc.conf)
-        self.assertTrue(len(tc.conf) > 0)
-        self.assertEqual(len(tc.conf[CATEGORY]), len(category))
+        self.assertIn(CATEGORY, tconf.conf)
+        self.assertTrue(len(tconf.conf) > 0)
+        self.assertEqual(len(tconf.conf[CATEGORY]), len(category))
 
 if __name__ == '__main__':
     main()
