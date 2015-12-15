@@ -82,4 +82,4 @@ class JSONConfDriver(FileConfDriver):
 
         with open(rscpath, 'w') as fpw:
 
-            dump(fpw, resource)
+            dump(resource, fpw)

@@ -160,8 +160,10 @@ class ConfDriver(object):
             self._set_conf(conf=conf, resource=resource, rscpath=rscpath)
 
         except:
+
             if logger is not None:
                 _, ex, traceback = exc_info()
+                print(ex, 'fuck')
                 msg = 'Error while setting conf to {0}.'.format(rscpath)
                 full_msg = '{0} {1}: {2}'.format(msg, ex, traceback)
                 logger.error(full_msg)
@@ -208,7 +210,7 @@ class ConfDriver(object):
 
         raise NotImplementedError()
 
-    def _pathresource(self, rscpath, force=False):
+    def _pathresource(self, rscpath):
         """Method to override in order to get specific conf resource from a
         resource path.
 

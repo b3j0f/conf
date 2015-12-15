@@ -48,7 +48,7 @@ class INIConfDriver(FileConfDriver):
 
         result.read(rscpath)
 
-        if not result.defaults():
+        if not result.sections():
             result = None
 
         return result
@@ -72,4 +72,5 @@ class INIConfDriver(FileConfDriver):
                 resource.set(category.name, param.name, param.svalue)
 
         with open(rscpath, 'w') as fps:
+
             resource.write(fps)

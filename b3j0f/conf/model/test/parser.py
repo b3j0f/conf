@@ -37,7 +37,9 @@ from ..cat import Category
 from ..param import Parameter
 from ...configurable.core import Configurable
 from ...driver.test.base import TestConfDriver
-from ..parser import _simpleparser, _exprparser, _resolve
+from ..parser import (
+    _simpleparser, _exprparser, _resolve, serialize, EXPR_PREFIX
+)
 
 
 class SimpleParserTest(UTCase):
@@ -139,6 +141,39 @@ class Resolve(ConfigurationTest):
         """Test when parameter name does not exist."""
 
         self.assertRaises(KeyError, _resolve, pname='test', conf=self.conf)
+
+
+class Serialiazer(ConfigurationTest):
+    """Test the function serializer."""
+
+    def test_str(self):
+        """Test to serialize a string."""
+
+        value = 'test'
+        serialized = serialize(value)
+
+        self.assertEqual(value, serialized)
+
+    def test_none(self):
+        """Test to serialize None."""
+
+        serialized = serialize(None)
+
+        self.assertIsNone(serialized)
+
+    def test_other(self):
+        """Test to serialize other."""
+
+        types = [int, float, complex, dict, list, set]
+
+        for _type in types:
+
+            value = _type()
+
+            serialized = serialize(value)
+
+            self.assertEqual(serialized, '{0}{1}'.format(EXPR_PREFIX, value))
+
 
 
 class ExprParser(ConfigurationTest):

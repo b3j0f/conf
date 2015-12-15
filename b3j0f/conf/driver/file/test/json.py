@@ -37,9 +37,8 @@ from ..json import JSONConfDriver
 class JSONConfDriverTest(FileConfDriverTest):
     """Test JSONConfDriver."""
 
-    def _get_manager(self):
+    __driverclass__ = JSONConfDriver
 
-        return JSONConfDriver
 
 if __name__ == '__main__':
     main()

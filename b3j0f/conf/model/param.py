@@ -30,7 +30,7 @@ __all__ = ['Parameter', 'PType']
 
 
 from .base import ModelElement
-from .parser import parser as _parser, _getscope, ParserError
+from .parser import parse, _getscope, ParserError, serialize
 
 from six import string_types, reraise
 
@@ -122,7 +122,7 @@ class Parameter(ModelElement):
 
     __slots__ = (
         '_name', 'vtype', 'parser', '_svalue', '_value', '_error', 'conf',
-        'local', '_globals', '_locals', 'configurable'
+        'local', '_globals', '_locals', 'configurable', 'serializer'
     ) + ModelElement.__slots__
 
     class Error(Exception):
@@ -138,8 +138,8 @@ class Parameter(ModelElement):
     DEFAULT_LOCAL = True  #: default local value.
 
     def __init__(
-            self, name, vtype=DEFAULT_VTYPE, svalue=None, parser=_parser,
-            value=None, conf=None, configurable=None,
+            self, name, vtype=DEFAULT_VTYPE, svalue=None, parser=parse,
+            serializer=serialize, value=None, conf=None, configurable=None,
             local=DEFAULT_LOCAL, _globals=None, _locals=None,
             *args, **kwargs
     ):
@@ -149,8 +149,10 @@ class Parameter(ModelElement):
             - regex: designates a group of parameters with a matching name and
                 common properties (parser, value, conf, etc.).
         :param type vtype: parameter value type.
-        :param callable parser: param test deserializer which takes in param
-            a str. Default is exprparser.
+        :param callable parser: param value deserializer which takes in param a
+            str. Default is the expression parser.
+        :param callable serializer: param serializer which takes in param an
+            object and retuns a string. Default is the expression serializer.
         :param str svalue: serialized value.
         :param value: param value. None if not given.
         :param dict conf: parameter configuration used to init the parameter
@@ -171,6 +173,7 @@ class Parameter(ModelElement):
 
         # init public attributes
         self.parser = parser
+        self.serializer = serializer
         self.name = name
         self.vtype = vtype
         self.conf = conf
@@ -285,8 +288,7 @@ class Parameter(ModelElement):
                 pass
 
             else:
-                if isinstance(value, string_types):
-                    result = self._svalue = value
+                result = self._svalue = self.serializer(value)
 
         return result
 

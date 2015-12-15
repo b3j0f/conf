@@ -41,9 +41,9 @@ from ..base import ConfDriver
 class TestConfDriver(ConfDriver):
     """Configuration driver for test."""
 
-    def __init__(self, count=5):
+    def __init__(self):
 
-        self.count = count
+        super(TestConfDriver, self).__init__()
 
         self.confbypath = {}
 
@@ -70,13 +70,13 @@ class TestConfDriver(ConfDriver):
 
         return result
 
-    def rscpaths(self, path):
-
-        return [path]
-
     def _set_conf(self, conf, resource, rscpath):
 
         self.confbypath[rscpath] = conf
+
+    def rscpaths(self, path):
+
+        return [path]
 
 
 class ConfDriverTest(UTCase):
@@ -87,7 +87,7 @@ class ConfDriverTest(UTCase):
     def setUp(self):
 
         self.count = 5
-        self.driver = self.__driverclass__(count=self.count)
+        self.driver = self.__driverclass__()
         self.paths = ['test{0}'.format(count) for count in range(self.count)]
         self.conf = Configuration(
             Category(

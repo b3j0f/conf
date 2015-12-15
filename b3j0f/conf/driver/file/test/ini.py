@@ -37,9 +37,8 @@ from ..ini import INIConfDriver
 class INIConfDriverTest(FileConfDriverTest):
     """Test the INIConfDriver."""
 
-    def _get_manager(self):
+    __driverclass__ = INIConfDriver
 
-        return INIConfDriver
 
 if __name__ == '__main__':
     main()

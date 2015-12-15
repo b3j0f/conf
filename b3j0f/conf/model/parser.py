@@ -74,7 +74,7 @@ expressions accept those keywords which does not exist in the python language.
 
 from __future__ import absolute_import
 
-__all__ = ['parser', 'ParserError', 'EXPR_PREFIX']
+__all__ = ['parse', 'ParserError', 'EXPR_PREFIX', 'serialize']
 
 
 from b3j0f.utils.path import lookup
@@ -83,6 +83,8 @@ from b3j0f.utils.runtime import safe_eval
 from re import compile as re_compile
 
 from parser import ParserError
+
+from six import string_types
 
 WORD = r'[a-zA-Z_]\w*'
 
@@ -97,7 +99,23 @@ REGEX_COMP = re_compile(EVAL_REGEX)  #: final regex compiler.
 EXPR_PREFIX = '='  #: expression prefix
 
 
-def parser(
+def serialize(expr):
+    """Serialize input expr into a parsable value.
+
+    :rtype: str"""
+
+    result = None
+
+    if isinstance(expr, string_types):
+        result = expr
+
+    elif expr is not None:
+        result = '{0}{1}'.format(EXPR_PREFIX, expr)
+
+    return result
+
+
+def parse(
         svalue, conf=None, configurable=None, _type=object,
         _locals=None, _globals=None
 ):
