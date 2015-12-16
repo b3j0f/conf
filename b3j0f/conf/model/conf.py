@@ -178,7 +178,9 @@ class Configuration(CompositeModelElement):
             and svalues."""
 
         for cat in conf:
+
             if cat.name in self:
+
                 selfcat = self._content[cat.name]
 
                 for param in cat:
@@ -188,11 +190,15 @@ class Configuration(CompositeModelElement):
                     if paramstoupdate:
                         for paramtoupdate in paramstoupdate:
                             paramtoupdate.svalue = param.svalue
-                            paramtoupdate.value = param.value
+                            try:
+                                paramtoupdate.value = param.value
+
+                            except TypeError:
+                                pass
 
                     else:
-                        selfcat += param
-                        param.local = False  # mark the param such as foreign
+                        # mark the param such as foreign
+                        selfcat += param.copy(local=False)
 
             else:
                 self += cat

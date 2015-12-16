@@ -159,8 +159,8 @@ class Parameter(ModelElement):
             value if not None. In this case, the parameter value must be
             callable.
         :param Configurable configurable: specific configuable.
-        :param bool local: distinguish local parameters from those found in
-            configuration resources.
+        :param bool local: distinguish local parameters from those defined
+            outside the configuration while updating the embedding conf.
         """
 
         super(Parameter, self).__init__(*args, **kwargs)
@@ -212,7 +212,7 @@ class Parameter(ModelElement):
     def __hash__(self):
         """Get parameter hash value.
 
-        :return:hash(self.name)+hash(self._value)+hash(self._svalue)
+        :return:hash(self.name)+hash(Parameter).
         :rtype: int"""
 
         return hash(self.name) + hash(Parameter)
@@ -351,13 +351,14 @@ class Parameter(ModelElement):
 
             # parse value if str and if parser exists
             try:
-                result = parser(
+                result = self._value = parser(
                     svalue=self._svalue, conf=conf,
                     configurable=configurable, _type=self.vtype,
                     _locals=_locals, _globals=_globals
                 )
 
             except Exception as ex:
+
                 self._error = ex
                 if error:
                     msg = 'Impossible to parse value ({0}) with {1}.'
@@ -383,7 +384,7 @@ class Parameter(ModelElement):
         if result is None and self._svalue is not None:
 
             try:
-                result = self.resolve()
+                result = self._value = self.resolve()
 
             except Exception:
                 reraise(

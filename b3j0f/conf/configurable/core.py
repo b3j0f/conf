@@ -24,12 +24,7 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-__all__ = ['MetaConfigurable', 'Configurable', 'ConfigurableError']
-
-
-from logging import Formatter, getLogger, FileHandler, Filter
-
-from os.path import join, sep
+__all__ = ['MetaConfigurable', 'Configurable']
 
 from six import string_types
 
@@ -39,7 +34,6 @@ from b3j0f.utils.iterable import ensureiterable
 from ..model.conf import Configuration
 from ..model.cat import Category
 from ..model.param import Parameter
-
 from ..driver.base import ConfDriver
 from ..driver.file.json import JSONConfDriver
 from ..driver.file.ini import INIConfDriver
@@ -71,10 +65,6 @@ class MetaConfigurable(type):
             result.apply_configuration(conf=conf)
 
         return result
-
-
-class ConfigurableError(Exception):
-    """Handle Configurable errors."""
 
 
 def _updatedrivers(self, *_):
@@ -115,7 +105,7 @@ class Configurable(object):
     __metaclass__ = MetaConfigurable
 
     # default drivers which are json and ini.
-    DEFAULT_DRIVERS = [JSONConfDriver(), INIConfDriver()]
+    DEFAULT_DRIVERS = (JSONConfDriver(), INIConfDriver())
 
     INIT_CAT = 'init_cat'  #: initialization category.
 
@@ -125,45 +115,20 @@ class Configurable(object):
     STORE_ATTR = '__configurable__'
 
     CONF = 'CONFIGURATION'  #: configuration attribute name.
-    LOG = 'LOG'  #: log attribute name.
 
     AUTO_CONF = 'auto_conf'  #: auto_conf attribute name.
     RECONF_ONCE = 'reconf_once'  #: reconf_once attribute name.
     CONF_PATHS = 'paths'  #: paths attribute name.
     DRIVERS = 'drivers'  #: drivers attribute name.
 
-    LOG_NAME = 'log_name'  #: logger name property name.
-    LOG_LVL = 'log_lvl'  #: logging level property name.
-    LOG_PATH = 'log_path'  #: logging path property name.
-    LOG_DEBUG_FORMAT = 'log_debug_format'  #: debug log format property name.
-    LOG_INFO_FORMAT = 'log_info_format'  #: info log format property name.
-    LOG_WARNING_FORMAT = 'log_warning_format'  #: warn log format property name
-    LOG_ERROR_FORMAT = 'log_error_format'  #: error log format property name.
-    LOG_CRITICAL_FORMAT = 'log_critical_format'  #: crit log format property.
-
     DEFAULT_AUTO_CONF = True  #: default auto conf.
     DEFAULT_RECONF_ONCE = False  #: default reconf once.
-
-    # log messages format.
-    #: debug message format.
-    DEBUG_FORMAT = "[%(asctime)s] [%(levelname)s] [%(name)s] \
-[%(process)d] [%(thread)d] [%(pathname)s] [%(lineno)d] %(message)s"
-    #: info message format.
-    INFO_FORMAT = "[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s"
-    WARNING_FORMAT = INFO_FORMAT  #: warning message format.
-    ERROR_FORMAT = WARNING_FORMAT  #: error message format.
-    CRITICAL_FORMAT = ERROR_FORMAT  #: critical message format.
 
     def __init__(
             self,
             conf=None, usecls_conf=True, unified_conf=True,
-            to_configure=None, store=False,
-            paths=None, drivers=DEFAULT_DRIVERS,
+            to_configure=None, store=False, paths=None, drivers=DEFAULT_DRIVERS,
             auto_conf=DEFAULT_AUTO_CONF, reconf_once=DEFAULT_RECONF_ONCE,
-            log_lvl='INFO', log_name=None, log_path='.',
-            log_info_format=INFO_FORMAT,
-            log_debug_format=DEBUG_FORMAT, log_warning_format=WARNING_FORMAT,
-            log_error_format=ERROR_FORMAT, log_critical_format=CRITICAL_FORMAT,
             *args, **kwargs
     ):
         """
@@ -184,15 +149,6 @@ class Configurable(object):
             change.
         :param bool reconf_once: True (default) force auto conf reconf_once as
             soon as param change.
-        :param str log_lvl: logging level. Default is INFO.
-        :param str log_name: logger name. Default is configurable class lower
-            name.
-        :param str log_path: logging file path. Default is current directory.
-        :param str log_info_format: info logging level format.
-        :param str log_debug_format: debug logging level format.
-        :param str log_warning_format: warning logging level format.
-        :param str log_error_format: error logging level format.
-        :param str log_critical_format: critical logging level format.
         """
 
         super(Configurable, self).__init__(*args, **kwargs)
@@ -222,66 +178,6 @@ class Configurable(object):
 
         # set drivers
         self.drivers = drivers
-
-        # set logging properties
-        self._log_lvl = log_lvl
-        self._log_path = log_path
-        self._log_name = log_name if log_name else type(self).__name__.lower()
-        self._log_debug_format = log_debug_format
-        self._log_info_format = log_info_format
-        self._log_warning_format = log_warning_format
-        self._log_error_format = log_error_format
-        self._log_critical_format = log_critical_format
-
-        self._logger = self.newlogger()
-
-    def newlogger(self):
-        """Get a new logger related to self properties."""
-
-        result = getLogger(self.log_name)
-        result.setLevel(self.log_lvl)
-
-        def sethandler(logger, lvl, path, _format):
-            """Set right handler related to input lvl, path and format.
-
-            :param Logger logger: logger on which add an handler.
-            :param str lvl: logging level.
-            :param str path: file path.
-            :param str _format: logging message format.
-            """
-
-            class _Filter(Filter):
-                """Ensure message will be given for specific lvl"""
-
-                def filter(self, record):
-
-                    return record.levelname == lvl
-
-            # get the rights formatter and filter to set on a file handler
-            handler = FileHandler(path, mode='a+')
-            handler.addFilter(_Filter())
-            handler.setLevel(lvl)
-            formatter = Formatter(_format)
-            handler.setFormatter(formatter)
-
-            # if an old handler exist, remove it from logger
-            if hasattr(logger, lvl):
-                old_handler = getattr(logger, lvl)
-                logger.removeHandler(old_handler)
-
-            logger.addHandler(handler)
-            setattr(logger, lvl, handler)
-
-        filename = self.log_name.replace('.', sep)
-        path = join(self.log_path, '{0}.log'.format(filename))
-
-        sethandler(result, 'DEBUG', path, self.log_debug_format)
-        sethandler(result, 'INFO', path, self.log_info_format)
-        sethandler(result, 'WARNING', path, self.log_warning_format)
-        sethandler(result, 'ERROR', path, self.log_error_format)
-        sethandler(result, 'CRITICAL', path, self.log_critical_format)
-
-        return result
 
     @property
     def conf(self):
@@ -334,17 +230,6 @@ class Configurable(object):
                 Parameter(name=Configurable.DRIVERS, vtype=tuple),
                 Parameter(name=Configurable.RECONF_ONCE, vtype=bool),
                 Parameter(name=Configurable.CONF_PATHS, vtype=tuple)
-            ),
-            Category(
-                Configurable.LOG,
-                Parameter(name=Configurable.LOG_NAME),
-                Parameter(name=Configurable.LOG_PATH),
-                Parameter(name=Configurable.LOG_LVL),
-                Parameter(name=Configurable.LOG_DEBUG_FORMAT),
-                Parameter(name=Configurable.LOG_INFO_FORMAT),
-                Parameter(name=Configurable.LOG_WARNING_FORMAT),
-                Parameter(name=Configurable.LOG_ERROR_FORMAT),
-                Parameter(name=Configurable.LOG_CRITICAL_FORMAT)
             )
         )
 
@@ -394,15 +279,7 @@ class Configurable(object):
 
             for to_configure in value:
 
-                try:
-                    setattr(to_configure, Configurable.STORE_ATTR, self)
-
-                except AttributeError:
-                    self.logger.warning(
-                        'Impossible to store configurable in {0}.'.format(
-                            to_configure
-                        )
-                    )
+                setattr(to_configure, Configurable.STORE_ATTR, self)
 
         # add self to value in order to synchronize this configurable with
         # to_configure objects
@@ -410,48 +287,6 @@ class Configurable(object):
             value.append(self)
 
         self._to_configure = value
-
-    @property
-    def log_lvl(self):
-        """Get this logger lvl.
-
-        :return: self logger lvl.
-        :rtype: str
-        """
-
-        return self._log_lvl
-
-    @log_lvl.setter
-    def log_lvl(self, value):
-        """Change of logging level.
-
-        :param str value: new log_lvl to set up.
-        """
-
-        self._log_lvl = value
-
-        self._logger.setLevel(self._log_lvl)
-
-    @property
-    def log_name(self):
-        """Get this logger name.
-
-        :return: self logger name.
-        :rtype: str
-        """
-
-        return self._log_name
-
-    @log_name.setter
-    def log_name(self, value):
-        """Change of logging name.
-
-        :param str value: new log_name to set up.
-        """
-
-        self._log_name = value
-
-        self._logger.setLevel(self._log_name)
 
     @property
     def paths(self):
@@ -524,16 +359,12 @@ class Configurable(object):
         :param Configuration conf: conf to update. Default this conf.
         :param str(s) paths: list of conf files. Default this paths.
         :param Logger logger: logger to use for logging info/error messages.
-            Default self logger.
         :param list drivers: ConfDriver to use. Default this drivers.
         """
 
         result = None
 
         # start to initialize input params
-        if logger is None:
-            logger = self.logger
-
         if conf is None:
             conf = self.conf
 
@@ -549,7 +380,7 @@ class Configurable(object):
         # iterate on all paths
         for path in paths:
 
-            for driver in drivers:
+            for driver in drivers:  # find the best driver
 
                 result = driver.get_conf(
                     path=path, conf=conf, logger=logger
@@ -560,31 +391,14 @@ class Configurable(object):
 
             else:
                 # if no conf found, display a warning log message
-                logger.warning(
-                    'No driver found among {0} for processing {1}'.format(
-                        drivers, path
+                if logger is not None:
+                    logger.warning(
+                        'No driver found among {0} for processing {1}'.format(
+                            drivers, path
+                        )
                     )
-                )
 
         return result
-
-    def set_conf(self, driver, rscpath, conf=None, logger=None):
-        """Set params on input path.
-
-        :param ConfDriver driver: specific driver to use.
-        :param str rscpath: specific driver resource path to use.
-        :param Configuration conf: configuration to save in resource. Default
-            this conf.
-        :param Logger logger: logger to use to set params. Default this logger.
-        """
-
-        if conf is None:
-            conf = self.conf
-
-        if logger is None:
-            logger = self.logger
-
-        driver.set_conf(conf=conf, rscpath=rscpath, logger=logger)
 
     def configure(self, conf=None, logger=None, to_configure=None):
         """Update self properties with input params only if:
@@ -613,9 +427,6 @@ class Configurable(object):
                 self.configure(conf=conf, logger=logger, to_configure=to_conf)
 
         else:
-            if logger is None:
-                logger = self.logger
-
             unified_conf = conf.unify()
 
             values = unified_conf[Configuration.VALUES]
@@ -639,11 +450,6 @@ class Configurable(object):
                 )
                 # when conf succeed, deactive reconf_once
                 self.reconf_once = False
-
-    def _is_local(self, to_configure, name):
-        """True iif input name parameter can be handled by to_configure."""
-
-        return hasattr(to_configure, name)
 
     def _configure(self, unified_conf=None, logger=None, to_configure=None):
         """Configure this class with input conf only if auto_conf or
@@ -671,30 +477,14 @@ class Configurable(object):
                 )
 
         else:
-
             values = [p for p in unified_conf[Configuration.VALUES]]
             foreigns = [p for p in unified_conf[Configuration.FOREIGNS]]
 
             for parameter in values + foreigns:
                 name = parameter.name
-                # if parameter is local, to_configure must a related name
-                if self._is_local(to_configure, name):
-                    if hasattr(to_configure, name):
 
-                        pvalue = parameter.value
-                        setattr(to_configure, name, pvalue)
-
-                else:  # else log the warning
-                    message = 'Param {0} does not exist in {1}.'
-                    self.logger.warning(message.format(name, to_configure))
-
-    def _init_paths(self, paths):
-
-        if paths is None:
-            self.paths = self._get_paths()
-
-        else:
-            self.paths = paths
+                pvalue = parameter.value
+                setattr(to_configure, name, pvalue)
 
     def _get_paths(self):
 

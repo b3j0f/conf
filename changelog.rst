@@ -1,6 +1,13 @@
 ChangeLog
 =========
 
+0.2.2 (2015/12/16)
+------------------
+
+- add the function model.parser.serialize in order to easily serialiaze Param values.
+- simplify driver API in order to make easier the development of new drivers.
+- move the logging part from the Configurable class to the specific module configurable.logger.
+
 0.2.1 (2015/10/29)
 ------------------
 

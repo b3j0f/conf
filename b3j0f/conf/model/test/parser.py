@@ -175,7 +175,6 @@ class Serialiazer(ConfigurationTest):
             self.assertEqual(serialized, '{0}{1}'.format(EXPR_PREFIX, value))
 
 
-
 class ExprParser(ConfigurationTest):
     """Test the function _exprparser."""
 

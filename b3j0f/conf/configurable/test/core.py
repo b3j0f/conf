@@ -153,7 +153,7 @@ class ConfigurableTest(UTCase):
             conf=Configuration(self.conf['B']),
             driver=configurable.drivers[1]
         )
-
+        print('test')
         conf = configurable.get_conf(conf=self.conf)
 
         unified_configuration = conf.unify()
