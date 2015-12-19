@@ -78,9 +78,6 @@ class Configurable(PrivateInterceptor):
     #: ensure to applyconfiguration after instanciation of the configurable.
     __metaclass__ = MetaConfigurable
 
-    # default drivers which are json and ini.
-    DEFAULT_DRIVERS = (JSONConfDriver(), INIConfDriver())
-
     __CONFIGURABLES__ = '__configurables__'  #: to_configure attribute name.
 
     CONF_PATHS = ('b3j0fconf-configurable.conf', )  #: default conf path.
@@ -91,14 +88,19 @@ class Configurable(PrivateInterceptor):
     DRIVERS = 'drivers'  #: drivers attribute name.
     INHERITEDCONF = 'inheritedconf'  #: usecls conf attribute name.
     STORE = 'store'  #: store attribute name.
+    FOREIGNS = 'foreigns'  #: not specified params setting attribute name.
 
     DEFAULT_INHERITEDCONF = True  #: default inheritedconf value.
     DEFAULT_STORE = True  #: default store value.
+    DEFAULT_FOREIGNS = True  #: default value for setting not specified params.
+    # default drivers which are json and ini.
+    DEFAULT_DRIVERS = (JSONConfDriver(), INIConfDriver())
 
     def __init__(
             self,
             conf=None, inheritedconf=DEFAULT_INHERITEDCONF,
             store=DEFAULT_STORE, paths=None, drivers=DEFAULT_DRIVERS,
+            foreigns=DEFAULT_FOREIGNS,
             *args, **kwargs
     ):
         """
@@ -113,6 +115,10 @@ class Configurable(PrivateInterceptor):
             ``STORE_ATTR``.
         :param paths: paths to parse.
         :type paths: Iterable or str
+        :param bool foreigns: if True (default), set parameters not specified by
+            this conf but given by conf resources.
+        :param ConfDriver(s) drivers: list of drivers to use. Default
+            Configurable.DEFAULT_DRIVERS.
         """
 
         super(Configurable, self).__init__(*args, **kwargs)
@@ -130,14 +136,18 @@ class Configurable(PrivateInterceptor):
         self.drivers = drivers
         self.conf = conf
         self.paths = paths
+        self.foreigns = foreigns
 
     def _interception(self, jointpoint):
 
-        result = jointpoint.proceed()
+        to_configure = result = jointpoint.proceed()
 
-        self.to_configure += result
+        if to_configure is None:
+            to_configure = jointpoint.kwargs['self']
 
-        self.apply_configuration(to_configure=result)
+        self.to_configure += [to_configure]
+
+        self.apply_configuration(to_configure=to_configure)
 
         return result
 
@@ -431,9 +441,12 @@ class Configurable(PrivateInterceptor):
 
         else:
             values = [p for p in unified_conf[Configuration.VALUES]]
-            foreigns = [p for p in unified_conf[Configuration.FOREIGNS]]
 
-            for parameter in values + foreigns:
+            if self.foreigns:
+                foreigns = [p for p in unified_conf[Configuration.FOREIGNS]]
+                values += foreigns
+
+            for parameter in values:
                 name = parameter.name
 
                 pvalue = parameter.value

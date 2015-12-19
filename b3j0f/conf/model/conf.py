@@ -188,8 +188,10 @@ class Configuration(CompositeModelElement):
                     paramstoupdate = selfcat.getparams(param=param)
 
                     if paramstoupdate:
+
                         for paramtoupdate in paramstoupdate:
                             paramtoupdate.svalue = param.svalue
+
                             try:
                                 paramtoupdate.value = param.value
 

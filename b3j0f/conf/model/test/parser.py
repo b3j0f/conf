@@ -105,7 +105,8 @@ class ConfigurationTest(UTCase):
             self.cnames[i] = 'c{0}'.format(i)
             self.pvalues[i] = i + 1
             category = Category(
-                self.cnames[i], Parameter('param', value=self.pvalues[i])
+                self.cnames[i],
+                Parameter('param', value=self.pvalues[i])
             )
             self.conf += category
 

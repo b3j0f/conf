@@ -106,15 +106,18 @@ class ConfigurableTest(UTCase):
 
         conf = Configuration(Category('TEST', Parameter(param, value=True)))
 
-        self.configurable.configure(conf=conf, targets=to_configure)
+        self.configurable.configure(conf=conf, to_configure=to_configure)
         self.assertTrue(to_configure.test)
 
     def test_configure_without_inheritance(self):
         """Test to configure an object without inheritance."""
 
+        @Configurable(
+            conf=Category('TEST', Parameter('test', value=True))
+        )
         class ToConfigure(object):
-            """Class to configure.
-            """
+            """Class to configure."""
+
             def __init__(self):
 
                 super(ToConfigure, self).__init__()
@@ -123,14 +126,6 @@ class ConfigurableTest(UTCase):
 
         to_configure = ToConfigure()
 
-        configurable = Configurable()
-        configurable(to_configure)
-
-        param = 'test'
-
-        conf = Configuration(Category('TEST', Parameter(param, value=True)))
-
-        configurable.configure(conf=conf, targets=to_configure)
         self.assertTrue(to_configure.test)
 
     def test_parser_inheritance(self):

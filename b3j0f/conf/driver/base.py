@@ -43,6 +43,7 @@ __all__ = ['ConfDriver']
 
 from ..model.conf import Configuration
 from ..model.cat import Category
+from ..model.param import Parameter
 
 from sys import exc_info
 
@@ -192,11 +193,9 @@ class ConfDriver(object):
 
                 for name, value in self._params(resource=resource, cname=cname):
 
-                    for param in category.params(name):
+                    param = Parameter(name=name, svalue=value)
 
-                        rscparam = param.copy(name=name, svalue=value)
-
-                        category += rscparam
+                    category += param
 
         return result
 

@@ -9,6 +9,7 @@ ChangeLog
 - move the logging part from the Configurable class to the specific module configurable.logger.
 - set inheritance to Configurable from b3j0f.annotation.PrivateCallInterceptor.
 - remove decorator module.
+- add foreigns attributes in Configurable which allows to add not specified parameters given by conf resources.
 
 0.2.1 (2015/10/29)
 ------------------

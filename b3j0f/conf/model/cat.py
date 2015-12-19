@@ -37,21 +37,16 @@ class Category(CompositeModelElement):
 
     __contenttype__ = Parameter  #: content type.
 
-    __slots__ = ('name', 'fill') + CompositeModelElement.__slots__
+    __slots__ = ('name', ) + CompositeModelElement.__slots__
 
-    def __init__(self, name, fill=True, *args, **kwargs):
+    def __init__(self, name, *args, **kwargs):
         """
         :param str name: category name to use.
-        :param bool fill: if True (default), the method getparams returns at
-            least one parameter related to the requested params. It allows to
-            avoid to specify configuration parameters, and fill this category
-            with all founded parameters.
         """
 
         super(Category, self).__init__(*args, **kwargs)
 
         self.name = name
-        self.fill = fill
 
     def getparams(self, param):
         """Get parameters which match with input param.
@@ -60,14 +55,9 @@ class Category(CompositeModelElement):
         :rtype: list
         """
 
-        result = list(
+        return list(
             cparam for cparam in self._content.values() if cparam == param
         )
-
-        if (not result) and self.fill:
-            result = [Parameter(name=param.name)]
-
-        return result
 
     def copy(self, cleaned=False):
 

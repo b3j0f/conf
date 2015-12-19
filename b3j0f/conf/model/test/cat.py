@@ -62,22 +62,6 @@ class CategoryTest(UTCase):
 
         self.assertEqual(len(self.name) - 1, len(params))
 
-    def test_getparamsfill(self):
-        """Test the method getparams with a not existing param name and fill."""
-
-        params = self.cat.getparams(param=Parameter('example'))
-
-        self.assertEqual(len(params), 1)
-
-    def test_getparamsnotfill(self):
-        """Test the method getparams with a not existing param name and not fill
-        ."""
-
-        self.cat.fill = False
-        params = self.cat.getparams(param=Parameter('example'))
-
-        self.assertFalse(params)
-
 
 if __name__ == '__main__':
     main()
