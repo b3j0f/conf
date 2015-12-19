@@ -7,6 +7,8 @@ ChangeLog
 - add the function model.parser.serialize in order to easily serialiaze Param values.
 - simplify driver API in order to make easier the development of new drivers.
 - move the logging part from the Configurable class to the specific module configurable.logger.
+- set inheritance to Configurable from b3j0f.annotation.PrivateCallInterceptor.
+- remove decorator module.
 
 0.2.1 (2015/10/29)
 ------------------

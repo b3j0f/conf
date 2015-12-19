@@ -73,9 +73,9 @@ class Configuration(CompositeModelElement):
         """Get a conf which contains only two categories:
 
         - VALUES where params are all self params where values are not
-            exceptions.contains all values
+            exceptions.contains all values.
         - ERRORS where params are all self params where values are
-            exceptions
+            exceptions.
 
         :return: two categories named respectivelly VALUES and ERRORS and
             contain respectivelly self param values and parsing errors.

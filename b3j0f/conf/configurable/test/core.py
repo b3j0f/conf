@@ -67,145 +67,31 @@ class ConfigurableTest(UTCase):
 
     def test_configuration_files(self):
 
-        configurable = Configurable()
+        configurable = Configurable(inheritedconf=False)
         configurable.paths = self.paths
 
         self.assertEqual(configurable.paths, self.paths)
 
-        configurable = Configurable(paths=self.paths)
+        configurable = Configurable(paths=self.paths, inheritedconf=False)
 
         self.assertEqual(configurable.paths, self.paths)
 
-    def test_auto_conf(self):
+    def test_store(self):
 
         configurable = Configurable()
 
-        self.assertTrue(configurable.auto_conf)
+        self.assertEqual(configurable.store, Configurable.DEFAULT_STORE)
 
-        configurable.auto_conf = False
+        configurable = Configurable(store=not Configurable.DEFAULT_STORE)
 
-        self.assertFalse(configurable.auto_conf)
+        self.assertEqual(configurable.store, not Configurable.DEFAULT_STORE)
 
-    def test_logging_level(self):
+        configurable.store = Configurable.DEFAULT_STORE
 
-        configurable = Configurable()
-
-        self.assertTrue(configurable.log_lvl, 'INFO')
-
-        configurable = Configurable(log_lvl='DEBUG')
-
-        self.assertTrue(configurable.log_lvl, 'DEBUG')
-
-        configurable.log_lvl = 'INFO'
-
-        self.assertTrue(configurable.log_lvl, 'INFO')
-
-    def test_configuration(self):
-
-        # test to get from no file
-        configurable = Configurable()
-
-        conf = configurable.get_conf()
-
-        self.assertEqual(len(conf), len(self.conf))
-
-        # test to get from files which do not exist
-        configurable.paths = self.paths
-
-        for path in self.paths:
-            try:
-                remove(path)
-            except OSError:
-                pass
-
-        conf = configurable.get_conf()
-
-        self.assertEqual(len(conf), len(self.conf))
-
-        # get parameters from empty files
-        for path in self.paths:
-            with open(path, 'w') as _file:
-                _file.write('\n')
-
-        conf = configurable.get_conf()
-
-        self.assertEqual(len(conf), len(self.conf))
-
-        # get parameters from empty files and empty parsing_rules
-        conf = Configuration()
-        configurable.get_conf(conf=conf)
-
-        self.assertEqual(len(conf), 0)
-
-        # fill files
-        configurable = Configurable(paths=self.paths)
-
-        # add first category in conf file[0]
-        configurable.set_conf(
-            rscpath=self.paths[0],
-            conf=Configuration(self.conf['A']),
-            driver=configurable.drivers[0]
-        )
-
-        # add second category in conf file[1]
-        configurable.set_conf(
-            rscpath=self.paths[1],
-            conf=Configuration(self.conf['B']),
-            driver=configurable.drivers[1]
-        )
-        print('test')
-        conf = configurable.get_conf(conf=self.conf)
-
-        unified_configuration = conf.unify()
-        parameters = unified_configuration[Configuration.VALUES]
-        errors = unified_configuration[Configuration.ERRORS]
-
-        self.assertIn('a', parameters)
-        self.assertNotIn('a', errors)
-        self.assertEqual(parameters['a'].value, 'b')
-        self.assertIn('_', parameters)
-        self.assertNotIn('_', errors)
-        self.assertEqual(parameters['_'].value, 2)
-        self.assertIn('b', parameters)
-        self.assertNotIn('b', errors)
-        self.assertEqual(parameters['b'].value, 'b')
-        self.assertIn('error', errors)
-        self.assertNotIn('error', parameters)
-
-    def test_reconfigure(self):
-
-        self.assertTrue(self.configurable.auto_conf)
-
-        conf = Configuration(
-            Category('TEST', Parameter('auto_conf', value=False))
-        )
-
-        self.configurable.configure(conf=conf)
-        self.assertFalse(self.configurable.auto_conf)
-        self.assertEqual(self.configurable.log_lvl, 'INFO')
-
-        conf = Configuration(
-            Category('TEST', Parameter('log_lvl', value='DEBUG'))
-        )
-
-        self.configurable.configure(conf=conf)
-        self.assertEqual(self.configurable.log_lvl, 'INFO')
-
-        self.configurable.reconf_once = True
-        self.configurable.configure(conf=conf)
-        self.assertEqual(self.configurable.log_lvl, 'DEBUG')
-        self.assertFalse(self.configurable.reconf_once)
-
-        self.configurable.log_lvl = 'INFO'
-        self.configurable.auto_conf = True
-        self.configurable.configure(conf=conf)
-        self.assertEqual(self.configurable.log_lvl, 'DEBUG')
+        self.assertEqual(configurable.store, Configurable.DEFAULT_STORE)
 
     def test_configure_to_reconfigure_param(self):
-        """Test to reconfigure an object with to_configure parameter.
-        """
-
-        self.assertTrue(self.configurable.auto_conf)
+        """Test to reconfigure an object with to_configure parameter."""
 
         class ToConfigure(object):
             """Class to configure.
@@ -220,12 +106,11 @@ class ConfigurableTest(UTCase):
 
         conf = Configuration(Category('TEST', Parameter(param, value=True)))
 
-        self.configurable.configure(conf=conf, to_configure=to_configure)
+        self.configurable.configure(conf=conf, targets=to_configure)
         self.assertTrue(to_configure.test)
 
     def test_configure_without_inheritance(self):
-        """Test to configure an object without inheritance.
-        """
+        """Test to configure an object without inheritance."""
 
         class ToConfigure(object):
             """Class to configure.
@@ -238,22 +123,23 @@ class ConfigurableTest(UTCase):
 
         to_configure = ToConfigure()
 
-        configurable = Configurable(to_configure=to_configure)
+        configurable = Configurable()
+        configurable(to_configure)
 
         param = 'test'
 
         conf = Configuration(Category('TEST', Parameter(param, value=True)))
 
-        configurable.configure(conf=conf, to_configure=to_configure)
+        configurable.configure(conf=conf, targets=to_configure)
         self.assertTrue(to_configure.test)
 
     def test_parser_inheritance(self):
 
         class _Configurable(Configurable):
 
-            def _clsconf(self, *args, **kwargs):
+            def clsconf(self, *args, **kwargs):
 
-                result = super(_Configurable, self)._clsconf(*args, **kwargs)
+                result = super(_Configurable, self).clsconf(*args, **kwargs)
 
                 result += Category('PLOP')
 

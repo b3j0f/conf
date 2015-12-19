@@ -98,8 +98,11 @@ setup(
     keywords=KEYWORDS,
     data_files=[
         (
-            expanduser('~/.config/'),
-            ['etc/b3j0fconf-configurable.conf']
+            expanduser(join('~', '.config')),
+            [
+                join('etc', 'b3j0fconf-configurable.conf'),
+                join('etc', 'b3j0fconf-log.conf')
+            ]
         )
     ]
 )

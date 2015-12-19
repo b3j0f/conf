@@ -28,19 +28,19 @@ __all__ = ['MetaConfigurable', 'Configurable']
 
 from six import string_types
 
-from b3j0f.utils.property import addproperties
-from b3j0f.utils.iterable import ensureiterable
+from b3j0f.annotation import PrivateCallInterceptor
 
 from ..model.conf import Configuration
 from ..model.cat import Category
 from ..model.param import Parameter
-from ..driver.base import ConfDriver
 from ..driver.file.json import JSONConfDriver
 from ..driver.file.ini import INIConfDriver
 
 
 class MetaConfigurable(type):
     """Meta class for Configurable."""
+
+    INIT_CAT = 'init_cat'  #: initialization category.
 
     def __call__(cls, *args, **kwargs):
         """Get a new instance of input cls class, and if instance.auto_conf or
@@ -55,7 +55,7 @@ class MetaConfigurable(type):
 
             # add a last category which contains args and kwargs as parameters
             if kwargs:
-                init_category = Category(Configurable.INIT_CAT)
+                init_category = Category(MetaConfigurable.INIT_CAT)
                 for name in kwargs:
                     param = Parameter(name=name, value=kwargs[name])
                     init_category += param
@@ -67,33 +67,7 @@ class MetaConfigurable(type):
         return result
 
 
-def _updatedrivers(self, *_):
-    """Ensure drivers is a list of drivers."""
-
-    drivers = self._drivers
-
-    drivers = ensureiterable(drivers)
-
-    self._drivers = [
-        driver if isinstance(driver, ConfDriver) else driver()
-        for driver in drivers
-    ]
-
-
-def _updatelogger(self, **_):
-    """Renew self logger."""
-    self._logger = self.newlogger()
-
-
-@addproperties(
-    names=[
-        'log_debug_format', 'log_info_format', 'log_warning_format',
-        'log_error_format', 'log_critical_format', 'log_name', 'log_path'
-    ], afset=_updatelogger
-)
-@addproperties(names=['auto_conf', 'reconf_once', 'drivers', 'logger'])
-@addproperties(names=['drivers'], afset=_updatedrivers)
-class Configurable(object):
+class Configurable(PrivateCallInterceptor):
     """Manage class conf synchronisation with conf resources.
 
     According to critical parameter updates, this class uses a dirty state.
@@ -107,77 +81,60 @@ class Configurable(object):
     # default drivers which are json and ini.
     DEFAULT_DRIVERS = (JSONConfDriver(), INIConfDriver())
 
-    INIT_CAT = 'init_cat'  #: initialization category.
+    CONF_PATHS = ('b3j0fconf-configurable.conf', )  #: default conf path.
 
-    CONF_PATH = 'b3j0fconf-configurable.conf'  #: default conf path.
+    CATEGORY = 'CONFIGURATION'  #: configuration category name.
 
-    #: configurable storing attribute in configured objects.
-    STORE_ATTR = '__configurable__'
-
-    CONF = 'CONFIGURATION'  #: configuration attribute name.
-
-    AUTO_CONF = 'auto_conf'  #: auto_conf attribute name.
-    RECONF_ONCE = 'reconf_once'  #: reconf_once attribute name.
     CONF_PATHS = 'paths'  #: paths attribute name.
     DRIVERS = 'drivers'  #: drivers attribute name.
+    INHERITEDCONF = 'inheritedconf'  #: usecls conf attribute name.
+    STORE = 'store'  #: store attribute name.
 
-    DEFAULT_AUTO_CONF = True  #: default auto conf.
-    DEFAULT_RECONF_ONCE = False  #: default reconf once.
+    DEFAULT_INHERITEDCONF = True  #: default inheritedconf value.
+    DEFAULT_STORE = True  #: default store value.
 
     def __init__(
             self,
-            conf=None, usecls_conf=True, unified_conf=True,
-            to_configure=None, store=False, paths=None, drivers=DEFAULT_DRIVERS,
-            auto_conf=DEFAULT_AUTO_CONF, reconf_once=DEFAULT_RECONF_ONCE,
+            conf=None, inheritedconf=DEFAULT_INHERITEDCONF,
+            store=DEFAULT_STORE, paths=None, drivers=DEFAULT_DRIVERS,
             *args, **kwargs
     ):
         """
         :param Configuration conf: conf to use at instance level.
-        :param bool usecls_conf: if True (default) add conf to cls conf.
-        :param bool unified_conf: if True (default) enrich instance conf with
-            unified cls conf (all cls parameters will be copied in instance
-            conf).
-        :param to_configure: object(s) to reconfigure. Such object may
+        :param bool inheritedconf: if True (default) add conf and paths to cls
+            conf and paths.
+        :param targets: object(s) to reconfigure. Such object may
             implement the methods configure apply_configuration and configure.
-        :type to_configure: list or instance.
-        :param bool store: if True (default False) and to_configure is given,
-            store this instance into to_configure instance with the attribute
+        :type targets: list or instance.
+        :param bool store: if True (default) and targets is given,
+            store this instance into targets instance with the attribute
             ``STORE_ATTR``.
         :param paths: paths to parse.
         :type paths: Iterable or str
-        :param bool auto_conf: True (default) force auto conf as soon as param
-            change.
-        :param bool reconf_once: True (default) force auto conf reconf_once as
-            soon as param change.
         """
 
         super(Configurable, self).__init__(*args, **kwargs)
 
         # init protected attributes
-        self._auto_conf = auto_conf
-        self._reconf_once = reconf_once
         self._paths = None
-        self._drivers = None
-        self._paths = None
-        self._to_configure = None
         self._conf = None
 
+        # init public attributes
         self.store = store
 
-        self.usecls_conf = usecls_conf
-        self.unified_conf = unified_conf
+        self.inheritedconf = inheritedconf
         self.conf = conf
-
-        self.to_configure = to_configure
-
-        self.auto_conf = auto_conf
-        self.reconf_once = reconf_once
-
-        # set conf files
-        self._init_paths(paths)
-
-        # set drivers
         self.drivers = drivers
+        self.conf = conf
+        self.paths = paths
+
+    def _interception(self, jointpoint):
+
+        targets = joinpoint.ctx
+
+        self.apply_configuration(targets=targets)
+
+        return joinpoint.proceed()
 
     @property
     def conf(self):
@@ -185,16 +142,6 @@ class Configurable(object):
 
         :rtype: Configuration.
         """
-
-        result = self._conf
-
-        if result is None:
-
-            if self.usecls_conf:  # use cls conf if specified
-                result = self._clsconf()
-
-            else:
-                result = Configuration()
 
         return self._conf
 
@@ -205,88 +152,30 @@ class Configurable(object):
         :param Configuration value: new configuration to use.
         """
 
-        # get cls conf if specified
-        self._conf = self._clsconf() if self.usecls_conf else Configuration()
+        if value is None:
+            value = Configuration()
 
-        if value is not None:
+        if self.inheritedconf:
+            self._conf = self.clsconf()
+            self._conf += value
 
-            if self.unified_conf:
+        else:
+            self._conf = value
 
-                for cname in value:
-                    category = value[cname]
-
-                    self._conf.add_unified_category(category)
-
-            else:
-                self._conf += value
-
-    def _clsconf(self):
+    def clsconf(self):
         """Method to override in order to specify class configuration."""
 
         result = Configuration(
             Category(
-                Configurable.CONF,
-                Parameter(name=Configurable.AUTO_CONF, vtype=bool),
+                Configurable.CATEGORY,
                 Parameter(name=Configurable.DRIVERS, vtype=tuple),
-                Parameter(name=Configurable.RECONF_ONCE, vtype=bool),
-                Parameter(name=Configurable.CONF_PATHS, vtype=tuple)
+                Parameter(name=Configurable.CONF_PATHS, vtype=tuple),
+                Parameter(name=Configurable.INHERITEDCONF, vtype=bool),
+                Parameter(name=Configurable.STORE, vtype=bool)
             )
         )
 
         return result
-
-    @property
-    def to_configure(self):
-        """Get resources to configure.
-
-        :rtype: list
-        """
-
-        return self._to_configure
-
-    @to_configure.setter
-    def to_configure(self, value):
-        """Change of resource(s) to configure.
-
-        If value is literally a list (without inheritance), this configurable
-        will be associated to all its items.
-
-        :param value: new object(s) to configure by default. List of objects to
-            configure is used only if value is a literally list (not a
-            subclass of list).
-        :type value: list or object.
-        """
-
-        if value is None:
-
-            value = [self]
-
-        elif type(value) is not list:
-
-            value = [value]
-
-        if self._to_configure is not None:
-
-            for to_configure in self._to_configure:
-                if to_configure not in value:
-                    try:  # remove old configurable storing
-                        delattr(to_configure, Configurable.STORE_ATTR)
-
-                    except AttributeError:
-                        pass
-
-        if self.store:
-
-            for to_configure in value:
-
-                setattr(to_configure, Configurable.STORE_ATTR, self)
-
-        # add self to value in order to synchronize this configurable with
-        # to_configure objects
-        if self not in value:
-            value.append(self)
-
-        self._to_configure = value
 
     @property
     def paths(self):
@@ -296,7 +185,7 @@ class Configurable(object):
         :rtype: tuple
         """
 
-        result = self._paths
+        result = tuple(self._paths)
 
         return result
 
@@ -304,11 +193,26 @@ class Configurable(object):
     def paths(self, value):
         """Change of paths in adding it in watching list."""
 
-        self._paths = tuple(value)
+        if value is None:
+            value = ()
+
+        elif isinstance(value, string_types):
+            value = (value, )
+
+        if self.inheritedconf:
+            self._paths = self.clspaths() + tuple(value)
+
+        else:
+            self._paths = tuple(value)
+
+    def clspaths(self):
+        """Get class paths."""
+
+        return tuple(self.CONF_PATHS)
 
     def apply_configuration(
             self, conf=None, paths=None, drivers=None, logger=None,
-            to_configure=None, _locals=None, _globals=None
+            targets=None, _locals=None, _globals=None
     ):
         """Apply conf on a destination in those phases:
 
@@ -316,13 +220,13 @@ class Configurable(object):
         2. for all paths, get conf which matches input conf.
         3. apply parsing rules on path parameters.
         4. fill input conf with resolved parameters.
-        5. apply filled conf on to_configure.
+        5. apply filled conf on targets.
 
         :param Configuration conf: conf from where get conf
         :param paths: conf files to parse. If paths is a str, it is
             automatically putted into a list.
         :type paths: list of str
-        :param to_configure: object to configure. self by default.
+        :param targets: object to configure. self by default.
         :param dict _locals: local variable to use for local python expression
             resolution.
         :param dict _globals: global variable to use for local python
@@ -332,15 +236,16 @@ class Configurable(object):
         if conf is None:
             conf = self.conf
 
-        if to_configure is None:  # init to_configure
-            to_configure = self.to_configure
+        if targets is None:  # init targets
+            targets = self.targets
 
-        if type(to_configure) is list:
+        if type(targets) is tuple:
 
-            for to_conf in to_configure:
+            for target in targets:
                 self.apply_configuration(
                     conf=conf, paths=paths, drivers=drivers,
-                    logger=logger, to_configure=to_conf
+                    logger=logger, targets=target,
+                    _locals=_locals, _globals=_globals
                 )
 
         else:
@@ -351,7 +256,7 @@ class Configurable(object):
             # resolve all values
             conf.resolve(configurable=self, _globals=_globals, _locals=_locals)
             # configure resolved configuration
-            self.configure(conf=conf, to_configure=to_configure)
+            self.configure(conf=conf, targets=targets)
 
     def get_conf(self, conf=None, paths=None, drivers=None, logger=None):
         """Get a configuration from paths.
@@ -369,7 +274,7 @@ class Configurable(object):
             conf = self.conf
 
         if paths is None:
-            paths = self._paths
+            paths = self.paths
 
         if isinstance(paths, string_types):
             paths = [paths]
@@ -400,7 +305,7 @@ class Configurable(object):
 
         return result
 
-    def configure(self, conf=None, logger=None, to_configure=None):
+    def configure(self, conf=None, logger=None, targets=None):
         """Update self properties with input params only if:
 
         - self.configure is True
@@ -412,46 +317,31 @@ class Configurable(object):
 
         :param Configuration conf: configuration model to configure. Default is
             this conf.
-        :param to_configure: object to configure. self if equals None.
+        :param targets: object to configure. self if equals None.
         :raises: Parameter.Error for any raised exception.
         """
 
         if conf is None:
             conf = self.conf
 
-        if to_configure is None:  # init to_configure
-            to_configure = self.to_configure
+        if targets is None:  # init targets
+            targets = self.targets
 
-        if type(to_configure) is list:
-            for to_conf in to_configure:
-                self.configure(conf=conf, logger=logger, to_configure=to_conf)
+        if type(targets) is tuple:
+
+            for target in targets:
+
+                self.configure(conf=conf, logger=logger, targets=target)
 
         else:
             unified_conf = conf.unify()
 
-            values = unified_conf[Configuration.VALUES]
+            self._configure(
+                unified_conf=unified_conf, logger=logger,
+                targets=targets
+            )
 
-            # set configure
-            reconf_once = values.get(Configurable.RECONF_ONCE)
-
-            if reconf_once is not None:
-                self.reconf_once = reconf_once.value
-
-            # set auto_conf
-            auto_conf_parameter = values.get(Configurable.AUTO_CONF)
-
-            if auto_conf_parameter is not None:
-                self.auto_conf = auto_conf_parameter.value
-
-            if self.reconf_once or self.auto_conf:
-                self._configure(
-                    unified_conf=unified_conf, logger=logger,
-                    to_configure=to_configure
-                )
-                # when conf succeed, deactive reconf_once
-                self.reconf_once = False
-
-    def _configure(self, unified_conf=None, logger=None, to_configure=None):
+    def _configure(self, unified_conf=None, logger=None, targets=None):
         """Configure this class with input conf only if auto_conf or
         configure is true.
 
@@ -460,20 +350,27 @@ class Configurable(object):
         :param Configuration unified_conf: unified configuration. Default is
             self.conf.unify().
         :param bool configure: if True, force full self conf
-        :param to_configure: object to configure. self if equals None.
+        :param targets: object to configure. self if equals None.
         """
 
         if unified_conf is None:
             unified_conf = self.conf.unify()
 
-        if to_configure is None:  # init to_configure
-            to_configure = self._to_configure
+        if targets is None:  # init targets
+            targets = self.targets
 
-        if type(to_configure) is list:
-            for to_conf in to_configure:
+        if type(targets) is tuple:
+
+            for target in targets:
+
                 self._configure(
                     unified_conf=unified_conf, logger=logger,
-                    to_configure=to_conf
+                    targets=target
+                )
+
+            else:
+                self._configure(
+                    unified_conf=unified_conf, logger=logger, targets=self
                 )
 
         else:
@@ -484,10 +381,4 @@ class Configurable(object):
                 name = parameter.name
 
                 pvalue = parameter.value
-                setattr(to_configure, name, pvalue)
-
-    def _get_paths(self):
-
-        result = [Configurable.CONF_PATH]
-
-        return result
+                setattr(targets, name, pvalue)

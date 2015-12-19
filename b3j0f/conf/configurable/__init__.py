@@ -25,7 +25,6 @@
 # --------------------------------------------------------------------
 
 
-__all__ = ['Configurable', 'confpaths', 'add_category']
+__all__ = ['Configurable']
 
 from .core import Configurable
-from .decorator import confpaths, add_category
