@@ -130,11 +130,11 @@ class Configurable(PrivateCallInterceptor):
 
     def _interception(self, jointpoint):
 
-        targets = joinpoint.ctx
+        targets = jointpoint.ctx
 
         self.apply_configuration(targets=targets)
 
-        return joinpoint.proceed()
+        return jointpoint.proceed()
 
     @property
     def conf(self):
@@ -368,10 +368,9 @@ class Configurable(PrivateCallInterceptor):
                     targets=target
                 )
 
-            else:
-                self._configure(
-                    unified_conf=unified_conf, logger=logger, targets=self
-                )
+            self._configure(
+                unified_conf=unified_conf, logger=logger, targets=self
+            )
 
         else:
             values = [p for p in unified_conf[Configuration.VALUES]]
