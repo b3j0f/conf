@@ -24,6 +24,8 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+"""Specification of the class Configurable."""
+
 __all__ = ['MetaConfigurable', 'Configurable']
 
 from six import string_types
@@ -49,16 +51,18 @@ class MetaConfigurable(type):
 
         result = type.__call__(cls, *args, **kwargs)
 
-        if result.auto_conf or result.reconf_once:
+        if result.autoconf:
             # get configuration
             conf = result.conf
 
             # add a last category which contains args and kwargs as parameters
             if kwargs:
                 init_category = Category(MetaConfigurable.INIT_CAT)
+
                 for name in kwargs:
                     param = Parameter(name=name, value=kwargs[name])
                     init_category += param
+
                 conf += init_category
 
             # apply configuration
@@ -75,7 +79,7 @@ class Configurable(PrivateInterceptor):
     In such situation, it is possible to go back to a stable state in calling
     the method `restart`. Without failure, the dirty status is canceled."""
 
-    #: ensure to applyconfiguration after instanciation of the configurable.
+    #: ensure to apply configuration after instanciation of the configurable.
     __metaclass__ = MetaConfigurable
 
     __CONFIGURABLES__ = '__configurables__'  #: to_configure attribute name.
@@ -89,18 +93,21 @@ class Configurable(PrivateInterceptor):
     INHERITEDCONF = 'inheritedconf'  #: usecls conf attribute name.
     STORE = 'store'  #: store attribute name.
     FOREIGNS = 'foreigns'  #: not specified params setting attribute name.
+    AUTOCONF = 'autoconf'  #: auto conf attribue name.
 
     DEFAULT_INHERITEDCONF = True  #: default inheritedconf value.
     DEFAULT_STORE = True  #: default store value.
     DEFAULT_FOREIGNS = True  #: default value for setting not specified params.
     # default drivers which are json and ini.
     DEFAULT_DRIVERS = (JSONConfDriver(), INIConfDriver())
+    DEFAULT_AUTOCONF = True  #: default value for auto configuration.
 
     def __init__(
             self,
             conf=None, inheritedconf=DEFAULT_INHERITEDCONF,
             store=DEFAULT_STORE, paths=None, drivers=DEFAULT_DRIVERS,
-            foreigns=DEFAULT_FOREIGNS,
+            foreigns=DEFAULT_FOREIGNS, autoconf=DEFAULT_AUTOCONF,
+            to_configure=(),
             *args, **kwargs
     ):
         """
@@ -119,6 +126,10 @@ class Configurable(PrivateInterceptor):
             this conf but given by conf resources.
         :param ConfDriver(s) drivers: list of drivers to use. Default
             Configurable.DEFAULT_DRIVERS.
+        :param list to_configure: objects to configure.
+        :param bool autoconf: if autoconf, configurate this `to_configure`
+            objects as soon as possible. (at to_configure instanciation or after
+            updating this paths/conf/to_configure).
         """
 
         super(Configurable, self).__init__(*args, **kwargs)
@@ -132,11 +143,15 @@ class Configurable(PrivateInterceptor):
         self.store = store
 
         self.inheritedconf = inheritedconf
-        self.conf = conf
         self.drivers = drivers
+        self.foreigns = foreigns
+        # dirty hack: falsify autoconf in order to avoid applyconf
+        self.autoconf = False
         self.conf = conf
         self.paths = paths
-        self.foreigns = foreigns
+        # when setup to_configure
+        self.to_configure = to_configure
+        self.autoconf = autoconf
 
     def _interception(self, jointpoint):
 
@@ -153,11 +168,15 @@ class Configurable(PrivateInterceptor):
 
     @property
     def to_configure(self):
+        """Get this to_configure objects.
+
+        :rtype: list"""
 
         return self._to_configure
 
     @to_configure.setter
     def to_configure(self, value):
+        """Change of objects to configure."""
 
         if type(value) in (set, tuple):  # transform value
             value = list(value)
@@ -202,6 +221,9 @@ class Configurable(PrivateInterceptor):
 
         self._to_configure = value
 
+        if self.autoconf:  # automatically configure to_configure objects
+            self.apply_configuration()
+
     @property
     def conf(self):
         """Get conf with parsers and self property values.
@@ -231,6 +253,9 @@ class Configurable(PrivateInterceptor):
 
         else:
             self._conf = value
+
+        if self.autoconf:
+            self.apply_configuration()
 
     def clsconf(self):
         """Method to override in order to specify class configuration."""
@@ -275,6 +300,9 @@ class Configurable(PrivateInterceptor):
         else:
             self._paths = tuple(value)
 
+        if self.autoconf:
+            self.apply_configuration()
+
     def clspaths(self):
         """Get class paths."""
 
@@ -309,7 +337,7 @@ class Configurable(PrivateInterceptor):
         if to_configure is None:  # init to_configure
             to_configure = self.to_configure
 
-        if type(to_configure) is tuple:
+        if type(to_configure) is list:
 
             for target in to_configure:
 
@@ -398,7 +426,7 @@ class Configurable(PrivateInterceptor):
         if to_configure is None:  # init to_configure
             to_configure = self.to_configure
 
-        if type(to_configure) is tuple:
+        if type(to_configure) is list:
 
             for to_configure in to_configure:
 
@@ -430,7 +458,7 @@ class Configurable(PrivateInterceptor):
         if to_configure is None:  # init to_configure
             to_configure = self.to_configure
 
-        if type(to_configure) is tuple:
+        if type(to_configure) is list:
 
             for to_configure in to_configure:
 
