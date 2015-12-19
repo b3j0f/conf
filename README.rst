@@ -111,9 +111,11 @@ The parser ``exprparser`` permits to write simple expressions using the python b
 
 In such expression, you can call back other configuration parameter in using this format (thanks to the idea from the pypi config_ project) related to a Configuration model:
 
-- `` `{path}` `` where ``path`` corresponds to a python object path. For example, `sys.maxsize` designates the max size of the integer on the host machine (attribute ``maxsize`` of the module ``sys``).
-- ``${cat}.{param}`` where ``cat`` designates a configuration category name, and ``param`` designates related parameter value.
-- ``${param}`` where ``param`` designates a final parameter value (last overidden value).
+First, you use the prefix '=' in order to tell the default parser to read the expression such an executable expression.
+
+- ``#{path}`` where ``path`` corresponds to a python object path. For example, `#sys.maxsize` designates the max size of the integer on the host machine (attribute ``maxsize`` of the module ``sys``).
+- ``@[[://{path}/]{cat}].{param}`` where ``cat`` designates a configuration category name, and ``param`` designates related parameter value.
+- ``@{param}`` where ``param`` designates a final parameter value (last overidden value).
 
 Configurable
 ############
@@ -140,47 +142,14 @@ The configuration file contains a category named ``MYCLASS`` containing the para
 
 - ``myattr`` equals ``'myvalue'``.
 - ``six`` equals ``6``.
-- ``bignumber`` equals ``six * sizeof(int)``
+- ``bignumber`` equals ``six * 2.0``
 
 .. code-block:: ini
 
     [MYCLASS]
-    myattr = 'myvalue'
-    six = 6
-    bignumber = $six * `sys.maxsize`
-
-
-With inheritance
-################
-
-.. code-block:: python
-
-    from b3j0f.conf import conf_paths, add_category, Configurable
-
-    MYCATEGORY = 'MYCLASS'  # MyClass configuration category name
-    MYCONF = 'myclass.conf'  # MyClass configuration file
-
-    # define the configurable business class
-    @add_category(MYCATEGORY)  # set configuration file category
-    @conf_paths(MYCONF)  # set conf path
-    class MyClass(Configurable):
-        def __init__(self, *args, **kwargs):
-            super(MyClass, self).__init__(*args, **kwargs)
-            self.myattr = None
-            self.six = None
-            self.bignumber = None
-
-    # instantiate the business class
-    myclass = MyClass()
-
-    # assert attributes
-    assert myclass.myattr == 'myvalue'
-    assert myclass.six == 6
-    from sys import maxsize
-    assert myclass.bignumber == myclass * maxsize
-
-Without inheritance
-###################
+    myattr = myvalue
+    six = =6
+    bignumber = =@six * 2.0
 
 .. code-block:: python
 
@@ -190,6 +159,7 @@ Without inheritance
     MYCONF = 'myclass.conf'  # MyClass configuration file
 
     # instantiate a business class
+    @Configurable(paths=MYCONF)
     class MyClass(object):
         def __init__(self):
             super(MyClass, self).__init__()
@@ -198,9 +168,6 @@ Without inheritance
             self.bignumber = None
 
     myclass = MyClass()
-
-    # apply configuration to the business class
-    Configurable(to_configure=myclass, conf_paths=MYCONF)
 
     # assert attributes
     assert myclass.myattr == 'myvalue'

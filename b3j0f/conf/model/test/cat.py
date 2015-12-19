@@ -43,7 +43,7 @@ class CategoryTest(UTCase):
         self.name = 'test'
         self.cat = Category(name=self.name)
 
-        for i in range(len(self.name)):
+        for i in range(1, len(self.name)):
             param = Parameter(self.name[:i])
             rparam = Parameter('^{0}.*'.format(self.name[:i]))
             self.cat += param, rparam
@@ -60,7 +60,23 @@ class CategoryTest(UTCase):
 
         params = self.cat.getparams(param=param)
 
-        self.assertEqual(len(self.name) + 1, len(params))
+        self.assertEqual(len(self.name) - 1, len(params))
+
+    def test_getparamsfill(self):
+        """Test the method getparams with a not existing param name and fill."""
+
+        params = self.cat.getparams(param=Parameter('example'))
+
+        self.assertEqual(len(params), 1)
+
+    def test_getparamsnotfill(self):
+        """Test the method getparams with a not existing param name and not fill
+        ."""
+
+        self.cat.fill = False
+        params = self.cat.getparams(param=Parameter('example'))
+
+        self.assertFalse(params)
 
 
 if __name__ == '__main__':

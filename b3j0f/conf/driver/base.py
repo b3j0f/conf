@@ -43,7 +43,6 @@ __all__ = ['ConfDriver']
 
 from ..model.conf import Configuration
 from ..model.cat import Category
-from ..model.param import Parameter
 
 from sys import exc_info
 
@@ -163,9 +162,9 @@ class ConfDriver(object):
 
             if logger is not None:
                 _, ex, traceback = exc_info()
-                print(ex, 'fuck')
                 msg = 'Error while setting conf to {0}.'.format(rscpath)
                 full_msg = '{0} {1}: {2}'.format(msg, ex, traceback)
+
                 logger.error(full_msg)
                 reraise(self.Error, self.Error(msg))
 
@@ -192,9 +191,12 @@ class ConfDriver(object):
                 result += category
 
                 for name, value in self._params(resource=resource, cname=cname):
-                    parameter = Parameter(name=name, svalue=value)
 
-                    category += parameter
+                    for param in category.params(name):
+
+                        rscparam = param.copy(name=name, svalue=value)
+
+                        category += rscparam
 
         return result
 

@@ -28,7 +28,7 @@ __all__ = ['MetaConfigurable', 'Configurable']
 
 from six import string_types
 
-from b3j0f.annotation import PrivateCallInterceptor
+from b3j0f.annotation import PrivateInterceptor
 
 from ..model.conf import Configuration
 from ..model.cat import Category
@@ -67,7 +67,7 @@ class MetaConfigurable(type):
         return result
 
 
-class Configurable(PrivateCallInterceptor):
+class Configurable(PrivateInterceptor):
     """Manage class conf synchronisation with conf resources.
 
     According to critical parameter updates, this class uses a dirty state.
@@ -80,6 +80,8 @@ class Configurable(PrivateCallInterceptor):
 
     # default drivers which are json and ini.
     DEFAULT_DRIVERS = (JSONConfDriver(), INIConfDriver())
+
+    __CONFIGURABLES__ = '__configurables__'  #: to_configure attribute name.
 
     CONF_PATHS = ('b3j0fconf-configurable.conf', )  #: default conf path.
 
@@ -103,11 +105,11 @@ class Configurable(PrivateCallInterceptor):
         :param Configuration conf: conf to use at instance level.
         :param bool inheritedconf: if True (default) add conf and paths to cls
             conf and paths.
-        :param targets: object(s) to reconfigure. Such object may
+        :param to_configure: object(s) to reconfigure. Such object may
             implement the methods configure apply_configuration and configure.
-        :type targets: list or instance.
-        :param bool store: if True (default) and targets is given,
-            store this instance into targets instance with the attribute
+        :type to_configure: list or instance.
+        :param bool store: if True (default) and to_configure is given,
+            store this instance into to_configure instance with the attribute
             ``STORE_ATTR``.
         :param paths: paths to parse.
         :type paths: Iterable or str
@@ -118,6 +120,7 @@ class Configurable(PrivateCallInterceptor):
         # init protected attributes
         self._paths = None
         self._conf = None
+        self._to_configure = []
 
         # init public attributes
         self.store = store
@@ -130,11 +133,64 @@ class Configurable(PrivateCallInterceptor):
 
     def _interception(self, jointpoint):
 
-        targets = jointpoint.ctx
+        result = jointpoint.proceed()
 
-        self.apply_configuration(targets=targets)
+        self.to_configure += result
 
-        return jointpoint.proceed()
+        self.apply_configuration(to_configure=result)
+
+        return result
+
+    @property
+    def to_configure(self):
+
+        return self._to_configure
+
+    @to_configure.setter
+    def to_configure(self, value):
+
+        if type(value) in (set, tuple):  # transform value
+            value = list(value)
+
+        elif type(value) is not list:
+            value = [value]
+
+        excluded = set(value) - set(self._to_configure)
+
+        for exclude in excluded:  # clean old references
+            try:
+                configurables = getattr(exclude, Configurable.__CONFIGURABLES__)
+
+            except AttributeError:
+                pass
+
+            else:
+                if self in configurables:
+                    configurables.remove(self)
+
+                if not configurables:
+                    delattr(exclude, Configurable.__CONFIGURABLES__)
+
+        if self.store:  # if store, save self in to_configure elements
+
+            for to_conf in value:
+
+                configurables = getattr(
+                    to_conf, Configurable.__CONFIGURABLES__, []
+                )
+
+                if self not in configurables:
+                    configurables.append(self)
+
+                try:
+                    setattr(
+                        to_conf, Configurable.__CONFIGURABLES__, configurables
+                    )
+
+                except AttributeError:
+                    pass
+
+        self._to_configure = value
 
     @property
     def conf(self):
@@ -149,11 +205,15 @@ class Configurable(PrivateCallInterceptor):
     def conf(self, value):
         """Change of configuration.
 
-        :param Configuration value: new configuration to use.
+        :param value: new configuration to use.
+        :type value: Category or Configuration
         """
 
         if value is None:
             value = Configuration()
+
+        elif isinstance(value, Category):
+            value = Configuration(value)
 
         if self.inheritedconf:
             self._conf = self.clsconf()
@@ -212,7 +272,7 @@ class Configurable(PrivateCallInterceptor):
 
     def apply_configuration(
             self, conf=None, paths=None, drivers=None, logger=None,
-            targets=None, _locals=None, _globals=None
+            to_configure=None, _locals=None, _globals=None
     ):
         """Apply conf on a destination in those phases:
 
@@ -220,13 +280,13 @@ class Configurable(PrivateCallInterceptor):
         2. for all paths, get conf which matches input conf.
         3. apply parsing rules on path parameters.
         4. fill input conf with resolved parameters.
-        5. apply filled conf on targets.
+        5. apply filled conf on to_configure.
 
         :param Configuration conf: conf from where get conf
         :param paths: conf files to parse. If paths is a str, it is
             automatically putted into a list.
         :type paths: list of str
-        :param targets: object to configure. self by default.
+        :param to_configure: object to configure. self by default.
         :param dict _locals: local variable to use for local python expression
             resolution.
         :param dict _globals: global variable to use for local python
@@ -236,15 +296,16 @@ class Configurable(PrivateCallInterceptor):
         if conf is None:
             conf = self.conf
 
-        if targets is None:  # init targets
-            targets = self.targets
+        if to_configure is None:  # init to_configure
+            to_configure = self.to_configure
 
-        if type(targets) is tuple:
+        if type(to_configure) is tuple:
 
-            for target in targets:
+            for target in to_configure:
+
                 self.apply_configuration(
                     conf=conf, paths=paths, drivers=drivers,
-                    logger=logger, targets=target,
+                    logger=logger, to_configure=target,
                     _locals=_locals, _globals=_globals
                 )
 
@@ -256,7 +317,7 @@ class Configurable(PrivateCallInterceptor):
             # resolve all values
             conf.resolve(configurable=self, _globals=_globals, _locals=_locals)
             # configure resolved configuration
-            self.configure(conf=conf, targets=targets)
+            self.configure(conf=conf, to_configure=to_configure)
 
     def get_conf(self, conf=None, paths=None, drivers=None, logger=None):
         """Get a configuration from paths.
@@ -305,7 +366,7 @@ class Configurable(PrivateCallInterceptor):
 
         return result
 
-    def configure(self, conf=None, logger=None, targets=None):
+    def configure(self, conf=None, logger=None, to_configure=None):
         """Update self properties with input params only if:
 
         - self.configure is True
@@ -317,31 +378,31 @@ class Configurable(PrivateCallInterceptor):
 
         :param Configuration conf: configuration model to configure. Default is
             this conf.
-        :param targets: object to configure. self if equals None.
+        :param to_configure: object to configure. self if equals None.
         :raises: Parameter.Error for any raised exception.
         """
 
         if conf is None:
             conf = self.conf
 
-        if targets is None:  # init targets
-            targets = self.targets
+        if to_configure is None:  # init to_configure
+            to_configure = self.to_configure
 
-        if type(targets) is tuple:
+        if type(to_configure) is tuple:
 
-            for target in targets:
+            for to_configure in to_configure:
 
-                self.configure(conf=conf, logger=logger, targets=target)
+                self.configure(conf=conf, logger=logger, to_configure=to_configure)
 
         else:
             unified_conf = conf.unify()
 
             self._configure(
                 unified_conf=unified_conf, logger=logger,
-                targets=targets
+                to_configure=to_configure
             )
 
-    def _configure(self, unified_conf=None, logger=None, targets=None):
+    def _configure(self, unified_conf=None, logger=None, to_configure=None):
         """Configure this class with input conf only if auto_conf or
         configure is true.
 
@@ -350,27 +411,23 @@ class Configurable(PrivateCallInterceptor):
         :param Configuration unified_conf: unified configuration. Default is
             self.conf.unify().
         :param bool configure: if True, force full self conf
-        :param targets: object to configure. self if equals None.
+        :param to_configure: object to configure. self if equals None.
         """
 
         if unified_conf is None:
             unified_conf = self.conf.unify()
 
-        if targets is None:  # init targets
-            targets = self.targets
+        if to_configure is None:  # init to_configure
+            to_configure = self.to_configure
 
-        if type(targets) is tuple:
+        if type(to_configure) is tuple:
 
-            for target in targets:
+            for to_configure in to_configure:
 
                 self._configure(
                     unified_conf=unified_conf, logger=logger,
-                    targets=target
+                    to_configure=to_configure
                 )
-
-            self._configure(
-                unified_conf=unified_conf, logger=logger, targets=self
-            )
 
         else:
             values = [p for p in unified_conf[Configuration.VALUES]]
@@ -380,4 +437,4 @@ class Configurable(PrivateCallInterceptor):
                 name = parameter.name
 
                 pvalue = parameter.value
-                setattr(targets, name, pvalue)
+                setattr(to_configure, name, pvalue)
