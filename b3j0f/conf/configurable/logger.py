@@ -228,6 +228,7 @@ for name, member in getmembers(Logger, isfunction):
 
         @wraps(member)
         def newmethod(self, logger=None, _name=name, *args, **kwargs):
+            """new method wrapper which bind Logger logger to params."""
 
             if logger is None:
                 logger = self.logger
