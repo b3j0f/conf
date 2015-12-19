@@ -63,6 +63,7 @@ def _filehandler(configurable):
 
 def _updatelogger(self, kwargsvalue, name):
     """Renew self logger."""
+
     self._logger = self.newlogger()
 
 
@@ -182,9 +183,9 @@ class Logger(Configurable):
 
         return result
 
-    def _clsconf(self, *args, **kwargs):
+    def clsconf(self, *args, **kwargs):
 
-        result = super(Logger, self)._clsconf(*args, **kwargs)
+        result = super(Logger, self).clsconf(*args, **kwargs)
 
         result += Category(
             Logger.LOG,

@@ -386,14 +386,17 @@ class Configurable(PrivateInterceptor):
 
             for driver in drivers:  # find the best driver
 
-                result = driver.get_conf(
+                rscconf = driver.get_conf(
                     path=path, conf=conf, logger=logger
                 )
 
-                if result:
-                    break
+                if result is None:
+                    result = rscconf
 
-            else:
+                else:
+                    result += rscconf
+
+            if result is None:
                 # if no conf found, display a warning log message
                 if logger is not None:
                     logger.warning(
