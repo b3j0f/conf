@@ -109,9 +109,9 @@ Expression parser
 
 The parser ``exprparser`` permits to write simple expressions using the python builtin functions except those able to do I/O operations like the ``open`` function.
 
-In such expression, you can call back other configuration parameter in using this format (thanks to the idea from the pypi config_ project) related to a Configuration model:
+Such expression is prefixed by the character `=`.
 
-First, you use the prefix '=' in order to tell the default parser to read the expression such an executable expression.
+In such expression, you can call back other configuration parameter in using this format (thanks to the idea from the pypi config_ project) related to a Configuration model:
 
 - ``#{path}`` where ``path`` corresponds to a python object path. For example, `#sys.maxsize` designates the max size of the integer on the host machine (attribute ``maxsize`` of the module ``sys``).
 - ``@[[://{path}/]{cat}].{param}`` where ``cat`` designates a configuration category name, and ``param`` designates related parameter value.
@@ -130,8 +130,8 @@ Driver
 Drivers are the mean to parse configuration resources, such as files, etc. from a configuration model provided by a Configurable object.
 By default, conf drivers are able to parse json/ini files. Those last use a relative path given by the environment variable ``B3J0F_CONF_DIR`` or ``~/etc`` if not given.
 
-Examples
---------
+Example
+-------
 
 Bind the configuration file ``~/etc/myclass.conf`` to a business class ``MyClass`` (the relative path ``~/etc`` can be change thanks to the environment variable ``B3J0F_CONF_DIR``).
 
@@ -142,24 +142,34 @@ The configuration file contains a category named ``MYCLASS`` containing the para
 
 - ``myattr`` equals ``'myvalue'``.
 - ``six`` equals ``6``.
-- ``bignumber`` equals ``six * 2.0``
+- ``bignumber`` equals ``six * 2.0``.
+
+Let the following configuration file in ini format:
 
 .. code-block:: ini
 
-    [MYCLASS]
-    myattr = myvalue
-    six = =6
-    bignumber = =@six * 2.0
+  [MYCLASS]
+  myattr = myvalue
+  bignumber = =@six * 2.0
+
+Let the following configuration file in json format:
+
+.. code-block:: json
+
+  {
+    "MYCLASS": {
+      "six": "=6"
+    }
+  }
+
+The following code permits to load upper configuration to a python object.
 
 .. code-block:: python
 
     from b3j0f.conf import Configurable
 
-    MYCATEGORY = 'MYCLASS'  # MyClass configuration category name
-    MYCONF = 'myclass.conf'  # MyClass configuration file
-
     # instantiate a business class
-    @Configurable(paths=MYCONF)
+    @Configurable(paths='MYCLASS', conf=Category('MYCLASS'))
     class MyClass(object):
         def __init__(self):
             super(MyClass, self).__init__()
