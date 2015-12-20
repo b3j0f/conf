@@ -61,7 +61,7 @@ class INIConfDriver(FileConfDriver):
 
         return resource.items(cname)
 
-    def _set_conf(self, conf, resource, rscpath):
+    def _setconf(self, conf, resource, rscpath):
 
         for category in conf:
 

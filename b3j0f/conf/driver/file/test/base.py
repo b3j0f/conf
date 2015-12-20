@@ -68,7 +68,7 @@ class TestFileConfDriver(FileConfDriver):
 
         return result
 
-    def _set_conf(self, resource, rscpath, conf):
+    def _setconf(self, resource, rscpath, conf):
 
         for cat in conf:
             for param in cat:

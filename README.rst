@@ -67,7 +67,7 @@ This library provides a set of class configuration tools in order to ease develo
 Configuration process is in 2 steps:
 
 - inject configuration resources (file, DB documents, etc.) in a Configurable class (with specific drivers which allows the Configurable class to be agnostic from configuration languages such as ini, json, xml, etc.),
-- let the configurable class read properties from such configuration resources and apply values on a dedicated class which may be a associated to a business code. This last process can be automatically or manually thanks to the the apply_reconfiguration method.
+- let the configurable class read properties from such configuration resources and apply values on a dedicated class which may be a associated to a business code. This last process can be done automatically or manually thanks to the the applyconfiguration method.
 
 Configuration
 #############
@@ -133,32 +133,32 @@ By default, conf drivers are able to parse json/ini files. Those last use a rela
 Example
 -------
 
-Bind the configuration file ``~/etc/myclass.conf`` to a business class ``MyClass`` (the relative path ``~/etc`` can be change thanks to the environment variable ``B3J0F_CONF_DIR``).
+Bind configuration files to an object
+#####################################
 
-Configuration file
-##################
+Bind the configuration file ``~/etc/myclass.conf`` and ``~/.config/myclass.conf`` to a business class ``MyClass`` (the relative path ``~/etc`` can be change thanks to the environment variable ``B3J0F_CONF_DIR``).
 
 The configuration file contains a category named ``MYCLASS`` containing the parameters:
 
 - ``myattr`` equals ``'myvalue'``.
 - ``six`` equals ``6``.
-- ``bignumber`` equals ``six * 2.0``.
+- ``twelve`` equals ``six * 2.0``.
 
-Let the following configuration file in ini format:
+Let the following configuration file ``~/etc/myclass.conf`` in ini format:
 
 .. code-block:: ini
 
   [MYCLASS]
   myattr = myvalue
-  bignumber = =@six * 2.0
+  twelve = = @six * 2.0
 
-Let the following configuration file in json format:
+Let the following configuration file ``~/.config/myclass.conf`` in json format:
 
 .. code-block:: json
 
   {
     "MYCLASS": {
-      "six": "=6"
+      "six": 6
     }
   }
 
@@ -166,24 +166,41 @@ The following code permits to load upper configuration to a python object.
 
 .. code-block:: python
 
-    from b3j0f.conf import Configurable
+    from b3j0f.conf import Configurable, Category
 
     # instantiate a business class
-    @Configurable(paths='MYCLASS', conf=Category('MYCLASS'))
+    @Configurable(paths='myclass.conf', conf=Category('MYCLASS'))
     class MyClass(object):
-        def __init__(self):
-            super(MyClass, self).__init__()
-            self.myattr = None
-            self.six = None
-            self.bignumber = None
+        pass
 
     myclass = MyClass()
 
     # assert attributes
     assert myclass.myattr == 'myvalue'
     assert myclass.six == 6
-    from sys import maxsize
-    assert myclass.bignumber == myclass.six * maxsize
+    assert myclass.twelve == 12
+
+Configure several objects with one configurable
+###############################################
+
+.. code-block:: python
+
+    from b3j0f.conf import getconfigurables
+
+    class Test(object):
+        pass
+
+    for configurable in getconfigurables(myclass):
+        configurable.toconfigure += [Test() for _ in range(5)]
+
+Reconfigure a configurable object
+#################################
+
+.. code-block:: python
+
+    from b3j0f.conf import applyconfiguration
+
+    applyconfiguration(myclass)
 
 Perspectives
 ------------

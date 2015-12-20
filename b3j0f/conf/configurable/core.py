@@ -46,7 +46,7 @@ class MetaConfigurable(type):
 
     def __call__(cls, *args, **kwargs):
         """Get a new instance of input cls class, and if instance.auto_conf or
-        instance.reconf_once, then call instance.apply_configuration().
+        instance.reconf_once, then call instance.applyconfiguration().
         """
 
         result = type.__call__(cls, *args, **kwargs)
@@ -66,9 +66,12 @@ class MetaConfigurable(type):
                 conf += init_category
 
             # apply configuration
-            result.apply_configuration(conf=conf)
+            result.applyconfiguration(conf=conf)
 
         return result
+
+#: toconfigure configurable attribute name.
+__CONFIGURABLES__ = '__configurables__'
 
 
 class Configurable(PrivateInterceptor):
@@ -82,19 +85,16 @@ class Configurable(PrivateInterceptor):
     #: ensure to apply configuration after instanciation of the configurable.
     __metaclass__ = MetaConfigurable
 
-    __CONFIGURABLES__ = '__configurables__'  #: to_configure attribute name.
+    CATEGORY = 'CONFIGURABLE'  #: configuration category name.
 
-    CONF_PATHS = ('b3j0fconf-configurable.conf', )  #: default conf path.
-
-    CATEGORY = 'CONFIGURATION'  #: configuration category name.
-
-    CONF_PATHS = 'paths'  #: paths attribute name.
+    CONFPATHS = 'paths'  #: paths attribute name.
     DRIVERS = 'drivers'  #: drivers attribute name.
     INHERITEDCONF = 'inheritedconf'  #: usecls conf attribute name.
     STORE = 'store'  #: store attribute name.
     FOREIGNS = 'foreigns'  #: not specified params setting attribute name.
     AUTOCONF = 'autoconf'  #: auto conf attribue name.
 
+    DEFAULT_CONFPATHS = ('b3j0fconf-configurable.conf', )  #: default conf path.
     DEFAULT_INHERITEDCONF = True  #: default inheritedconf value.
     DEFAULT_STORE = True  #: default store value.
     DEFAULT_FOREIGNS = True  #: default value for setting not specified params.
@@ -107,18 +107,18 @@ class Configurable(PrivateInterceptor):
             conf=None, inheritedconf=DEFAULT_INHERITEDCONF,
             store=DEFAULT_STORE, paths=None, drivers=DEFAULT_DRIVERS,
             foreigns=DEFAULT_FOREIGNS, autoconf=DEFAULT_AUTOCONF,
-            to_configure=(),
+            toconfigure=(),
             *args, **kwargs
     ):
         """
         :param Configuration conf: conf to use at instance level.
         :param bool inheritedconf: if True (default) add conf and paths to cls
             conf and paths.
-        :param to_configure: object(s) to reconfigure. Such object may
-            implement the methods configure apply_configuration and configure.
-        :type to_configure: list or instance.
-        :param bool store: if True (default) and to_configure is given,
-            store this instance into to_configure instance with the attribute
+        :param toconfigure: object(s) to reconfigure. Such object may
+            implement the methods configure applyconfiguration and configure.
+        :type toconfigure: list or instance.
+        :param bool store: if True (default) and toconfigure is given,
+            store this instance into toconfigure instance with the attribute
             ``STORE_ATTR``.
         :param paths: paths to parse.
         :type paths: Iterable or str
@@ -126,10 +126,10 @@ class Configurable(PrivateInterceptor):
             this conf but given by conf resources.
         :param ConfDriver(s) drivers: list of drivers to use. Default
             Configurable.DEFAULT_DRIVERS.
-        :param list to_configure: objects to configure.
-        :param bool autoconf: if autoconf, configurate this `to_configure`
-            objects as soon as possible. (at to_configure instanciation or after
-            updating this paths/conf/to_configure).
+        :param list toconfigure: objects to configure.
+        :param bool autoconf: if autoconf, configurate this `toconfigure`
+            objects as soon as possible. (at toconfigure instanciation or after
+            updating this paths/conf/toconfigure).
         """
 
         super(Configurable, self).__init__(*args, **kwargs)
@@ -137,7 +137,7 @@ class Configurable(PrivateInterceptor):
         # init protected attributes
         self._paths = None
         self._conf = None
-        self._to_configure = []
+        self._toconfigure = []
 
         # init public attributes
         self.store = store
@@ -149,46 +149,47 @@ class Configurable(PrivateInterceptor):
         self.autoconf = False
         self.conf = conf
         self.paths = paths
-        # when setup to_configure
-        self.to_configure = to_configure
+        # when setup toconfigure
+        self.toconfigure = toconfigure
         self.autoconf = autoconf
 
     def _interception(self, jointpoint):
 
-        to_configure = result = jointpoint.proceed()
+        toconfigure = result = jointpoint.proceed()
 
-        if to_configure is None:
-            to_configure = jointpoint.kwargs['self']
+        if toconfigure is None:
+            toconfigure = jointpoint.kwargs['self']
 
-        self.to_configure += [to_configure]
+        self.toconfigure += [toconfigure]
 
-        self.apply_configuration(to_configure=to_configure)
+        self.applyconfiguration(toconfigure=toconfigure)
 
         return result
 
     @property
-    def to_configure(self):
-        """Get this to_configure objects.
+    def toconfigure(self):
+        """Get this toconfigure objects.
 
         :rtype: list"""
 
-        return self._to_configure
+        return self._toconfigure
 
-    @to_configure.setter
-    def to_configure(self, value):
+    @toconfigure.setter
+    def toconfigure(self, value):
         """Change of objects to configure."""
 
         if type(value) in (set, tuple):  # transform value
+
             value = list(value)
 
         elif type(value) is not list:
             value = [value]
 
-        excluded = set(value) - set(self._to_configure)
+        excluded = set(value) - set(self._toconfigure)
 
         for exclude in excluded:  # clean old references
             try:
-                configurables = getattr(exclude, Configurable.__CONFIGURABLES__)
+                configurables = getattr(exclude, __CONFIGURABLES__)
 
             except AttributeError:
                 pass
@@ -198,31 +199,27 @@ class Configurable(PrivateInterceptor):
                     configurables.remove(self)
 
                 if not configurables:
-                    delattr(exclude, Configurable.__CONFIGURABLES__)
+                    delattr(exclude, __CONFIGURABLES__)
 
-        if self.store:  # if store, save self in to_configure elements
+        if self.store:  # if store, save self in toconfigure elements
 
             for to_conf in value:
 
-                configurables = getattr(
-                    to_conf, Configurable.__CONFIGURABLES__, []
-                )
+                configurables = getattr(to_conf, __CONFIGURABLES__, [])
 
                 if self not in configurables:
                     configurables.append(self)
 
                 try:
-                    setattr(
-                        to_conf, Configurable.__CONFIGURABLES__, configurables
-                    )
+                    setattr(to_conf, __CONFIGURABLES__, configurables)
 
                 except AttributeError:
                     pass
 
-        self._to_configure = value
+        self._toconfigure = value
 
-        if self.autoconf:  # automatically configure to_configure objects
-            self.apply_configuration()
+        if self.autoconf:  # automatically configure toconfigure objects
+            self.applyconfiguration()
 
     @property
     def conf(self):
@@ -255,7 +252,7 @@ class Configurable(PrivateInterceptor):
             self._conf = value
 
         if self.autoconf:
-            self.apply_configuration()
+            self.applyconfiguration()
 
     def clsconf(self):
         """Method to override in order to specify class configuration."""
@@ -264,7 +261,7 @@ class Configurable(PrivateInterceptor):
             Category(
                 Configurable.CATEGORY,
                 Parameter(name=Configurable.DRIVERS, vtype=tuple),
-                Parameter(name=Configurable.CONF_PATHS, vtype=tuple),
+                Parameter(name=Configurable.CONFPATHS, vtype=tuple),
                 Parameter(name=Configurable.INHERITEDCONF, vtype=bool),
                 Parameter(name=Configurable.STORE, vtype=bool)
             )
@@ -301,16 +298,16 @@ class Configurable(PrivateInterceptor):
             self._paths = tuple(value)
 
         if self.autoconf:
-            self.apply_configuration()
+            self.applyconfiguration()
 
     def clspaths(self):
         """Get class paths."""
 
-        return tuple(self.CONF_PATHS)
+        return tuple(self.DEFAULT_CONFPATHS)
 
-    def apply_configuration(
+    def applyconfiguration(
             self, conf=None, paths=None, drivers=None, logger=None,
-            to_configure=None, _locals=None, _globals=None
+            toconfigure=None, _locals=None, _globals=None
     ):
         """Apply conf on a destination in those phases:
 
@@ -318,46 +315,43 @@ class Configurable(PrivateInterceptor):
         2. for all paths, get conf which matches input conf.
         3. apply parsing rules on path parameters.
         4. fill input conf with resolved parameters.
-        5. apply filled conf on to_configure.
+        5. apply filled conf on toconfigure.
 
-        :param Configuration conf: conf from where get conf
+        :param Configuration conf: conf from where get conf.
         :param paths: conf files to parse. If paths is a str, it is
             automatically putted into a list.
         :type paths: list of str
-        :param to_configure: object to configure. self by default.
+        :param toconfigure: object to configure. self by default.
         :param dict _locals: local variable to use for local python expression
             resolution.
         :param dict _globals: global variable to use for local python
             expression resolution.
         """
 
-        if conf is None:
-            conf = self.conf
+        if toconfigure is None:  # init toconfigure
+            toconfigure = self.toconfigure
 
-        if to_configure is None:  # init to_configure
-            to_configure = self.to_configure
+        if type(toconfigure) is list:
 
-        if type(to_configure) is list:
+            for target in toconfigure:
 
-            for target in to_configure:
-
-                self.apply_configuration(
+                self.applyconfiguration(
                     conf=conf, paths=paths, drivers=drivers,
-                    logger=logger, to_configure=target,
+                    logger=logger, toconfigure=target,
                     _locals=_locals, _globals=_globals
                 )
 
         else:
             # get conf from drivers and paths
-            conf = self.get_conf(
+            conf = self.getconf(
                 conf=conf, paths=paths, logger=logger, drivers=drivers
             )
             # resolve all values
             conf.resolve(configurable=self, _globals=_globals, _locals=_locals)
             # configure resolved configuration
-            self.configure(conf=conf, to_configure=to_configure)
+            self.configure(conf=conf, toconfigure=toconfigure)
 
-    def get_conf(self, conf=None, paths=None, drivers=None, logger=None):
+    def getconf(self, conf=None, paths=None, drivers=None, logger=None):
         """Get a configuration from paths.
 
         :param Configuration conf: conf to update. Default this conf.
@@ -386,15 +380,18 @@ class Configurable(PrivateInterceptor):
 
             for driver in drivers:  # find the best driver
 
-                rscconf = driver.get_conf(
+                rscconf = driver.getconf(
                     path=path, conf=conf, logger=logger
                 )
+
+                if rscconf is None:
+                    continue
 
                 if result is None:
                     result = rscconf
 
                 else:
-                    result += rscconf
+                    result.update(conf=rscconf)
 
             if result is None:
                 # if no conf found, display a warning log message
@@ -407,78 +404,100 @@ class Configurable(PrivateInterceptor):
 
         return result
 
-    def configure(self, conf=None, logger=None, to_configure=None):
-        """Update self properties with input params only if:
+    def configure(self, conf=None, toconfigure=None, logger=None):
+        """Apply input conf on toconfigure objects.
 
-        - self.configure is True
-        - self.auto_conf is True
-        - param conf 'configure' is True
-        - param conf 'auto_conf' is True
-
-        This method may not be overriden. see _configure instead
+        Specialization of this method is done in the _configure method.
 
         :param Configuration conf: configuration model to configure. Default is
             this conf.
-        :param to_configure: object to configure. self if equals None.
+        :param toconfigure: object to configure. self if equals None.
+        :param Logger logger: specific logger to use.
         :raises: Parameter.Error for any raised exception.
         """
 
         if conf is None:
             conf = self.conf
 
-        if to_configure is None:  # init to_configure
-            to_configure = self.to_configure
+        if toconfigure is None:  # init toconfigure
+            toconfigure = self.toconfigure
 
-        if type(to_configure) is list:
+        if type(toconfigure) is list:
 
-            for to_configure in to_configure:
+            for toconfigure in toconfigure:
 
-                self.configure(conf=conf, logger=logger, to_configure=to_configure)
+                self.configure(
+                    conf=conf, toconfigure=toconfigure, logger=logger
+                )
 
         else:
-            unified_conf = conf.unify()
+            unifiedconf = conf.unify()
 
             self._configure(
-                unified_conf=unified_conf, logger=logger,
-                to_configure=to_configure
+                unifiedconf=unifiedconf, logger=logger,
+                toconfigure=toconfigure
             )
 
-    def _configure(self, unified_conf=None, logger=None, to_configure=None):
+    def _configure(self, unifiedconf=None, logger=None, toconfigure=None):
         """Configure this class with input conf only if auto_conf or
         configure is true.
 
         This method should be overriden for specific conf
 
-        :param Configuration unified_conf: unified configuration. Default is
+        :param Configuration unifiedconf: unified configuration. Default is
             self.conf.unify().
         :param bool configure: if True, force full self conf
-        :param to_configure: object to configure. self if equals None.
+        :param toconfigure: object to configure. self if equals None.
         """
 
-        if unified_conf is None:
-            unified_conf = self.conf.unify()
+        if unifiedconf is None:
+            unifiedconf = self.conf.unify()
 
-        if to_configure is None:  # init to_configure
-            to_configure = self.to_configure
+        if toconfigure is None:  # init toconfigure
+            toconfigure = self.toconfigure
 
-        if type(to_configure) is list:
+        if type(toconfigure) is list:
 
-            for to_configure in to_configure:
+            for toconfigure in toconfigure:
 
                 self._configure(
-                    unified_conf=unified_conf, logger=logger,
-                    to_configure=to_configure
+                    unifiedconf=unifiedconf, logger=logger,
+                    toconfigure=toconfigure
                 )
 
         else:
-            values = [p for p in unified_conf[Configuration.VALUES]]
+            values = [p for p in unifiedconf[Configuration.VALUES]]
 
             if self.foreigns:
-                foreigns = [p for p in unified_conf[Configuration.FOREIGNS]]
+                foreigns = [p for p in unifiedconf[Configuration.FOREIGNS]]
                 values += foreigns
 
             for parameter in values:
                 name = parameter.name
 
                 pvalue = parameter.value
-                setattr(to_configure, name, pvalue)
+                setattr(toconfigure, name, pvalue)
+
+
+def getconfigurables(toconfigure):
+    """Get configurables attached to input toconfigure.
+
+    :rtype: list"""
+
+    return getattr(toconfigure, __CONFIGURABLES__, [])
+
+
+def applyconfiguration(toconfigure, *args, **kwargs):
+    """Apply configuration on input toconfigure.
+
+    :param tuple args: applyconfiguration var args.
+    :param dict kwargs: applyconfiguration keywords.
+    """
+
+    configurables = getconfigurables(toconfigure)
+
+    for configurable in configurables:
+
+        configurable.applyconfiguration(
+            toconfigure=toconfigure, *args, **kwargs
+        )

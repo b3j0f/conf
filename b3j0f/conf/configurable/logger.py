@@ -139,7 +139,6 @@ class Logger(Configurable):
         self._logger = self.newlogger()
 
 
-
     def newlogger(self):
         """Get a new logger related to self properties."""
 
@@ -189,14 +188,14 @@ class Logger(Configurable):
 
         result += Category(
             Logger.LOG,
-            Parameter(name=Logger.LOG_NAME, critical=True),
-            Parameter(name=Logger.LOG_PATH, critical=True),
-            Parameter(name=Logger.LOG_LVL, critical=True),
-            Parameter(name=Logger.LOG_DEBUG_FORMAT, critical=True),
-            Parameter(name=Logger.LOG_INFO_FORMAT, critical=True),
-            Parameter(name=Logger.LOG_WARNING_FORMAT, critical=True),
-            Parameter(name=Logger.LOG_ERROR_FORMAT, critical=True),
-            Parameter(name=Logger.LOG_CRITICAL_FORMAT, critical=True)
+            Parameter(name=Logger.LOG_NAME),
+            Parameter(name=Logger.LOG_PATH),
+            Parameter(name=Logger.LOG_LVL),
+            Parameter(name=Logger.LOG_DEBUG_FORMAT),
+            Parameter(name=Logger.LOG_INFO_FORMAT),
+            Parameter(name=Logger.LOG_WARNING_FORMAT),
+            Parameter(name=Logger.LOG_ERROR_FORMAT),
+            Parameter(name=Logger.LOG_CRITICAL_FORMAT)
         )
 
         return result

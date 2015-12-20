@@ -35,8 +35,8 @@ driver (and all its sub types of course...).
 In order to implement your self drivers, you have to implement those methods:
 
 - rscpaths(path): get resource paths from one configuration path.
-- _get_conf(rscpath, logger): get one configuration from one resource path.
-- _set_conf(rscpath, logger): put one configuration from one resource path.
+- _getconf(rscpath, logger): get one configuration from one resource path.
+- _setconf(rscpath, logger): put one configuration from one resource path.
 """
 
 __all__ = ['ConfDriver']
@@ -47,7 +47,7 @@ from ..model.param import Parameter
 
 from sys import exc_info
 
-from six import reraise
+from six import reraise, string_types
 
 
 class ConfDriver(object):
@@ -66,7 +66,7 @@ class ConfDriver(object):
         """Get resource paths related to input configuration path.
 
         :param str path: configuration path.
-        :return: resource paths which could be used by the method set_conf.
+        :return: resource paths which could be used by the method setconf.
         :rtype: list
         """
 
@@ -106,7 +106,7 @@ class ConfDriver(object):
 
         return result
 
-    def get_conf(self, path, conf=None, logger=None):
+    def getconf(self, path, conf=None, logger=None):
         """Parse a configuration path with input conf and returns
         parameters by param name.
 
@@ -129,7 +129,7 @@ class ConfDriver(object):
 
         for rscpath in rscpaths:
 
-            pathconf = self._get_conf(rscpath=rscpath, logger=logger)
+            pathconf = self._getconf(rscpath=rscpath, logger=logger)
 
             if pathconf is not None:
 
@@ -141,7 +141,7 @@ class ConfDriver(object):
 
         return result
 
-    def set_conf(self, conf, rscpath, logger=None):
+    def setconf(self, conf, rscpath, logger=None):
         """Set input conf in input path.
 
         :param Configuration conf: conf to write to path.
@@ -157,7 +157,7 @@ class ConfDriver(object):
             resource = self.resource()
 
         try:
-            self._set_conf(conf=conf, resource=resource, rscpath=rscpath)
+            self._setconf(conf=conf, resource=resource, rscpath=rscpath)
 
         except:
 
@@ -169,7 +169,7 @@ class ConfDriver(object):
                 logger.error(full_msg)
                 reraise(self.Error, self.Error(msg))
 
-    def _get_conf(self, rscpath, logger=None):
+    def _getconf(self, rscpath, logger=None):
         """Get specific conf from one driver path.
 
         :param str rscpath: resource path.
@@ -193,13 +193,17 @@ class ConfDriver(object):
 
                 for name, value in self._params(resource=resource, cname=cname):
 
-                    param = Parameter(name=name, svalue=value)
+                    if not isinstance(value, string_types):
+                        param = Parameter(name=name, value=value)
+
+                    else:
+                        param = Parameter(name=name, svalue=value)
 
                     category += param
 
         return result
 
-    def _set_conf(self, conf, resource, rscpath):
+    def _setconf(self, conf, resource, rscpath):
         """Set input conf to input resource.
 
         :param Configuration conf: conf to write to path.

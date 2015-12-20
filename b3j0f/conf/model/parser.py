@@ -249,7 +249,7 @@ def _resolve(pname, conf=None, configurable=None, cname=None, path=None):
         if path is not None:
             kwargs['paths'] = path
 
-        conf = configurable.get_conf(**kwargs)
+        conf = configurable.getconf(**kwargs)
 
     result = conf.pvalue(pname=pname, cname=cname)
 

@@ -70,7 +70,7 @@ class TestConfDriver(ConfDriver):
 
         return result
 
-    def _set_conf(self, conf, resource, rscpath):
+    def _setconf(self, conf, resource, rscpath):
 
         self.confbypath[rscpath] = conf
 
@@ -116,11 +116,11 @@ class ConfDriverTest(UTCase):
 
         for path in self.paths:
 
-            conf = self.driver.get_conf(path=path)
+            conf = self.driver.getconf(path=path)
 
             self.assertIsNone(conf)
 
-            conf = self.driver.get_conf(path=path, conf=self.conf)
+            conf = self.driver.getconf(path=path, conf=self.conf)
 
             self.assertEqual(conf, self.conf)
 
@@ -133,9 +133,9 @@ class ConfDriverTest(UTCase):
                 conf = self.conf.copy()
                 conf += Category('test', Parameter('test'))
 
-                self.driver.set_conf(rscpath=rscpath, conf=conf)
+                self.driver.setconf(rscpath=rscpath, conf=conf)
 
-            conf = self.driver.get_conf(path=path)
+            conf = self.driver.getconf(path=path)
 
             self.assertNotEqual(conf, self.conf)
 

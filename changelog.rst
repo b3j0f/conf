@@ -10,7 +10,8 @@ ChangeLog
 - set inheritance to Configurable from b3j0f.annotation.PrivateCallInterceptor.
 - remove decorator module.
 - add foreigns attributes in Configurable which allows to add not specified parameters given by conf resources.
-- add autoconf attribute in Configurable.
+- add autoconf attribute in Configurable, getconfigurables and applyconfiguration functions.
+- rename get_conf, set_conf, to_configure and apply_configuration to getconf, setconf, toconfigure and applyconfiguration.
 
 0.2.1 (2015/10/29)
 ------------------
@@ -45,7 +46,7 @@ ChangeLog
 0.1.7 (2015/07/22)
 ------------------
 
-- fix bug about to_configure parameter.
+- fix bug about toconfigure parameter.
 - update README in fixing the example.
 
 0.1.6 (2015/06/13)

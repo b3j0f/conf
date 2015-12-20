@@ -30,7 +30,7 @@ from unittest import main
 
 from b3j0f.utils.ut import UTCase
 
-from ..core import Configurable
+from ..core import Configurable, getconfigurables, applyconfiguration
 from ...model.conf import Configuration
 from ...model.cat import Category
 from ...model.param import Parameter
@@ -91,7 +91,7 @@ class ConfigurableTest(UTCase):
         self.assertEqual(configurable.store, Configurable.DEFAULT_STORE)
 
     def test_configure_to_reconfigure_param(self):
-        """Test to reconfigure an object with to_configure parameter."""
+        """Test to reconfigure an object with toconfigure parameter."""
 
         class ToConfigure(object):
             """Class to configure.
@@ -100,14 +100,14 @@ class ConfigurableTest(UTCase):
                 super(ToConfigure, self).__init__()
                 self.test = None
 
-        to_configure = ToConfigure()
+        toconfigure = ToConfigure()
 
         param = 'test'
 
         conf = Configuration(Category('TEST', Parameter(param, value=True)))
 
-        self.configurable.configure(conf=conf, to_configure=to_configure)
-        self.assertTrue(to_configure.test)
+        self.configurable.configure(conf=conf, toconfigure=toconfigure)
+        self.assertTrue(toconfigure.test)
 
     def test_configure_without_inheritance(self):
         """Test to configure an object without inheritance."""
@@ -124,9 +124,9 @@ class ConfigurableTest(UTCase):
 
                 self.test = None
 
-        to_configure = ToConfigure()
+        toconfigure = ToConfigure()
 
-        self.assertTrue(to_configure.test)
+        self.assertTrue(toconfigure.test)
 
     def test_parser_inheritance(self):
 
@@ -148,6 +148,39 @@ class ConfigurableTest(UTCase):
             len(configurable.conf) + 1,
             len(_configurable.conf)
         )
+
+    def test_getconfigurables(self):
+        """Test the getconfigurables function."""
+
+        configurable = Configurable()
+
+        configurables = getconfigurables(configurable)
+
+        self.assertFalse(configurables)
+
+        configurable.toconfigure += [configurable]
+
+        configurables = getconfigurables(configurable)
+
+        self.assertEqual(configurables, [configurable])
+
+    def test_applyconfiguration(self):
+        """Test the function applyconfiguration."""
+
+        configurable = Configurable()
+        configurable.toconfigure += [configurable]
+
+        store = configurable.store
+
+        self.assertEqual(store, Configurable.DEFAULT_STORE)
+
+        configurable.store = not store
+
+        self.assertEqual(configurable.store, not Configurable.DEFAULT_STORE)
+
+        applyconfiguration(toconfigure=configurable)
+
+        self.assertEqual(configurable.store, Configurable.DEFAULT_STORE)
 
 if __name__ == '__main__':
     main()

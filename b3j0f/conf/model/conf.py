@@ -28,7 +28,6 @@
 
 __all__ = ['Configuration']
 
-
 from .base import CompositeModelElement
 from .cat import Category
 from .param import Parameter
@@ -190,6 +189,7 @@ class Configuration(CompositeModelElement):
                     if paramstoupdate:
 
                         for paramtoupdate in paramstoupdate:
+
                             paramtoupdate.svalue = param.svalue
 
                             try:
