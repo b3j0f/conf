@@ -154,9 +154,7 @@ class ConfigurableTest(UTCase):
     def test_inheritance(self):
         """Test with inheritance between toconfigure objects."""
 
-        tcd0, tcd1 = TestConfDriver(), TestConfDriver()
-
-        tcd0.confbypath['test0'] = Configuration(
+        conf0 = Configuration(
             Category(
                 'test0',
                 Parameter('test0', value=0)
@@ -167,21 +165,21 @@ class ConfigurableTest(UTCase):
             )
         )
 
-        tcd1.confbypath['test1'] = Configuration(
+        conf1 = Configuration(
             Category(
                 'test1',
                 Parameter('test1', value=2)
             )
         )
 
-        @Configurable(drivers=[tcd0], paths='test0')
+        @Configurable(conf=conf0)
         class Parent(object):
             pass
 
         self.assertEqual(Parent().test0, 0)
         self.assertEqual(Parent().test1, 1)
 
-        @Configurable(drivers=[tcd1], paths=['test0', 'test1'])
+        @Configurable(conf=conf1)
         class Child(Parent):
             pass
 
@@ -260,16 +258,14 @@ class ConfigurableTest(UTCase):
     def test_safe(self):
         """Test to configurate a configurable in a safe context."""
 
-        tcd = TestConfDriver()
-
-        tcd.confbypath['test'] = Configuration(
+        conf = Configuration(
             Category(
                 'test',
-                Parameter('test', value='=open')
+                Parameter('test', svalue='=open')
             )
         )
 
-        configurable = Configurable(drivers=[tcd])
+        configurable = Configurable(conf=conf)
 
         self.assertRaises(
             Parameter.Error,
@@ -280,16 +276,14 @@ class ConfigurableTest(UTCase):
     def test_unsafe(self):
         """Test to configurate a configurable in an unsafe context."""
 
-        tcd = TestConfDriver()
-
-        tcd.confbypath['test'] = Configuration(
+        conf = Configuration(
             Category(
                 'test',
-                Parameter('test', value='=int')
+                Parameter('test', svalue='=int')
             )
         )
 
-        configurable = Configurable(drivers=[tcd], safe=False)
+        configurable = Configurable(conf=conf, safe=False)
 
         configurable.applyconfiguration(
             toconfigure=configurable, paths='test'

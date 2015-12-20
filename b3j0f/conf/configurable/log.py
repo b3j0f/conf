@@ -27,7 +27,7 @@
 __all__ = ['Logger']
 
 
-from logging import Formatter, getLogger, FileHandler, Filter
+from logging import Formatter, getLogger, FileHandler, Filter, INFO
 
 from os import environ
 from os.path import join, sep
@@ -39,7 +39,7 @@ from ..model.param import Parameter
 
 from .core import Configurable
 
-from inspect import getargspec, getmembers, isfunction
+from inspect import getargspec, getmembers, isroutine
 
 from functools import wraps
 
@@ -99,9 +99,12 @@ class Logger(Configurable):
     ERROR_FORMAT = WARNING_FORMAT  #: error message format.
     CRITICAL_FORMAT = ERROR_FORMAT  #: critical message format.
 
+    DEFAULT_LOG_PATH = '.'  #: default log_path value.
+    DEFAULT_LOG_LVL = INFO  #: default log_lvl value.
+
     def __init__(
             self, logger=None,
-            log_lvl='INFO', log_name=None, log_path=LOG_PATH,
+            log_lvl=DEFAULT_LOG_LVL, log_name=None, log_path=DEFAULT_LOG_PATH,
             log_handler=_filehandler, log_info_format=INFO_FORMAT,
             log_debug_format=DEBUG_FORMAT, log_warning_format=WARNING_FORMAT,
             log_error_format=ERROR_FORMAT, log_critical_format=CRITICAL_FORMAT,
@@ -222,17 +225,26 @@ class Logger(Configurable):
         self._logger.setLevel(self._log_lvl)
 
 # set logger to arguments of Logger methods
-for name, member in getmembers(Logger, isfunction):
+for name, member in getmembers(Logger, isroutine):
 
-    if name != '__init__' and 'logger' in getargspec(member).args:
+    try:
+        argspec = getargspec(member)
 
-        @wraps(member)
-        def newmethod(self, logger=None, _name=name, *args, **kwargs):
-            """new method wrapper which bind Logger logger to params."""
+    except TypeError:
+        pass
 
-            if logger is None:
-                logger = self.logger
+    else:
+        if name != '__init__' and 'logger' in argspec.args:
 
-            return getattr(self, _name)(logger=logger, *args, **kwargs)
+            @wraps(member)
+            def newmethod(self, logger=None, _name=name, *args, **kwargs):
+                """new method wrapper which bind Logger logger to params."""
 
-        setattr(Logger, name, newmethod)
+                if logger is None:
+                    logger = self.logger
+
+                return getattr(super(Logger, self), _name)(
+                    logger=logger, *args, **kwargs
+                )
+
+            setattr(Logger, name, newmethod)
