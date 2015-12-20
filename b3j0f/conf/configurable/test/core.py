@@ -176,14 +176,14 @@ class ConfigurableTest(UTCase):
 
         @Configurable(drivers=[tcd0], paths='test0')
         class Parent(object):
-            def __init__(self): pass
+            pass
 
         self.assertEqual(Parent().test0, 0)
         self.assertEqual(Parent().test1, 1)
 
         @Configurable(drivers=[tcd1], paths=['test0', 'test1'])
         class Child(Parent):
-            def __init__(self): pass
+            pass
 
         self.assertEqual(Child().test0, 0)
         self.assertEqual(Child().test1, 2)
