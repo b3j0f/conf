@@ -192,8 +192,8 @@ Configure several objects with one configurable
 
     toconfigure = list(Test() for _ in range(5))
 
-    for configurable in getconfigurables(myclass):
-        configurable.toconfigure += toconfigure
+    configurable = getconfigurables(myclass)[0]
+    configurable.applyconfiguration(toconfigure=toconfigure)
 
     for item in toconfigure:
         assert item.six == 6
