@@ -190,8 +190,13 @@ Configure several objects with one configurable
     class Test(object):
         pass
 
+    toconfigure = list(Test() for _ in range(5))
+
     for configurable in getconfigurables(myclass):
-        configurable.toconfigure += [Test() for _ in range(5)]
+        configurable.toconfigure += toconfigure
+
+    for item in toconfigure:
+        assert item.six == 6
 
 Reconfigure a configurable object
 #################################
@@ -200,7 +205,11 @@ Reconfigure a configurable object
 
     from b3j0f.conf import applyconfiguration
 
+    myclass.six = 7
+
     applyconfiguration(myclass)
+
+    assert myclass.six == 6
 
 Perspectives
 ------------
