@@ -13,6 +13,7 @@ ChangeLog
 - add autoconf attribute in Configurable, getconfigurables and applyconfiguration functions.
 - rename get_conf, set_conf, to_configure and apply_configuration to getconf, setconf, toconfigure and applyconfiguration.
 - add Configurable.safe attribute in order to execute configuration in an unsafe context if necessary.
+- add the configurable Logger useful to ease management of complex logging needs.
 
 0.2.1 (2015/10/29)
 ------------------
