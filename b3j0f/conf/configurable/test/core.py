@@ -35,6 +35,8 @@ from ...model.conf import Configuration
 from ...model.cat import Category
 from ...model.param import Parameter
 
+from ...driver.test.base import TestConfDriver
+
 from tempfile import NamedTemporaryFile
 
 from os import remove
@@ -181,6 +183,43 @@ class ConfigurableTest(UTCase):
         applyconfiguration(toconfigure=configurable)
 
         self.assertEqual(configurable.store, Configurable.DEFAULT_STORE)
+
+    def test_multiconf(self):
+        """Test to get configuration from multi resources."""
+
+        tcd0, tcd1 = TestConfDriver(), TestConfDriver()
+
+        tcd0.confbypath['test0'] = Configuration(
+            Category(
+                'test',
+                Parameter('test0', value='0')
+            )
+        )
+        tcd0.confbypath['test1'] = Configuration(
+            Category(
+                'test',
+                Parameter('test1', value='1')
+            )
+        )
+        tcd1.confbypath['test1'] = Configuration(
+            Category(
+                'test',
+                Parameter('test2', value='=@://test0/test.test0 + @://test1/test.test1'),
+                Parameter('test3', value=3)
+            )
+        )
+
+        configurable = Configurable(drivers=[tcd0, tcd1])
+
+        configurable.applyconfiguration(
+            toconfigure=configurable, paths=['test0', 'test1']
+        )
+
+        self.assertEqual(configurable.test0, '0')
+        self.assertEqual(configurable.test1, '1')
+        self.assertEqual(configurable.test2, '01')
+        self.assertEqual(configurable.test3, 3)
+
 
 if __name__ == '__main__':
     main()

@@ -135,6 +135,7 @@ def parse(
     result = None
 
     if svalue.startswith(EXPR_PREFIX):
+
         value = _exprparser(
             svalue=svalue[len(EXPR_PREFIX):], conf=conf,
             configurable=configurable, _locals=_locals, _globals=_globals
@@ -249,7 +250,8 @@ def _resolve(pname, conf=None, configurable=None, cname=None, path=None):
         if path is not None:
             kwargs['paths'] = path
 
-        conf = configurable.getconf(**kwargs)
+        if conf is None:
+            conf = configurable.getconf(**kwargs)
 
     result = conf.pvalue(pname=pname, cname=cname)
 
