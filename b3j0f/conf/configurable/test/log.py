@@ -36,10 +36,6 @@ from ...model.cat import Category
 from ...model.param import Parameter
 from ...driver.test.base import TestConfDriver
 
-from inspect import getargspec, getmembers, isroutine
-
-from functools import wraps
-
 
 class LoggerTest(UTCase):
 
