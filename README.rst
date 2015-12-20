@@ -128,7 +128,7 @@ Driver
 ######
 
 Drivers are the mean to parse configuration resources, such as files, etc. from a configuration model provided by a Configurable object.
-By default, conf drivers are able to parse json/ini files. Those last use a relative path given by the environment variable ``B3J0F_CONF_DIR`` or ``~/etc`` if not given.
+By default, conf drivers are able to parse json/ini files. Those last use a relative path given by the environment variable ``B3J0F_CONF_DIR`` or from directories (in this order) ``/etc``, ``/usr/local/etc``, ``~/etc``, ``~/.config``, ``~/config`` or current execution directory.
 
 Example
 -------

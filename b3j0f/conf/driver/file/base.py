@@ -72,6 +72,8 @@ _addconfig(
     CONF_DIRS, join(HOME, '.config'), join(HOME, 'config'), join(HOME, 'etc')
 )
 
+_addconfig(CONF_DIRS, '.')  # add current directory
+
 B3J0F_CONF_DIR = 'B3J0F_CONF_DIR'  #: conf dir environment variable name.
 
 if B3J0F_CONF_DIR in environ:  # add b3j0F_CONF_DIR if necessary
