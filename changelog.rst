@@ -12,6 +12,7 @@ ChangeLog
 - add foreigns attributes in Configurable which allows to add not specified parameters given by conf resources.
 - add autoconf attribute in Configurable, getconfigurables and applyconfiguration functions.
 - rename get_conf, set_conf, to_configure and apply_configuration to getconf, setconf, toconfigure and applyconfiguration.
+- add Configurable.safe attribute in order to execute configuration in an unsafe context if necessary.
 
 0.2.1 (2015/10/29)
 ------------------

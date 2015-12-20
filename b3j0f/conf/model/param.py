@@ -309,7 +309,7 @@ class Parameter(ModelElement):
     def resolve(
             self,
             configurable=None, conf=None, _locals=None, _globals=None,
-            parser=None, error=True
+            parser=None, error=True, safe=True
     ):
         """Resolve this parameter value related to a configurable and a
         configuration.
@@ -326,6 +326,7 @@ class Parameter(ModelElement):
             expression resolution.
         :param parser: specific parser to use. Default this parser.
         :param bool error: raise an error if True (False by default).
+        :param bool safe: if True (default) resolve without builtins functions.
         :return: newly resolved value.
         :raises: Parameter.Error for any raised exception.
         """
@@ -354,7 +355,7 @@ class Parameter(ModelElement):
                 result = self._value = parser(
                     svalue=self._svalue, conf=conf,
                     configurable=configurable, _type=self.vtype,
-                    _locals=_locals, _globals=_globals
+                    _locals=_locals, _globals=_globals, safe=safe
                 )
 
             except Exception as ex:

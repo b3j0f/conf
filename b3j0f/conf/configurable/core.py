@@ -92,7 +92,8 @@ class Configurable(PrivateInterceptor):
     INHERITEDCONF = 'inheritedconf'  #: usecls conf attribute name.
     STORE = 'store'  #: store attribute name.
     FOREIGNS = 'foreigns'  #: not specified params setting attribute name.
-    AUTOCONF = 'autoconf'  #: auto conf attribue name.
+    AUTOCONF = 'autoconf'  #: auto conf attribute name.
+    SAFE = 'safe'  #: safe attribute name.
 
     DEFAULT_CONFPATHS = ('b3j0fconf-configurable.conf', )  #: default conf path.
     DEFAULT_INHERITEDCONF = True  #: default inheritedconf value.
@@ -101,13 +102,14 @@ class Configurable(PrivateInterceptor):
     # default drivers which are json and ini.
     DEFAULT_DRIVERS = (JSONConfDriver(), INIConfDriver())
     DEFAULT_AUTOCONF = True  #: default value for auto configuration.
+    DEFAULT_SAFE = True  #: default value for safe attribute.
 
     def __init__(
             self,
             conf=None, inheritedconf=DEFAULT_INHERITEDCONF,
             store=DEFAULT_STORE, paths=None, drivers=DEFAULT_DRIVERS,
             foreigns=DEFAULT_FOREIGNS, autoconf=DEFAULT_AUTOCONF,
-            toconfigure=(),
+            toconfigure=(), safe=DEFAULT_SAFE,
             *args, **kwargs
     ):
         """
@@ -130,6 +132,9 @@ class Configurable(PrivateInterceptor):
         :param bool autoconf: if autoconf, configurate this `toconfigure`
             objects as soon as possible. (at toconfigure instanciation or after
             updating this paths/conf/toconfigure).
+        :param bool safe: if True (default), expression parser are used in a
+            safe context to resolve python object. For example, if safe,
+            builtins function such as `open` are not resolvable.
         """
 
         super(Configurable, self).__init__(*args, **kwargs)
@@ -145,20 +150,24 @@ class Configurable(PrivateInterceptor):
         self.inheritedconf = inheritedconf
         self.drivers = drivers
         self.foreigns = foreigns
-        # dirty hack: falsify autoconf in order to avoid applyconf
+        self.toconfigure = toconfigure
+        # dirty hack: falsify autoconf in order to avoid auto applyconfiguration
         self.autoconf = False
         self.conf = conf
         self.paths = paths
-        # when setup toconfigure
-        self.toconfigure = toconfigure
-        self.autoconf = autoconf
+        self.safe = safe
+        self.autoconf = autoconf  # end of dirty hack
 
-    def _interception(self, jointpoint):
+    def _interception(self, joinpoint):
 
-        toconfigure = result = jointpoint.proceed()
+        toconfigure = result = joinpoint.proceed()
 
         if toconfigure is None:
-            toconfigure = jointpoint.kwargs['self']
+            if 'self' in joinpoint.kwargs:
+                toconfigure = joinpoint.kwargs['self']
+
+            else:
+                toconfigure = joinpoint.args[0]
 
         self.toconfigure += [toconfigure]
 
@@ -217,9 +226,6 @@ class Configurable(PrivateInterceptor):
                     pass
 
         self._toconfigure = value
-
-        if self.autoconf:  # automatically configure toconfigure objects
-            self.applyconfiguration()
 
     @property
     def conf(self):
@@ -347,7 +353,10 @@ class Configurable(PrivateInterceptor):
                 conf=conf, paths=paths, logger=logger, drivers=drivers
             )
             # resolve all values
-            conf.resolve(configurable=self, _globals=_globals, _locals=_locals)
+            conf.resolve(
+                configurable=self,
+                _globals=_globals, _locals=_locals, safe=self.safe
+            )
             # configure resolved configuration
             self.configure(conf=conf, toconfigure=toconfigure)
 

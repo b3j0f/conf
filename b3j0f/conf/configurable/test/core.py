@@ -151,6 +151,43 @@ class ConfigurableTest(UTCase):
             len(_configurable.conf)
         )
 
+    def test_inheritance(self):
+        """Test with inheritance between toconfigure objects."""
+
+        tcd0, tcd1 = TestConfDriver(), TestConfDriver()
+
+        tcd0.confbypath['test0'] = Configuration(
+            Category(
+                'test0',
+                Parameter('test0', value=0)
+            ),
+            Category(
+                'test1',
+                Parameter('test1', value=1)
+            )
+        )
+
+        tcd1.confbypath['test1'] = Configuration(
+            Category(
+                'test1',
+                Parameter('test1', value=2)
+            )
+        )
+
+        @Configurable(drivers=[tcd0], paths='test0')
+        class Parent(object):
+            def __init__(self): pass
+
+        self.assertEqual(Parent().test0, 0)
+        self.assertEqual(Parent().test1, 1)
+
+        @Configurable(drivers=[tcd1], paths=['test0', 'test1'])
+        class Child(Parent):
+            def __init__(self): pass
+
+        self.assertEqual(Child().test0, 0)
+        self.assertEqual(Child().test1, 2)
+
     def test_getconfigurables(self):
         """Test the getconfigurables function."""
 
@@ -219,6 +256,46 @@ class ConfigurableTest(UTCase):
         self.assertEqual(configurable.test1, '1')
         self.assertEqual(configurable.test2, '01')
         self.assertEqual(configurable.test3, 3)
+
+    def test_safe(self):
+        """Test to configurate a configurable in a safe context."""
+
+        tcd = TestConfDriver()
+
+        tcd.confbypath['test'] = Configuration(
+            Category(
+                'test',
+                Parameter('test', value='=open')
+            )
+        )
+
+        configurable = Configurable(drivers=[tcd])
+
+        self.assertRaises(
+            Parameter.Error,
+            configurable.applyconfiguration,
+            toconfigure=configurable, paths='test'
+        )
+
+    def test_unsafe(self):
+        """Test to configurate a configurable in an unsafe context."""
+
+        tcd = TestConfDriver()
+
+        tcd.confbypath['test'] = Configuration(
+            Category(
+                'test',
+                Parameter('test', value='=int')
+            )
+        )
+
+        configurable = Configurable(drivers=[tcd], safe=False)
+
+        configurable.applyconfiguration(
+            toconfigure=configurable, paths='test'
+        )
+
+        self.assertIs(configurable.test, int)
 
 
 if __name__ == '__main__':

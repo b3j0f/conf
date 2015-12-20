@@ -117,7 +117,7 @@ def serialize(expr):
 
 def parse(
         svalue, conf=None, configurable=None, _type=object,
-        _locals=None, _globals=None
+        _locals=None, _globals=None, safe=True
 ):
     """Expression parser.
 
@@ -173,7 +173,8 @@ def _simpleparser(svalue, _type=str):
 
 
 def _exprparser(
-        svalue, conf=None, configurable=None, _locals=None, _globals=None
+        svalue, conf=None, configurable=None, _locals=None, _globals=None,
+        safe=True
 ):
     """Parse input serialized value such as an expression."""
 
@@ -196,7 +197,9 @@ def _exprparser(
 
         final_globals = _getscope(_globals)
 
-        result = safe_eval(compilation, final_globals, final_locals)
+        expreval = safe_eval if safe else eval
+
+        result = expreval(compilation, final_globals, final_locals)
 
     return result
 
@@ -213,7 +216,6 @@ def _repl(match):
         result = 'lookup(path=\'{0}\')'.format(path)
 
     else:
-
         params = 'pname=\'{0}\''.format(pname)
 
         if confpath:

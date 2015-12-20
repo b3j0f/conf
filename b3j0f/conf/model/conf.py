@@ -47,7 +47,9 @@ class Configuration(CompositeModelElement):
     VALUES = ':VALUES'  #: category name which contains local param values.
     FOREIGNS = ':FOREIGN'  #: category name which contains foreign params vals.
 
-    def resolve(self, configurable=None, _locals=None, _globals=None):
+    def resolve(
+        self, configurable=None, _locals=None, _globals=None, safe=True
+    ):
         """Resolve all parameters.
 
         :param Configurable configurable: configurable to use for foreign
@@ -56,6 +58,7 @@ class Configuration(CompositeModelElement):
             resolution.
         :param dict _globals: global variable to use for local python
             expression resolution.
+        :param bool safe: safe execution (remove builtins functions).
         :raises: Parameter.Error for any raised exception.
         """
 
@@ -65,7 +68,7 @@ class Configuration(CompositeModelElement):
 
                 param.resolve(
                     configurable=configurable, conf=self,
-                    _locals=_locals, _globals=_globals
+                    _locals=_locals, _globals=_globals, safe=safe
                 )
 
     def unify(self):
