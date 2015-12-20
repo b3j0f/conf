@@ -31,9 +31,6 @@ from unittest import main
 from b3j0f.utils.ut import UTCase
 
 from ..log import Logger
-from ...model.conf import Configuration
-from ...model.cat import Category
-from ...model.param import Parameter
 from ...driver.test.base import TestConfDriver
 
 
@@ -42,20 +39,6 @@ class LoggerTest(UTCase):
     def setUp(self):
 
         self.logger = Logger()
-
-        self.conf = Configuration(
-            Category(
-                'A',
-                Parameter('a', value='a', vtype=str),
-                Parameter('_', value=2, vtype=int),
-                Parameter('error', vtype=float, svalue='error')
-            ),
-            Category(
-                'B',
-                Parameter('a', value='b', vtype=str),
-                Parameter('b', value='b', vtype=str)
-            )
-        )
 
     def test_loglvl(self):
 
@@ -75,16 +58,17 @@ class LoggerTest(UTCase):
         testself = self
 
         class MyTestConfDriver(TestConfDriver):
+            """ConfDriver test function."""
 
             def getconf(self, logger, *args, **kwargs):
 
-                testself.assertIs(logger, self.logger)
+                testself.assertIs(logger, testself.logger.logger)
 
                 return super(MyTestConfDriver, self).getconf(
                     logger=logger, *args, **kwargs
                 )
 
-        self.logger.applyconfiguration(drivers=[MyTestConfDriver()])
+        self.logger.getconf(drivers=[MyTestConfDriver()])
 
 
 if __name__ == '__main__':
