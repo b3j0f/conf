@@ -27,7 +27,7 @@
 """Parameter parser module.
 
 The parser transform a serialization parameter value to a parameter value,
-related to parameter properties (_type, _globals, _locals, etc.).
+related to parameter properties (vtype, _globals, _locals, safe, etc.).
 
 It takes in parameter :
 
@@ -48,8 +48,6 @@ Simple value
 
 Expression value
 ----------------
-
-Expression values are evaluated in a safe context (without I/O functions).
 
 For example:
 
@@ -138,7 +136,8 @@ def parse(
 
         value = _exprparser(
             svalue=svalue[len(EXPR_PREFIX):], conf=conf,
-            configurable=configurable, _locals=_locals, _globals=_globals
+            configurable=configurable, _locals=_locals, _globals=_globals,
+            safe=safe
         )
 
     else:
@@ -180,7 +179,7 @@ def _exprparser(
 
     result = None
 
-    compilation = REGEX_COMP.sub(_repl, svalue)
+    compilation = REGEX_COMP.sub(_repl(safe=safe), svalue)
 
     if compilation:
 
@@ -204,32 +203,37 @@ def _exprparser(
     return result
 
 
-def _repl(match):
+def _repl(safe=True):
     """Replace matching expression in input match with corresponding
     conf accessor."""
 
-    result = None
+    def __repl(match):
+        """Internal regex repl function."""
 
-    confpath, cname, pname, path = match.groups()
+        result = None
 
-    if path:
-        result = 'lookup(path=\'{0}\')'.format(path)
+        confpath, cname, pname, path = match.groups()
 
-    else:
-        params = 'pname=\'{0}\''.format(pname)
+        if path:
+            result = 'lookup(path=\'{0}\', safe={1})'.format(path, safe)
 
-        if confpath:
-            confpath = confpath[3:-1]
-            params += ', path=\'{0}\''.format(confpath)
+        else:
+            params = 'pname=\'{0}\''.format(pname)
 
-        if cname:
-            cname = cname[:-1]
-            params += ', cname=\'{0}\''.format(cname)
+            if confpath:
+                confpath = confpath[3:-1]
+                params += ', path=\'{0}\''.format(confpath)
 
-        conf = 'configurable=configurable, conf=conf'
-        result = 'resolve({0}, {1})'.format(conf, params)
+            if cname:
+                cname = cname[:-1]
+                params += ', cname=\'{0}\''.format(cname)
 
-    return result
+            conf = 'configurable=configurable, conf=conf'
+            result = 'resolve({0}, {1})'.format(conf, params)
+
+        return result
+
+    return __repl
 
 
 def _resolve(pname, conf=None, configurable=None, cname=None, path=None):
