@@ -114,8 +114,7 @@ Such expression is prefixed by the character `=`.
 In such expression, you can call back other configuration parameter in using this format (thanks to the idea from the pypi config_ project) related to a Configuration model:
 
 - ``#{path}`` where ``path`` corresponds to a python object path. For example, `#sys.maxsize` designates the max size of the integer on the host machine (attribute ``maxsize`` of the module ``sys``).
-- ``@[[://{path}/]{cat}].{param}`` where ``cat`` designates a configuration category name, and ``param`` designates related parameter value.
-- ``@{param}`` where ``param`` designates a final parameter value (last overidden value).
+- ``@[[://{path}/]{cat}].{param}`` where ``cat`` designates a configuration category name, and ``param`` designates related parameter value. If path and cat are omitted, param designates the final parameter value (last overidden value).
 
 Configurable
 ############

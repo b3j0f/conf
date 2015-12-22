@@ -35,12 +35,14 @@ It takes in parameter :
 - configuration: the configuration.
 - configurable: the configurable.
 - logger: a logger.
-- _locals and _globals respective dictionaries of local/global variables for python expressions.
+- _locals and _globals respective dictionaries of local/global variables for
+    python expressions.
 - _type: final value type to check.
 
 There are two kind of values:
 
-- simple values: like in most system configuration files, such values are string by default.
+- simple values: like in most system configuration files, such values are string
+    by default.
 - expression values: contains a python expression.
 
 Simple value
@@ -60,13 +62,16 @@ For example:
 expressions accept those keywords which does not exist in the python language.
 
 - '#'{path}: get a python object given by the ``path`` value.
-- '@'[://{confpath}/][{cat}.]{param}: param value from optionnally cat and confpath.
+- '@'[://{confpath}/][{cat}.]{param}: param value from optionnally cat and
+    confpath.
 
 .. csv-table::
     :header: expr, description
 
-    "@://r/c.p", "parameter p, from the category c in the configuration resource r"
-    "@c.p", "parameter value from the category c in the same configurable scope"
+    "@://r/c.p", "parameter `p`, from the category `c` in the configuration
+        resource `r`"
+    "@c.p", "parameter value from the category `c` in the same configurable
+        scope"
     "@p", "last parameter value of the configurable object"
 """
 
