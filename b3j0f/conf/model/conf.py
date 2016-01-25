@@ -30,7 +30,6 @@ __all__ = ['Configuration']
 
 from .base import CompositeModelElement
 from .cat import Category
-from .param import Parameter
 
 
 class Configuration(CompositeModelElement):
@@ -48,16 +47,13 @@ class Configuration(CompositeModelElement):
     FOREIGNS = ':FOREIGN'  #: category name which contains foreign params vals.
 
     def resolve(
-        self, configurable=None, _locals=None, _globals=None, safe=True
+            self, configurable=None, scope=None, safe=True
     ):
         """Resolve all parameters.
 
         :param Configurable configurable: configurable to use for foreign
             parameter resolution.
-        :param dict _locals: local variable to use for local python expression
-            resolution.
-        :param dict _globals: global variable to use for local python
-            expression resolution.
+        :param dict scope: variables to use for parameter expression evaluation.
         :param bool safe: safe execution (remove builtins functions).
         :raises: Parameter.Error for any raised exception.
         """
@@ -68,103 +64,44 @@ class Configuration(CompositeModelElement):
 
                 param.resolve(
                     configurable=configurable, conf=self,
-                    _locals=_locals, _globals=_globals, safe=safe
+                    scope=scope, safe=safe
                 )
 
-    def unify(self):
-        """Get a conf which contains only two categories:
-
-        - VALUES where params are all self params where values are not
-            exceptions.contains all values.
-        - ERRORS where params are all self params where values are
-            exceptions.
-
-        :return: two categories named respectivelly VALUES and ERRORS and
-            contain respectivelly self param values and parsing errors.
-        :rtype: Configuration
-        """
-
-        result = Configuration()
-
-        values = Category(Configuration.VALUES)
-        errors = Category(Configuration.ERRORS)
-        foreigns = Category(Configuration.FOREIGNS)
-
-        for category in self:
-
-            for param in category:
-
-                pvalue = None
-
-                try:  # get value
-                    pvalue = param.value
-
-                except Parameter.Error:
-                    pass
-
-                if (pvalue, param.error) != (None, None):
-                    final_values = values if param.local else foreigns
-
-                    if param.error is not None:  # if param is in error
-                        to_update = errors
-                        to_delete = final_values
-
-                    else:
-                        to_update = final_values
-                        to_delete = errors
-
-                    to_update += param
-
-                    if param.name in to_delete:
-                        del to_delete[param.name]
-
-        result += values
-        result += foreigns
-        result += errors
-
-        return result
-
-    def get_unified_category(self, name):
-        """Add a category with input name which takes all this parameters.
-
-        :param str name: new category name.
-        """
-
-        result = Category(name)
-
-        for cat in self._content.values():
-            for param in cat:
-                result.put(param)
-
-        return result
-
-    def pvalue(self, pname, cname=None):
+    def pvalue(self, pname, cname=None, history=0):
         """Get final parameter value, from the category "VALUES" or
         from a calculated.
 
         :param str pname: parameter name.
         :param str cname: category name.
+        :param int history: historical param value from specific category or
+            final parameter value if cname is not given. For example, if history
+            equals 1 and cname is None, result is the value defined just before
+            the last parameter value if exist. If cname is given, the result
+            is the parameter value defined before the category cname.
         :raises: NameError if pname or cname do not exist."""
 
         result = None
 
-        if cname is None:
-            if Configuration.VALUES in self._content:
-                category = self._content[Configuration.VALUES]
+        category = None
 
-            else:
-                unified = self.unify()
-                if pname in unified[Configuration.VALUES]:
-                    category = unified[Configuration.VALUES]
+        categories = []  # list of categories containing input parameter name
 
-                else:
-                    category = unified[Configuration.FOREIGNS]
+        for cat in self._content.values():
 
-        else:
-            category = self._content[cname]
+            if pname in cat:
+                categories.append(cat)
+
+                if cname in (None, category.name):
+                    category = cat
+
+                    if cname is not None:
+                        break
 
         if category is None:
             raise NameError('Category {0} does not exist.'.format(cname))
+
+        elif history != 0:
+            category = categories[-history]
 
         param = category[pname]
 

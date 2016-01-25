@@ -30,7 +30,7 @@ __all__ = ['Parameter', 'PType']
 
 
 from .base import ModelElement
-from .parser import parse, _getscope, ParserError, serialize
+from ..parser.core import parse, _getscope, ParserError, serialize
 
 from six import string_types, reraise
 
@@ -121,8 +121,8 @@ class Parameter(ModelElement):
     """
 
     __slots__ = (
-        '_name', 'vtype', 'parser', '_svalue', '_value', '_error', 'conf',
-        'local', '_globals', '_locals', 'configurable', 'serializer'
+        '_name', 'ptype', 'parser', '_svalue', '_value', '_error', 'conf',
+        'local', 'scope', 'configurable', 'serializer'
     ) + ModelElement.__slots__
 
     class Error(Exception):
@@ -134,13 +134,15 @@ class Parameter(ModelElement):
     #: simple name regex compiler.
     _PARAM_NAME_COMPILER_MATCHER = re_compile(PARAM_NAME_REGEX).match
 
-    DEFAULT_VTYPE = object  #: default vtype.
+    DEFAULT_NAME = re_compile('.*')
+    DEFAULT_VTYPE = object  #: default ptype.
     DEFAULT_LOCAL = True  #: default local value.
 
     def __init__(
-            self, name, vtype=DEFAULT_VTYPE, svalue=None, parser=parse,
-            serializer=serialize, value=None, conf=None, configurable=None,
-            local=DEFAULT_LOCAL, _globals=None, _locals=None,
+            self, name=DEFAULT_NAME, ptype=DEFAULT_VTYPE, value=None,
+            parser=parse, serializer=serialize, svalue=None,
+            conf=None, configurable=None,
+            local=DEFAULT_LOCAL, scope=None,
             *args, **kwargs
     ):
         """
@@ -148,7 +150,9 @@ class Parameter(ModelElement):
             - str: unique by category.
             - regex: designates a group of parameters with a matching name and
                 common properties (parser, value, conf, etc.).
-        :param type vtype: parameter value type.
+
+            Default is the regex ``.*``.
+        :param type ptype: parameter value type.
         :param callable parser: param value deserializer which takes in param a
             str. Default is the expression parser.
         :param callable serializer: param serializer which takes in param an
@@ -161,6 +165,8 @@ class Parameter(ModelElement):
         :param Configurable configurable: specific configuable.
         :param bool local: distinguish local parameters from those defined
             outside the configuration while updating the embedding conf.
+        :param dict scope: dictionary of elements to add in the serialized
+            value evaluation.
         """
 
         super(Parameter, self).__init__(*args, **kwargs)
@@ -175,14 +181,13 @@ class Parameter(ModelElement):
         self.parser = parser
         self.serializer = serializer
         self.name = name
-        self.vtype = vtype
+        self.ptype = ptype
         self.conf = conf
         self.configurable = configurable
         self.local = local
         self.svalue = svalue
         self.value = value
-        self._globals = _globals
-        self._locals = _locals
+        self.scope = scope
 
     def __eq__(self, other):
         """
@@ -218,12 +223,12 @@ class Parameter(ModelElement):
         return hash(self.name) + hash(Parameter)
 
     def __repr__(self):
-        """Display self name, value, svalue, vtype and error.
+        """Display self name, value, svalue, ptype and error.
 
         :rtype: str"""
 
         return 'Parameter({0}, {1}, {2}, {3}, {4})'.format(
-            self.name, self._value, self._svalue, self.vtype, self.error
+            self.name, self._value, self._svalue, self.ptype, self.error
         )
 
     @property
@@ -308,7 +313,7 @@ class Parameter(ModelElement):
 
     def resolve(
             self,
-            configurable=None, conf=None, _locals=None, _globals=None,
+            configurable=None, conf=None, scope=None,
             parser=None, error=True, safe=True
     ):
         """Resolve this parameter value related to a configurable and a
@@ -320,10 +325,7 @@ class Parameter(ModelElement):
             parameter resolution.
         :param Configuration conf: configuration to use for
             cross-value resolution.
-        :param dict _locals: local variable to use for local python expression
-            resolution.
-        :param dict _globals: global variable to use for local python
-            expression resolution.
+        :param dict scope: variables to use for local expression evaluation.
         :param parser: specific parser to use. Default this parser.
         :param bool error: raise an error if True (False by default).
         :param bool safe: if True (default) resolve without builtins functions.
@@ -347,15 +349,14 @@ class Parameter(ModelElement):
             if configurable is None:  # init configurable
                 configurable = self.configurable
 
-            _locals = _getscope(self._locals, _locals)
-            _globals = _getscope(self._globals, _globals)
+            scope = _getscope(self.scope, scope)
 
             # parse value if str and if parser exists
             try:
                 result = self._value = parser(
                     svalue=self._svalue, conf=conf,
-                    configurable=configurable, _type=self.vtype,
-                    _locals=_locals, _globals=_globals, safe=safe
+                    configurable=configurable, _type=self.ptype,
+                    scope=scope, safe=safe
                 )
 
             except Exception as ex:
@@ -376,7 +377,7 @@ class Parameter(ModelElement):
         calculate the new value from the serialized one.
 
         :return: parameter value.
-        :raises: TypeError if serialized value is not an instance of self vtype
+        :raises: TypeError if serialized value is not an instance of self ptype
             . ParserError if parsing step raised an error.
         """
 
@@ -402,12 +403,12 @@ class Parameter(ModelElement):
         If an error occured, it is stored in this error attribute.
 
         :param value: new value to use. If input value is not an instance of
-            self.vtype, self error
-        :raises: TypeError if input value is not an instance of self vtype.
+            self.ptype, self error
+        :raises: TypeError if input value is not an instance of self ptype.
         """
 
         if value is None or (
-                self.vtype is not None and isinstance(value, self.vtype)
+                self.ptype is not None and isinstance(value, self.ptype)
         ):
             self._value = value
 
@@ -415,7 +416,7 @@ class Parameter(ModelElement):
             # raise wrong type error
             error = TypeError(
                 'Wrong value type of ({0}). {1} expected.'.format(
-                    value, self.vtype
+                    value, self.ptype
                 )
             )
             self._error = error
@@ -430,7 +431,7 @@ class Parameter(ModelElement):
         :return: new parameter.
         """
 
-        props = ('name', 'parser', 'local', 'vtype', 'conf')
+        props = ('name', 'parser', 'local', 'ptype', 'conf', 'scope')
         for prop in props:
             kwargs.setdefault(prop, getattr(self, prop))
 

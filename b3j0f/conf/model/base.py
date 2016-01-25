@@ -334,3 +334,21 @@ class CompositeModelElement(ModelElement):
         """Clear this composite model element from this content."""
 
         self._content.clear()
+
+    @property
+    def params(self):
+        """Get set of parameters.
+
+        :rtype: list"""
+
+        result = set()
+
+        for content in self._content.values():
+
+            if isinstance(content, CompositeModelElement):
+                result = content.params | result
+
+            else:
+                result.add(content)
+
+        return list(result)

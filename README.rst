@@ -114,7 +114,7 @@ Such expression is prefixed by the character `=`.
 In such expression, you can call back other configuration parameter in using this format (thanks to the idea from the pypi config_ project) related to a Configuration model:
 
 - ``#{path}`` where ``path`` corresponds to a python object path. For example, `#sys.maxsize` designates the max size of the integer on the host machine (attribute ``maxsize`` of the module ``sys``).
-- ``@[[://{path}/]{cat}].{param}`` where ``cat`` designates a configuration category name, and ``param`` designates related parameter value. If path and cat are omitted, param designates the final parameter value (last overidden value).
+- ``@[{confpath}|][{cat}].{param}`` where ``confpath`` designates a configuration path, ``cat`` designates a configuration category name, and ``param`` designates related parameter value. If path and cat are omitted, param designates the final parameter value (last overidden value).
 
 Configurable
 ############
@@ -135,28 +135,28 @@ Example
 Bind configuration files to an object
 #####################################
 
-Bind the configuration file ``~/etc/myclass.conf`` and ``~/.config/myclass.conf`` to a business class ``MyClass`` (the relative path ``~/etc`` can be change thanks to the environment variable ``B3J0F_CONF_DIR``).
+Bind the configuration file ``~/etc/myobject.conf`` and ``~/.config/myobject.conf`` to a business class ``MyObject`` (the relative path ``~/etc`` can be change thanks to the environment variable ``B3J0F_CONF_DIR``).
 
-The configuration file contains a category named ``MYCLASS`` containing the parameters:
+The configuration file contains a category named ``MYOBJECT`` containing the parameters:
 
 - ``myattr`` equals ``'myvalue'``.
 - ``six`` equals ``6``.
 - ``twelve`` equals ``six * 2.0``.
 
-Let the following configuration file ``~/etc/myclass.conf`` in ini format:
+Let the following configuration file ``~/etc/myobject.conf`` in ini format:
 
 .. code-block:: ini
 
-  [MYCLASS]
+  [MYOBJECT]
   myattr = myvalue
   twelve = = @six * 2.0
 
-Let the following configuration file ``~/.config/myclass.conf`` in json format:
+Let the following configuration file ``~/.config/myobject.conf`` in json format:
 
 .. code-block:: json
 
   {
-    "MYCLASS": {
+    "MYOBJECT": {
       "six": 6
     }
   }
@@ -168,16 +168,16 @@ The following code permits to load upper configuration to a python object.
     from b3j0f.conf import Configurable, Category
 
     # instantiate a business class
-    @Configurable(paths='myclass.conf', conf=Category('MYCLASS'))
-    class MyClass(object):
+    @Configurable(paths='myobject.conf')
+    class MyObject(object):
         pass
 
-    myclass = MyClass()
+    myobject = MyObject()
 
     # assert attributes
-    assert myclass.myattr == 'myvalue'
-    assert myclass.six == 6
-    assert myclass.twelve == 12
+    assert myobject.myattr == 'myvalue'
+    assert myobject.six == 6
+    assert myobject.twelve == 12
 
 Configure several objects with one configurable
 ###############################################
@@ -191,7 +191,7 @@ Configure several objects with one configurable
 
     toconfigure = list(Test() for _ in range(5))
 
-    configurable = getconfigurables(myclass)[0]
+    configurable = getconfigurables(myobject)[0]
     configurable.applyconfiguration(toconfigure=toconfigure)
 
     for item in toconfigure:
@@ -204,11 +204,11 @@ Reconfigure a configurable object
 
     from b3j0f.conf import applyconfiguration
 
-    myclass.six = 7
+    myobject.six = 7
 
-    applyconfiguration(myclass)
+    applyconfiguration(myobject)
 
-    assert myclass.six == 6
+    assert myobject.six == 6
 
 Perspectives
 ------------

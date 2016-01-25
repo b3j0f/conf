@@ -185,9 +185,10 @@ class Logger(Configurable):
 
         return result
 
-    def clsconf(self, *args, **kwargs):
+    @classmethod
+    def clsconf(cls):
 
-        result = super(Logger, self).clsconf(*args, **kwargs)
+        result = Configurable.clsconf()
 
         result += Category(
             Logger.LOG,

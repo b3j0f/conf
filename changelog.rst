@@ -1,6 +1,12 @@
 ChangeLog
 =========
 
+0.2.4 (2016/01/11)
+------------------
+
+- add confpath parameter in order to import configurable configuration from a file.
+- add ui package.
+
 0.2.3 (2015/12/20)
 ------------------
 

@@ -90,6 +90,7 @@ class Configurable(PrivateInterceptor):
     CONFPATHS = 'paths'  #: paths attribute name.
     DRIVERS = 'drivers'  #: drivers attribute name.
     INHERITEDCONF = 'inheritedconf'  #: usecls conf attribute name.
+    CONFPATH = 'confpath'  #: conf path attribute name.
     STORE = 'store'  #: store attribute name.
     FOREIGNS = 'foreigns'  #: not specified params setting attribute name.
     AUTOCONF = 'autoconf'  #: auto conf attribute name.
@@ -106,7 +107,7 @@ class Configurable(PrivateInterceptor):
 
     def __init__(
             self,
-            conf=None, inheritedconf=DEFAULT_INHERITEDCONF,
+            conf=None, inheritedconf=DEFAULT_INHERITEDCONF, confpath=None,
             store=DEFAULT_STORE, paths=None, drivers=DEFAULT_DRIVERS,
             foreigns=DEFAULT_FOREIGNS, autoconf=DEFAULT_AUTOCONF,
             toconfigure=(), safe=DEFAULT_SAFE,
@@ -116,6 +117,7 @@ class Configurable(PrivateInterceptor):
         :param Configuration conf: conf to use at instance level.
         :param bool inheritedconf: if True (default) add conf and paths to cls
             conf and paths.
+        :param str confpath: instance configuration path.
         :param toconfigure: object(s) to reconfigure. Such object may
             implement the methods configure applyconfiguration and configure.
         :type toconfigure: list or instance.
@@ -143,6 +145,7 @@ class Configurable(PrivateInterceptor):
         self._paths = None
         self._conf = None
         self._toconfigure = []
+        self._confpath = confpath
 
         # init public attributes
         self.store = store
@@ -154,6 +157,7 @@ class Configurable(PrivateInterceptor):
         # dirty hack: falsify autoconf in order to avoid auto applyconfiguration
         self.autoconf = False
         self.conf = conf
+        self.confpath = confpath
         self.paths = paths
         self.safe = safe
         self.autoconf = autoconf  # end of dirty hack
@@ -174,6 +178,32 @@ class Configurable(PrivateInterceptor):
         self.applyconfiguration(toconfigure=toconfigure)
 
         return result
+
+    @property
+    def confpath(self):
+        """Get configuration path.
+
+        :rtype: str"""
+
+        return self._confpath
+
+    @confpath.setter
+    def confpath(self, value):
+        """Change of configuration path.
+
+        :param str value: new conf path to use."""
+
+        if value is None:
+            value = ''
+
+        conf = self.getconf(paths=value)
+        # force to get parameters if values are parameters
+        for cat in conf:
+            for param in cat:
+                if isinstance(param.value, Parameter):
+                    conf[cat.name] = param.value
+
+        self.conf = conf
 
     @property
     def toconfigure(self):
@@ -260,7 +290,8 @@ class Configurable(PrivateInterceptor):
         if self.autoconf:
             self.applyconfiguration()
 
-    def clsconf(self):
+    @classmethod
+    def clsconf(cls):
         """Method to override in order to specify class configuration."""
 
         result = Configuration(
