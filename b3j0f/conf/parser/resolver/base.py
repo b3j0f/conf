@@ -47,6 +47,8 @@ And is loaded in three ways:
 
 __all__ = ['ExprResolver']
 
+from six import add_metaclass
+
 from .registry import register
 
 
@@ -57,19 +59,18 @@ class _MetaExprResolver(type):
 
     def __new__(mcs, *args, **kwargs):
 
-        result = super(mcs, *args, **kwargs)
+        result = type.__new__(mcs, *args, **kwargs)
 
         register(exprresolver=result)
 
         return result
 
 
+@add_metaclass(_MetaExprResolver)
 class ExprResolver(object):
     """Expression resolver class.
 
     All sub classes are automatically registered."""
-
-    __metaclass__ = _MetaExprResolver
 
     __registry__ = 'py'  #: regitration name.
 

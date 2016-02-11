@@ -49,7 +49,7 @@ And is loaded in three ways:
 
 __all__ = [
     'ResolverRegistry',
-    'names', 'resolve', 'register', 'loadresolvers', 'defaultname'
+    'names', 'resolve', 'register', 'loadresolvers', 'defaultname', 'getname'
 ]
 
 from b3j0f.utils.path import lookup
@@ -58,12 +58,14 @@ from inspect import isroutine, isclass
 
 from future.moves.collections import OrderedDict
 
+from six import string_types
+
 from os import getenv
 
 #: env variable name of exprres modules.
 B3J0F_EXPRRES_PATH = 'B3J0F_EXPRRES_PATH'
 
-EXPRRES_PATH = getenv(B3J0F_EXPRRES_PATH)  #: exprres modules.
+EXPRRES_PATH = getenv(B3J0F_EXPRRES_PATH)  #: expression resolver modules.
 
 
 if EXPRRES_PATH:  # load modules
@@ -98,8 +100,12 @@ class ResolverRegistry(object):
         :param str value: new default value to use.
         :raises: NameError if value is not registered."""
 
-        if value is None and self.resolvers:
-            value = list(self.resolvers.keys())[0]
+        if value is None:
+            if self.resolvers:
+                value = list(self.resolvers.keys())[0]
+
+        elif not isinstance(value, string_types):
+            value = register(exprresolver=value, reg=self)
 
         elif value not in self.resolvers:
             raise NameError(
@@ -115,85 +121,6 @@ class ResolverRegistry(object):
         :rtype: list"""
 
         return list(self.resolvers.keys())
-
-    def register(self, name=None, exprresolver=None, params=None):
-        """Register an expression resolver.
-
-        Can be used such as a decorator.
-
-        For example all remainding expressions are the same.
-
-        .. code-block:: python
-
-            @register('myresolver')
-            def myresolver(**kwargs): pass
-
-        .. code-block:: python
-
-            def myresolver(**kwargs): pass
-
-            register('myresolver', myresolver)
-
-        .. code-block:: python
-
-            @register('myresolver')
-            class MyResolver():
-                def __call__(**kwargs): pass
-
-        .. code-block:: python
-
-            class MyResolver():
-                def __call__(**kwargs): pass
-
-            register('myresolver', MyResolver)
-
-        .. code-block:: python
-
-            class MyResolver():
-                def __call__(**kwargs): pass
-
-            register('myresolver', MyResolver())
-
-
-        :param str name: register name to use. Default is the function/class
-            name.
-        :param exprresolver: function able to resolve an expression.
-        :param dict kwargs: parameters of resolver instanciation if exprresolver
-            is a class and this function is used such as a decorator."""
-
-        def _register(exprresolver, _name=name, _params=params):
-            """Local registration for better use in a decoration context.
-
-            :param exprresolver: function able to resolve an expression.
-            :param str _name: private parameter used to set the name.
-            :param dict _params: private parameter used to set resolver class
-                constructor parameters.
-            """
-
-            if isclass(exprresolver):  # try to instanciate exprresolver
-                if _params is None:
-                    _params = {}
-                exprresolver = exprresolver(**_params)
-
-            if _name is None:
-                if isroutine(exprresolver):  # get name from function name
-                    _name = exprresolver.__name__
-
-                else:  # get name from class name
-                    cls = exprresolver.__class__
-                    _name = getattr(cls, __RESOLVER__, cls.__name__)
-
-            self.resolvers[_name] = exprresolver
-
-            return exprresolver
-
-        if exprresolver is None:
-            return _register
-
-        else:
-            _register(exprresolver)
-
-        self.resolvers[name] = exprresolver
 
     def resolve(self, expr, name=None, safe=True, tostr=False, scope=None):
         """Resolve an expression with possibly a dedicated expression resolvers.
@@ -232,12 +159,90 @@ def loadresolvers(paths):
     for path in paths:
         lookup(path)
 
-def register(name=None, exprresolver=None):
+def register(name=None, exprresolver=None, params=None, reg=None):
     """Register an expression resolver.
 
-    Can be used such as a decorator"""
+    Can be used such as a decorator.
 
-    return _RESOLVER_REGISTRY.register(name=name, exprresolver=exprresolver)
+    For example all remainding expressions are the same.
+
+    .. code-block:: python
+
+        @register('myresolver')
+        def myresolver(**kwargs): pass
+
+    .. code-block:: python
+
+        def myresolver(**kwargs): pass
+
+        register('myresolver', myresolver)
+
+    .. code-block:: python
+
+        @register('myresolver')
+        class MyResolver():
+            def __call__(**kwargs): pass
+
+    .. code-block:: python
+
+        class MyResolver():
+            def __call__(**kwargs): pass
+
+        register('myresolver', MyResolver)
+
+    .. code-block:: python
+
+        class MyResolver():
+            def __call__(**kwargs): pass
+
+        register('myresolver', MyResolver())
+
+
+    :param str name: register name to use. Default is the function/class
+        name.
+    :param exprresolver: function able to resolve an expression.
+    :param dict kwargs: parameters of resolver instanciation if exprresolver
+        is a class and this function is used such as a decorator.
+    :param ResolverRegistry reg: registry to use. Default is the global registry
+    .
+    """
+
+    def _register(exprresolver, _name=name, _params=params):
+        """Local registration for better use in a decoration context.
+
+        :param exprresolver: function/class able to resolve an expression.
+        :param str _name: private parameter used to set the name.
+        :param dict _params: private parameter used to set resolver class
+            constructor parameters.
+        """
+
+        if _name is None:
+            _name = getname(exprresolver)
+
+        if isclass(exprresolver):  # try to instanciate exprresolver
+            if _params is None:
+                _params = {}
+            exprresolver = exprresolver(**_params)
+
+        reg.resolvers[_name] = exprresolver
+
+        return exprresolver
+
+    if reg is None:
+        reg = _RESOLVER_REGISTRY
+
+    if exprresolver is None:
+        return _register
+
+    else:
+        if name is None:
+            name = getname(exprresolver)
+        _register(exprresolver)
+
+    reg.resolvers[name] = exprresolver
+
+    return name
+
 
 def defaultname(name=None):
     """Get default resolver name.
@@ -277,3 +282,25 @@ def resolve(**kwargs):
     """
 
     return _RESOLVER_REGISTRY.resolve(**kwargs)
+
+def getname(exprresolver):
+    """Get expression resolver name.
+
+    :raises: TypeError if exprresolver is not callable."""
+
+    result = None
+
+    if isroutine(exprresolver):
+        result = exprresolver.__name__
+
+    elif isclass(exprresolver):
+        result = getattr(exprresolver, __RESOLVER__, exprresolver.__name__)
+
+    elif callable(exprresolver):
+        cls = exprresolver.__class__
+        result = getname(cls)
+
+    else:
+        raise TypeError('Expression resolver must be a callable object.')
+
+    return result

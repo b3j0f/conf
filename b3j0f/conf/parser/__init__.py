@@ -1,8 +1,8 @@
 
 __all__ = [
 	'parse', 'ParserError', 'EXPR_PREFIX', 'serialize',
-	'resolve', 'ExprResolver', 'register', 'resolvernames'
+	'resolve', 'ExprResolver', 'register', 'names'
 ]
 
 from .core import parse, ParserError, EXPR_PREFIX, serialize
-from .exprres import resolve, ExprResolver, resolvernames, register
+from .resolver import resolve, ExprResolver, names, register

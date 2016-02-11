@@ -28,7 +28,7 @@
 
 __all__ = ['MetaConfigurable', 'Configurable']
 
-from six import string_types
+from six import string_types, add_metaclass
 
 from b3j0f.annotation import PrivateInterceptor
 
@@ -74,6 +74,7 @@ class MetaConfigurable(type):
 __CONFIGURABLES__ = '__configurables__'
 
 
+@add_metaclass(MetaConfigurable)
 class Configurable(PrivateInterceptor):
     """Manage class conf synchronisation with conf resources.
 
@@ -81,9 +82,6 @@ class Configurable(PrivateInterceptor):
 
     In such situation, it is possible to go back to a stable state in calling
     the method `restart`. Without failure, the dirty status is canceled."""
-
-    #: ensure to apply configuration after instanciation of the configurable.
-    __metaclass__ = MetaConfigurable
 
     CATEGORY = 'CONFIGURABLE'  #: configuration category name.
 
@@ -104,6 +102,8 @@ class Configurable(PrivateInterceptor):
     DEFAULT_DRIVERS = (JSONConfDriver(), INIConfDriver())
     DEFAULT_AUTOCONF = True  #: default value for auto configuration.
     DEFAULT_SAFE = True  #: default value for safe attribute.
+
+    SUB_CONF_PREFIX = ':'  #: sub conf prefix.
 
     def __init__(
             self,
@@ -471,27 +471,23 @@ class Configurable(PrivateInterceptor):
                 )
 
         else:
-            unifiedconf = conf.unify()
 
-            self._configure(
-                unifiedconf=unifiedconf, logger=logger,
-                toconfigure=toconfigure
-            )
+            self._configure(conf=conf, logger=logger, toconfigure=toconfigure)
 
-    def _configure(self, unifiedconf=None, logger=None, toconfigure=None):
+    def _configure(self, conf=None, logger=None, toconfigure=None):
         """Configure this class with input conf only if auto_conf or
         configure is true.
 
         This method should be overriden for specific conf
 
-        :param Configuration unifiedconf: unified configuration. Default is
-            self.conf.unify().
+        :param Configuration conf: configuration model to configure. Default is
+            this conf.
         :param bool configure: if True, force full self conf
         :param toconfigure: object to configure. self if equals None.
         """
 
-        if unifiedconf is None:
-            unifiedconf = self.conf.unify()
+        if conf is None:
+            conf = self.conf
 
         if toconfigure is None:  # init toconfigure
             toconfigure = self.toconfigure
@@ -501,22 +497,50 @@ class Configurable(PrivateInterceptor):
             for toconfigure in toconfigure:
 
                 self._configure(
-                    unifiedconf=unifiedconf, logger=logger,
-                    toconfigure=toconfigure
+                    conf=conf, logger=logger, toconfigure=toconfigure
                 )
 
         else:
-            values = [p for p in unifiedconf[Configuration.VALUES]]
 
-            if self.foreigns:
-                foreigns = [p for p in unifiedconf[Configuration.FOREIGNS]]
-                values += foreigns
+            sub_confs = []
+            params = []
 
-            for parameter in values:
-                name = parameter.name
+            for category in conf:
+                if category.name.startswith(self.SUB_CONF_PREFIX):
+                    sub_confs.append(category.name)
 
-                pvalue = parameter.value
-                setattr(toconfigure, name, pvalue)
+                else:
+                    cparams = category.params
+                    params += cparams
+
+                    for param in cparams:
+
+                        value = param.value
+
+                        if param.error:
+                            continue
+
+                        if self.foreigns or param.local:
+                            setattr(toconfigure, param.name, value)
+
+            for param in params:
+
+                sub_conf_name = '{0}{1}'.format(self.SUB_CONF_PREFIX, param.name)
+
+                if sub_conf_name in sub_confs:
+
+                    category = sub_confs[sub_conf_name]
+
+                    kwargs = {}
+                    for param in category.params:
+
+                        kwargs[param.name] = param.value
+
+                    value = param.value(**kwargs)
+
+                    self._configure(
+                        toconfigure=value, logger=logger, conf=value
+                    )
 
 
 def getconfigurables(toconfigure):

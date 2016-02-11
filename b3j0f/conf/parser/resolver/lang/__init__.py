@@ -24,6 +24,7 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-# extend the b3j0f.conf.parser.resolver.lang package
-from pkgutil import extend_path
-__path__ = extend_path(__path__, __name__)
+__all__ = ['resolvejs', 'resolvepy']
+
+from .js import resolvejs
+from .py import resolvepy

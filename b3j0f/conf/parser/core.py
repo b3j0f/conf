@@ -53,7 +53,7 @@ Simple value
 A simple value is a string. It is possible to format a dedicated programming
 language expression in respecting this syntax:
 
-*%[{lang}]%{expr}%* where:
+*%[{lang}]:{expr}%* where:
 
 - lang is an optional expression evaluator name (``py`` for python, ``js`` for
     javascript, etc.) Default is python.
@@ -70,9 +70,9 @@ Examples:
 
     :header: expression, result, description
 
-    "te%%'test'[:-2]%", test, 'te' + 'st' in default (python) evaluator
-    "te%js%'test'.substr(2)%", test, 'te' + 'st' in javascript evaluator
-    "test number %%2\%2%", "test number 0", "default evaluation of 2 modulo 2"
+    "te%:'test'[:-2]%", test, 'te' + 'st' in default (python) evaluator
+    "te%js:'test'.substr(2)%", test, 'te' + 'st' in javascript evaluator
+    "test number %:2\%2%", "test number 0", "default evaluation of 2 modulo 2"
 
 Expression value
 ----------------
@@ -84,7 +84,7 @@ evaluated expression.
 
 Such expression must respects this syntax:
 
-**=[{lang}]:{expr} where:
+*=[{lang}]:{expr}* where:
 
 - expr is the expression to evaluate
 - lang is the dedicated programming language keyword (for example, ``py`` for
@@ -159,17 +159,15 @@ from six import string_types
 
 from .resolver.registry import resolve
 
-WORD = r'[a-zA-Z_]\w*'
+EVAL_REF = r'@([^@]+\|)?(\w)?(\.*)?(\w)'  #: ref parameter.
 
-EVAL_REF = r'@([^@]+\|)?({0})?(\.+)?(+{0})?'.format(WORD)  #: ref parameter.
-
-EVAL_LOOKUP = r'%(\w+)%(.+)[^\\]%?'  #: programmatic language expression.
+EVAL_LOOKUP = r'%(\w):(.+)[^\\]%?'  #: programmatic language expression.
 
 EVAL_REGEX = '{0}|{1}'.format(EVAL_REF, EVAL_LOOKUP)  #: all regex.
 
 REGEX_COMP = re_compile(EVAL_REGEX)  #: final regex compiler.
 
-EXPR_PREFIX = r'=({0}):(.*)'.format(WORD)  #: interpreted expression prefix
+EXPR_PREFIX = r'=(\w):(.*)'  #: interpreted expression prefix
 
 EXPR_PREFIX_COMP = re_compile(EXPR_PREFIX)  #: interpreted expression regex comp
 
@@ -212,7 +210,10 @@ def parse(
             'false': False
         }
 
-        if scope is not None:
+        if scope is None:
+            scope = default_scope
+
+        else:
             scope.update(default_scope)
 
         result = resolve(

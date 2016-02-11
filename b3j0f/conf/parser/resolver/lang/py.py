@@ -26,7 +26,7 @@
 
 """python expression resolver."""
 
-__all__ = ['resolve']
+__all__ = ['resolvepy']
 
 from b3j0f.utils.runtime import safe_eval
 
@@ -34,7 +34,7 @@ from ..registry import register
 
 
 @register('py')
-def resolve(expr, safe=True, tostr=False, scope=None):
+def resolvepy(expr, safe=True, tostr=False, scope=None):
     """Resolve input expression.
 
     :param str expr: configuration expression to resolve in this language.

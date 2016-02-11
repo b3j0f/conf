@@ -24,25 +24,41 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
+from __future__ import print_function
+
 """Javascript expression resolver."""
 
-__all__ = ['resolve']
+__all__ = ['resolvejs']
 
 from ..registry import register
 
-from PyV8 import JSContext
+try:
+	from PyV8 import JSContext
 
-CTXT = JSContext()
+except ImportError:
 
-@register('js')
-def resolve(expr, tostr=False, scope=None, **_):
-    """Javascript resolver."""
+    from sys import stderr
+    print(
+        'Impossible to load the javascript resolver. Install the PyV8 before.',
+        file=stderr
+    )
+    def resolvejs(**_):
+        """Default resolvejs if PyV8 is not installed."""
+        pass
 
-    _ctxt = CTXT if scope is None else JSContext(scope)
+else:
+    CTXT = JSContext()
 
-    if tostr:
-        expr = '({0}).string'.format(expr)
+    @register('js')
+    def resolvejs(expr, tostr=False, scope=None, **_):
+        """Javascript resolver."""
 
-    result = _ctxt.eval(expr)
+        _ctxt = CTXT if scope is None else JSContext(scope)
 
-    return result
+        if tostr:
+            expr = '({0}).string'.format(expr)
+
+        result = _ctxt.eval(expr)
+
+        return result
+

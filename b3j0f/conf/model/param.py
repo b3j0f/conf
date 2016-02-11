@@ -30,13 +30,15 @@ __all__ = ['Parameter', 'PType']
 
 
 from .base import ModelElement
-from ..parser.core import parse, _getscope, ParserError, serialize
+from ..parser.core import parse, ParserError, serialize
 
 from six import string_types, reraise
 
 from re import compile as re_compile
 
 from collections import Iterable
+
+from copy import deepcopy
 
 
 class PType(object):
@@ -349,7 +351,12 @@ class Parameter(ModelElement):
             if configurable is None:  # init configurable
                 configurable = self.configurable
 
-            scope = _getscope(self.scope, scope)
+            if scope is None:
+                scope = self.scope
+
+            else:
+                scope, selfscope = deepcopy(self.scope), scope
+                scope.update(selfscope)
 
             # parse value if str and if parser exists
             try:
