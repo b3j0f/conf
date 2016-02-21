@@ -239,6 +239,8 @@ class ExprParser(ConfigurationTest):
 
         svalue = '#{0}'.format(getpath(getpath))
 
+        print(_exprparser(svalue=svalue))
+
         self.assertRaises(ImportError, _exprparser, svalue=svalue)
 
 

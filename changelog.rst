@@ -1,6 +1,12 @@
 ChangeLog
 =========
 
+0.2.4 (2016/02/22)
+------------------
+
+- fix missing requirements.
+- remove dependency to future.
+
 0.2.3 (2015/12/20)
 ------------------
 

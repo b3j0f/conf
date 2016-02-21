@@ -30,7 +30,7 @@ from __future__ import absolute_import
 
 __all__ = ['ModelElement', 'CompositeModelElement']
 
-from future.moves.collections import OrderedDict
+from b3j0f.utils.version import OrderedDict
 
 
 class ModelElement(object):

@@ -30,7 +30,7 @@ from __future__ import absolute_import
 
 __all__ = ['INIConfDriver']
 
-from configparser import RawConfigParser
+from six.moves.configparser import RawConfigParser
 
 from .base import FileConfDriver
 
