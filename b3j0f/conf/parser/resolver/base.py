@@ -72,9 +72,11 @@ class ExprResolver(object):
 
     All sub classes are automatically registered."""
 
-    __registry__ = 'py'  #: regitration name.
+    __registry__ = None  #: registry name.
 
-    def __call__(self, expr, safe=True, tostr=False, scope=None):
+    def __call__(
+        self, expr, safe=True, tostr=False, scope=None, besteffort=True
+    ):
         """Resolve input expression.
 
         :param str expr: configuration expression to resolve in this language.
@@ -82,6 +84,8 @@ class ExprResolver(object):
         :param bool tostr: format the result.
         :param dict scope: execution scope (contains references to expression
             objects).
+        :param bool besteffort: try to resolve unknown variable name from
+            runtime context.
         """
 
         raise NotImplementedError()

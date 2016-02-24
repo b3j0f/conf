@@ -27,6 +27,8 @@
 
 """model.param UTs."""
 
+from __future__ import absolute_import
+
 from unittest import main
 
 from six import string_types
@@ -34,7 +36,7 @@ from six import string_types
 from b3j0f.utils.ut import UTCase
 
 from ..param import Parameter, PType
-from ..parser import ParserError
+from parser import ParserError
 
 
 class PTypeTest(UTCase):

@@ -102,7 +102,7 @@ For example:
 
 
     ``=:"example"``: string equals "example" from a python interpretor.
-    ``=js:2``: string equals "2" from javascript interpretor.
+    ``=js:"2"``: string equals "2" from javascript interpretor.
     ``=:None``: None.
     `=js:3*4``: 12 in javascript.
 
@@ -148,28 +148,56 @@ For examples:
 
 from __future__ import absolute_import
 
-__all__ = ['parse', 'ParserError', 'EXPR_PREFIX', 'serialize']
+__all__ = ['parse', 'EXPR_PREFIX', 'serialize']
 
 
 from re import compile as re_compile
 
-from parser import ParserError
-
 from six import string_types
+
+from random import random
 
 from .resolver.registry import resolve
 
-EVAL_REF = r'@([^@]+\|)?(\w)?(\.*)?(\w)'  #: ref parameter.
+#: ref parameter.
+EVAL_REF = r'@((?P<path>([^@]|\\@)+)\/)?((?P<cat>\w+)\.)?(?P<depth>\.*)(?P<param>\w+)'
 
-EVAL_LOOKUP = r'%(\w):(.+)[^\\]%?'  #: programmatic language expression.
+REGEX_REF = re_compile(EVAL_REF)
 
-EVAL_REGEX = '{0}|{1}'.format(EVAL_REF, EVAL_LOOKUP)  #: all regex.
+EVAL_FORMAT = r'%(?P<lang>\w*:)?(?P<expr>([^%]|\\%)+[^\\])%'  #: programmatic language expression.
 
-REGEX_COMP = re_compile(EVAL_REGEX)  #: final regex compiler.
+REGEX_FORMAT = re_compile(EVAL_FORMAT)
 
-EXPR_PREFIX = r'=(\w):(.*)'  #: interpreted expression prefix
+EXPR_PREFIX = r'=(?P<lang>\w*):(?P<expr>.*)$'  #: interpreted expression prefix
 
-EXPR_PREFIX_COMP = re_compile(EXPR_PREFIX)  #: interpreted expression regex comp
+EVAL_STR = r'({0})|({1})'.format(EVAL_REF, EVAL_FORMAT)
+
+REGEX_STR = re_compile(EVAL_STR)
+
+REGEX_PREFIX = re_compile(EXPR_PREFIX)  #: interpreted expression regex comp
+
+
+def eval(expr):
+
+    matches = REGEX_STR.finditer(expr)
+
+    for match in matches:
+        entries = match.groupdict()
+
+        if entries['param']:
+            pvalue = resolve(
+                lang=entries['lang'],
+                cat=entries['cat'],
+                depth=len(entries['depth']),
+                param=entries['param']
+            )
+
+            result = str(pvalue)
+
+        elif entries['expr']:
+            result = langeval(lang=entries['lang'], expr=entries['expr'], tostr=True)
+
+    return result
 
 
 def serialize(expr):
@@ -196,32 +224,21 @@ def parse(
 
     result = None
 
-    compilation = EXPR_PREFIX_COMP.matches(svalue)
+    compilation = REGEX_PREFIX.matches(svalue)
 
     if compilation:
 
-        lang, expr = compilation.groups()
-
-        default_scope = {
-            '_resolve': resolve,
-            'configurable': configurable,
-            'conf': conf,
-            'true': True,
-            'false': False
-        }
-
-        if scope is None:
-            scope = default_scope
-
-        else:
-            scope.update(default_scope)
-
-        result = resolve(
-            expr=expr, name=lang, safe=safe, scope=scope, tostr=False
+        result = objectparser(
+            svalue=svalue, compilation=compilation, conf=conf,
+            configurable=configurable, vtype=vtype, scope=scope, safe=safe
         )
 
     else:
-        result = _simpleparser(svalue=svalue, vtype=vtype)
+
+        result = stringparser(
+            svalue=svalue, conf=conf, configurable=configurable, vtype=vtype,
+            scope=scope, safe=safe
+        )
 
     # try to cast value in vtype
     if not isinstance(result, vtype):
@@ -234,14 +251,39 @@ def parse(
     return result
 
 
-def _simpleparser(svalue, vtype=str):
-    """Execute a simple parsing.
+def objectparser(
+        compilation, conf=None, configurable=None, scope=None, safe=True
+):
 
-    :param str svalue: serialized value to parse.
-    :param type vtype: expected value type.
-    """
+    lang, expr = compilation.groups()
 
-    result = svalue
+    default_scope = {
+        '_resolve': resolve,
+        'configurable': configurable,
+        'conf': conf,
+        'true': True,
+        'false': False,
+        '_scope': scope
+    }
+
+    if scope is None:
+        scope = default_scope
+
+    else:
+        scope.update(default_scope)
+
+    result = resolve(
+        expr=expr, name=lang, safe=safe, scope=scope, tostr=False
+    )
+
+    return result
+
+
+def stringparser(svalue, safe=True, vtype=str, scope=None, configurable=None):
+
+    repl = _repl(safe=safe, scope=scope, configurable=configurable, tostr=True)
+
+    result = EVAL_REGEX.sub(repl, svalue)
 
     if issubclass(vtype, bool):
         result = result in ('1', 'True', 'true')
@@ -249,7 +291,7 @@ def _simpleparser(svalue, vtype=str):
     return result
 
 
-def _repl(safe=True):
+def _repl(scope, safe=True, tostr=True, conf=None, configurable=None):
     """Replace matching expression in input match with corresponding
     conf accessor."""
 
@@ -258,39 +300,38 @@ def _repl(safe=True):
 
         result = None
 
-        fconfpath, confpath, cname, pname, fexpr, expr, ename = match.groups()
+        confpath, cname, history, pname, lang, expr = match.groups()
 
-        if lookup:
-            result = '_resolve(expr=\'{0}\', name={1}, safe={2}, tostr={3})'.format(
-                expr, '\'{0}\''.format(ename) if ename else None, safe, fexpr
+        if expr:
+            result = resolve(
+                expr=expr, name=lang, safe=safe, tostr=tostr, scope=scope
             )
 
+            if not tostr:
+                while True:
+                    var = '_{0}'.format(random()).replace('.', '_')
+                    if var not in scope:
+                        scope[var] = result
+                        result = var
+                        break
+
         else:
-            params = ''
+            result = lookup(
+                pname=pname, conf=conf, configurable=configurable, cname=cname,
+                path=confpath, history=history
+            )
 
-            if pname:
-                params = 'pname=\'{0}\', '.format(pname)
-
-            if confpath:
-                confpath = confpath[:-1]
-                params += 'path=\'{0}\', '.format(confpath)
-
-            if cname:
-                cname = cname[:cname.index('.')]
-                params += 'cname=\'{0}\', '.format(cname)
-
-            if fconfpath:
-                params += 'tostr=True'
-
-            conf = 'configurable=configurable, conf=conf'
-            result = '_resolve({0}, {1})'.format(conf, params)
+            if tostr:
+                result = str(result)
 
         return result
 
     return __repl
 
 
-def lookup(pname, conf=None, configurable=None, cname=None, path=None):
+def lookup(
+        pname, conf=None, configurable=None, cname=None, path=None, history=0
+):
     """Resolve a parameter value.
 
     :param Configuration conf: configuration to use.
@@ -298,21 +339,25 @@ def lookup(pname, conf=None, configurable=None, cname=None, path=None):
     :param Configurable configurable: configurable.
     :param str cname: category name.
     :param str path: conf path.
+    :param int history: parameter history research.
     :return: parameter
     """
 
     result = None
 
     if configurable is not None:
+
         kwargs = {}
+
         if conf is not None:
             kwargs['conf'] = conf
+
         if path is not None:
             kwargs['paths'] = path
 
         if conf is None:
             conf = configurable.getconf(**kwargs)
 
-    result = conf.pvalue(pname=pname, cname=cname)
+    result = conf.pvalue(pname=pname, cname=cname, history=history)
 
     return result

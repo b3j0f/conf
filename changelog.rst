@@ -1,6 +1,11 @@
 ChangeLog
 =========
 
+0.2.5 (2016/02/20)
+------------------
+
+- fix installation via easy-install in adding the etc folder in the project.
+
 0.2.4 (2016/01/11)
 ------------------
 

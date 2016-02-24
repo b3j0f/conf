@@ -1,7 +1,7 @@
 Description
 -----------
 
-Python class configuration tools in reflective and distributed concerns.
+Python class/function configuration tools in reflective and distributed concerns.
 
 .. image:: https://img.shields.io/pypi/l/b3j0f.conf.svg
    :target: https://pypi.python.org/pypi/b3j0f.conf/
@@ -62,12 +62,12 @@ pip install b3j0f.conf
 Features
 --------
 
-This library provides a set of class configuration tools in order to ease development of systems based on configuration resources such as files, DB documents, etc. in a reflexive context.
+This library provides a set of class configuration tools in order to ease development of systems based on configuration resources such as files, DB documents, etc. in a reflexive, functional and distributed context.
 
 Configuration process is in 2 steps:
 
 - inject configuration resources (file, DB documents, etc.) in a Configurable class (with specific drivers which allows the Configurable class to be agnostic from configuration languages such as ini, json, xml, etc.),
-- let the configurable class read properties from such configuration resources and apply values on a dedicated class which may be a associated to a business code. This last process can be done automatically or manually thanks to the the applyconfiguration method.
+- let the configurable class read properties from such configuration resources and apply values on a dedicated class or function which may be a associated to a business code. This last process can be done automatically or manually thanks to the the applyconfiguration method.
 
 Configuration
 #############
@@ -165,7 +165,7 @@ The following code permits to load upper configuration to a python object.
 
 .. code-block:: python
 
-    from b3j0f.conf import Configurable, Category
+    from b3j0f.conf import Configurable
 
     # instantiate a business class
     @Configurable(paths='myobject.conf')
@@ -178,6 +178,24 @@ The following code permits to load upper configuration to a python object.
     assert myobject.myattr == 'myvalue'
     assert myobject.six == 6
     assert myobject.twelve == 12
+
+The following code permits to load upper configuration to a python function.
+
+.. code-block:: python
+
+    from b3j0f.conf import Configurable
+
+    # instantiate a business class
+    @Configurable(paths='myobject.conf')
+    def myfunc(myattr, six, twelve):
+        return myattr, six, twelve
+
+    myattr, six, twelve = myfunc(twelve=46)
+
+    # assert attributes
+    assert myobject.myattr == 'myvalue'
+    assert myobject.six == 6
+    assert myobject.twelve == 46
 
 Configure several objects with one configurable
 ###############################################

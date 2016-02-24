@@ -26,11 +26,14 @@
 
 """Parameter definition objects."""
 
+from __future__ import absolute_import
+
 __all__ = ['Parameter', 'PType']
 
-
 from .base import ModelElement
-from ..parser.core import parse, ParserError, serialize
+from ..parser.core import parse, serialize
+
+from parser import ParserError
 
 from six import string_types, reraise
 

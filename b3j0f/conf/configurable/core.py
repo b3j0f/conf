@@ -26,9 +26,15 @@
 
 """Specification of the class Configurable."""
 
-__all__ = ['MetaConfigurable', 'Configurable']
+__all__ = ['Configurable']
 
-from six import string_types, add_metaclass
+from six import string_types
+from six.moves import reload_module
+
+from inspect import getargspec, isclass
+
+from b3j0f.utils.path import lookup
+from b3j0f.utils.version import getcallargs
 
 from b3j0f.annotation import PrivateInterceptor
 
@@ -38,43 +44,9 @@ from ..model.param import Parameter
 from ..driver.file.json import JSONConfDriver
 from ..driver.file.ini import INIConfDriver
 
-
-class MetaConfigurable(type):
-    """Meta class for Configurable."""
-
-    INIT_CAT = 'init_cat'  #: initialization category.
-
-    def __call__(cls, *args, **kwargs):
-        """Get a new instance of input cls class, and if instance.auto_conf or
-        instance.reconf_once, then call instance.applyconfiguration().
-        """
-
-        result = type.__call__(cls, *args, **kwargs)
-
-        if result.autoconf:
-            # get configuration
-            conf = result.conf
-
-            # add a last category which contains args and kwargs as parameters
-            if kwargs:
-                init_category = Category(MetaConfigurable.INIT_CAT)
-
-                for name in kwargs:
-                    param = Parameter(name=name, value=kwargs[name])
-                    init_category += param
-
-                conf += init_category
-
-            # apply configuration
-            result.applyconfiguration(conf=conf)
-
-        return result
-
-#: toconfigure configurable attribute name.
 __CONFIGURABLES__ = '__configurables__'
 
 
-@add_metaclass(MetaConfigurable)
 class Configurable(PrivateInterceptor):
     """Manage class conf synchronisation with conf resources.
 
@@ -110,7 +82,7 @@ class Configurable(PrivateInterceptor):
             conf=None, inheritedconf=DEFAULT_INHERITEDCONF, confpath=None,
             store=DEFAULT_STORE, paths=None, drivers=DEFAULT_DRIVERS,
             foreigns=DEFAULT_FOREIGNS, autoconf=DEFAULT_AUTOCONF,
-            toconfigure=(), safe=DEFAULT_SAFE,
+            toconfigure=(), safe=DEFAULT_SAFE, modules=None, callparams=True,
             *args, **kwargs
     ):
         """
@@ -137,7 +109,9 @@ class Configurable(PrivateInterceptor):
         :param bool safe: if True (default), expression parser are used in a
             safe context to resolve python object. For example, if safe,
             builtins function such as `open` are not resolvable.
-        """
+        :param list modules: required modules.
+        :param bool callparams: if True (default), use parameters in the
+            configured callable function."""
 
         super(Configurable, self).__init__(*args, **kwargs)
 
@@ -146,6 +120,7 @@ class Configurable(PrivateInterceptor):
         self._conf = None
         self._toconfigure = []
         self._confpath = confpath
+        self._modules = []
 
         # init public attributes
         self.store = store
@@ -161,23 +136,83 @@ class Configurable(PrivateInterceptor):
         self.paths = paths
         self.safe = safe
         self.autoconf = autoconf  # end of dirty hack
+        self.modules = modules
+        self.callparams = callparams
 
     def _interception(self, joinpoint):
 
-        toconfigure = result = joinpoint.proceed()
+        if self.callparams:
 
-        if toconfigure is None:
-            if 'self' in joinpoint.kwargs:
-                toconfigure = joinpoint.kwargs['self']
+            conf = self.conf
+
+            params = conf.params
+
+            args, kwargs = joinpoint.args, joinpoint.kwargs
+
+            target = joinpoint.target
+
+            try:
+                argspec = getargspec(target)
+
+            except TypeError:
+                argspec = None
+                callargs = None
 
             else:
-                toconfigure = joinpoint.args[0]
+                callargs = getcallargs(
+                    target, args, kwargs
+                )
 
-        self.toconfigure += [toconfigure]
+            for param in params:
 
-        self.applyconfiguration(toconfigure=toconfigure)
+                if argspec is None:
+                    args.append(param.value)
+
+                elif param.name not in callargs and (
+                        param.name in argspec.args or self.foreigns
+                ):
+
+                    kwargs[param.name] = param.value
+
+        toconfigure = result = joinpoint.proceed()
+
+        if self.autoconf:
+
+            if isclass(target):
+
+                if toconfigure is None:
+                    if 'self' in kwargs:
+                        toconfigure = kwargs['self']
+
+                    else:
+                        toconfigure = args[0]
+
+                if isinstance(toconfigure, target):
+
+                    self.toconfigure += [toconfigure]
+
+                    self.applyconfiguration(toconfigure=toconfigure)
 
         return result
+
+    @property
+    def modules(self):
+        """Get this required modules."""
+
+        return self._modules
+
+    @modules.setter
+    def modules(self, value):
+        """Change required modules.
+
+        Reload modules given in the value.
+
+        :param list value: new modules to use."""
+
+        self._modules = value
+        if value:
+            for module in value:
+                reload_module(lookup(module))
 
     @property
     def confpath(self):

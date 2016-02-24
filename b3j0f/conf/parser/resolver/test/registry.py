@@ -145,6 +145,36 @@ class ResolverRegistryTest(UTCase):
 
         self.assertEqual(set(reg.names), set(['test', 'example']))
 
+    def test_setnotdefault(self):
+
+        reg = ResolverRegistry()
+
+        self.assertRaises(NameError, setattr, reg, 'default', 'test')
+
+    def test_setdefault(self):
+
+        reg = ResolverRegistry(test=lambda **_: None)
+
+        reg.default = 'test'
+
+        self.assertEqual(reg.default, 'test')
+
+    def test_setnonedefault(self):
+
+        reg = ResolverRegistry(test=lambda **_: None)
+
+        reg.default = None
+
+        self.assertEqual(reg.default, 'test')
+
+
+class DefaultTest(UTCase):
+
+    def test_name(self):
+
+        _defaultname = defaultname()
+
+        self.assertEqual(names()[0], _defaultname)
 
 if __name__ == '__main__':
     main()

@@ -24,39 +24,31 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-"""JSON configuration file driver."""
+"""XML configuration file driver."""
 
 from __future__ import absolute_import
 
-__all__ = ['JSONFileConfDriver']
+__all__ = ['XMLFileConfDriver']
 
-try:
-    from json import load, dump
-
-except ImportError:
-    from simplejson import load, dump
+from xml.etree.ElementTree import parse
 
 from .base import FileConfDriver
-from ..json import JSONConfDriver
+from ..xml import XMLConfDriver
 
 
-class JSONFileConfDriver(FileConfDriver, JSONConfDriver):
-    """Manage json resource configuration from json file."""
+class XMLFileConfDriver(FileConfDriver, XMLConfDriver):
+    """Manage xml resource configuration from file."""
 
     def _pathresource(self, rscpath):
 
-        result = None
-
-        with open(rscpath, 'r') as fpr:
-
-            result = load(fpr)
+        result = parse(rscpath).getroot()
 
         return result
 
     def _setconf(self, conf, resource, rscpath):
 
-        super(JSONFileConfDriver, self)._setconf(conf, resource, rscpath)
+        super(XMLFileConfDriver, self)._setconf(
+            conf=conf, resource=resource, rscpath=rscpath
+        )
 
-        with open(rscpath, 'w') as fpw:
-
-            dump(resource, fpw)
+        resource.write(rscpath)

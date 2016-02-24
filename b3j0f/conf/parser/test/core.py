@@ -32,14 +32,12 @@ from unittest import main
 from b3j0f.utils.ut import UTCase
 from b3j0f.utils.path import getpath
 
-from ..conf import Configuration
-from ..cat import Category
-from ..param import Parameter
+from ...model.conf import Configuration
+from ...model.cat import Category
+from ...model.param import Parameter
 from ...configurable.core import Configurable
 from ...driver.test.base import TestConfDriver
-from ..parser import (
-    _simpleparser, _exprparser, _resolve, serialize, EXPR_PREFIX
-)
+from ..core import _simpleparser, parse, serialize, EXPR_PREFIX
 
 
 class SimpleParserTest(UTCase):
@@ -144,7 +142,7 @@ class Resolve(ConfigurationTest):
         self.assertRaises(KeyError, _resolve, pname='test', conf=self.conf)
 
 
-class Serialiazer(ConfigurationTest):
+class Serializer(ConfigurationTest):
     """Test the function serializer."""
 
     def test_str(self):
@@ -173,7 +171,7 @@ class Serialiazer(ConfigurationTest):
 
             serialized = serialize(value)
 
-            self.assertEqual(serialized, '{0}{1}'.format(EXPR_PREFIX, value))
+            self.assertEqual(serialized, '={0}'.format(value))
 
 
 class ExprParser(ConfigurationTest):

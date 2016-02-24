@@ -53,10 +53,9 @@ __all__ = [
 ]
 
 from b3j0f.utils.path import lookup
+from b3j0f.utils.version import OrderedDict
 
 from inspect import isroutine, isclass
-
-from future.moves.collections import OrderedDict
 
 from six import string_types
 
@@ -225,6 +224,9 @@ def register(name=None, exprresolver=None, params=None, reg=None):
             exprresolver = exprresolver(**_params)
 
         reg.resolvers[_name] = exprresolver
+
+        if reg.default is None:
+            reg.default = _name
 
         return exprresolver
 
