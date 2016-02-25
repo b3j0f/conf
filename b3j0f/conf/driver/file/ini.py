@@ -28,14 +28,14 @@
 
 from __future__ import absolute_import
 
-__all__ = ['INIConfDriver']
+__all__ = ['INIFileConfDriver']
 
-from configparser import RawConfigParser
+from six.moves.configparser import RawConfigParser
 
 from .base import FileConfDriver
 
 
-class INIConfDriver(FileConfDriver):
+class INIFileConfDriver(FileConfDriver):
     """Manage ini resource configuration."""
 
     def resource(self):

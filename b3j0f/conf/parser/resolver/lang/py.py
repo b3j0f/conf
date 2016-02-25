@@ -31,14 +31,35 @@ __all__ = ['resolvepy']
 from b3j0f.utils.runtime import safe_eval
 from b3j0f.utils.path import lookup
 
-from re import compile as re_compile
+from re import compile as re_compile, sub
 
 from copy import deepcopy
 
 from ..registry import register
 
-MISSING_NAME = r'\'(?P<name>.+)\''
+
+MISSING_NAME = r'\'(?P<name>\w+)\''
 MISSING_NAME_REGEX = re_compile(MISSING_NAME)
+
+MISSING_VARIABLE = r'(?P<name>(\w+\.)*{0}(\.\w+)*)'
+
+
+def genrepl(scope):
+    """Replacement function with specific scope."""
+
+    def repl(match):
+        """Internal replacement function."""
+
+        name = match.group('name')
+
+        value = lookup(name, scope=scope)
+
+        result = name.replace('.', '_')
+        scope[result] = value
+
+        return result
+
+    return repl
 
 
 @register('py')
@@ -51,32 +72,38 @@ def resolvepy(expr, safe=True, tostr=False, scope=None, besteffort=True):
     :param dict scope: execution scope (contains references to expression
         objects).
     :param bool besteffort: try to resolve unknown variable name with execution
-        runtime.
-    """
+        runtime."""
+
+    result = None
 
     _eval = safe_eval if safe else eval
 
-    _scope = deepcopy(scope)
+    _scope = {} if scope is None else deepcopy(scope)
 
-    while besteffort:
+    _expr = expr
+
+    while True:
 
         try:
+            result = _eval(_expr, _scope)
 
-            result = _eval(expr, _scope)
+        except (AttributeError, NameError) as nex:
 
-        except NameError as nex:
+            if not besteffort:
+                raise
 
-            arg = nex.args
-            match = MISSING_NAME_REGEX.search(arg)
-            missing = match.group('name')
+            arg = nex.args[0]
+            missing = MISSING_NAME_REGEX.findall(arg)[-1]
+
             try:
-                missing_value = lookup(missing)
+                _expr = sub(
+                    MISSING_VARIABLE.format(missing),
+                    genrepl(scope=_scope),
+                    _expr
+                )
 
             except ImportError:
-                break
-
-            else:
-                _scope[missing] = missing_value
+                raise nex
 
         else:
             break

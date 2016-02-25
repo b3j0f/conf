@@ -41,8 +41,9 @@ from b3j0f.annotation import PrivateInterceptor
 from ..model.conf import Configuration
 from ..model.cat import Category
 from ..model.param import Parameter
-from ..driver.file.json import JSONConfDriver
-from ..driver.file.ini import INIConfDriver
+from ..driver.file.json import JSONFileConfDriver
+from ..driver.file.ini import INIFileConfDriver
+from ..driver.file.xml import XMLFileConfDriver
 
 __CONFIGURABLES__ = '__configurables__'
 
@@ -71,7 +72,9 @@ class Configurable(PrivateInterceptor):
     DEFAULT_STORE = True  #: default store value.
     DEFAULT_FOREIGNS = True  #: default value for setting not specified params.
     # default drivers which are json and ini.
-    DEFAULT_DRIVERS = (JSONConfDriver(), INIConfDriver())
+    DEFAULT_DRIVERS = (
+        JSONFileConfDriver(), INIFileConfDriver(), XMLFileConfDriver()
+    )
     DEFAULT_AUTOCONF = True  #: default value for auto configuration.
     DEFAULT_SAFE = True  #: default value for safe attribute.
 
