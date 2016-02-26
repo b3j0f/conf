@@ -55,7 +55,7 @@ __all__ = [
 from b3j0f.utils.path import lookup
 from b3j0f.utils.version import OrderedDict
 
-from inspect import isroutine, isclass
+from inspect import isclass
 
 from six import string_types
 
@@ -70,8 +70,7 @@ EXPRRES_PATH = getenv(B3J0F_EXPRRES_PATH)  #: expression resolver modules.
 if EXPRRES_PATH:  # load modules
     loadresolvers(EXPRRES_PATH.split(','))
 
-
-__RESOLVER__ = '__resolver__'  #: resolver name for class resolvers.
+__RESOLVER__ = '__resolver__'  #: resolver name for class IoC
 
 
 class ResolverRegistry(object):
@@ -158,6 +157,7 @@ def loadresolvers(paths):
     for path in paths:
         lookup(path)
 
+
 def register(name=None, exprresolver=None, params=None, reg=None):
     """Register an expression resolver.
 
@@ -212,38 +212,40 @@ def register(name=None, exprresolver=None, params=None, reg=None):
         :param exprresolver: function/class able to resolve an expression.
         :param str _name: private parameter used to set the name.
         :param dict _params: private parameter used to set resolver class
-            constructor parameters.
-        """
+            constructor parameters."""
 
-        if _name is None:
-            _name = getname(exprresolver)
+        _exprresolver = exprresolver
 
         if isclass(exprresolver):  # try to instanciate exprresolver
             if _params is None:
                 _params = {}
-            exprresolver = exprresolver(**_params)
 
-        reg.resolvers[_name] = exprresolver
+            _exprresolver = _exprresolver(**_params)
+
+        if _name is None:
+            _name = getname(exprresolver)
+
+        reg.resolvers[_name] = _exprresolver
 
         if reg.default is None:
             reg.default = _name
 
         return exprresolver
 
+    if name is None:
+        name = getname(exprresolver)
+
     if reg is None:
         reg = _RESOLVER_REGISTRY
 
     if exprresolver is None:
-        return _register
+        result = _register
 
     else:
-        if name is None:
-            name = getname(exprresolver)
+        result = name
         _register(exprresolver)
 
-    reg.resolvers[name] = exprresolver
-
-    return name
+    return result
 
 
 def defaultname(name=None):
@@ -268,7 +270,7 @@ def names():
 
     return _RESOLVER_REGISTRY.names
 
-def resolve(**kwargs):
+def resolve(*args, **kwargs):
     """Resolve an expression with possibly a dedicated expression resolvers.
 
     :param str name: expression resolver registered name. Default is the
@@ -283,26 +285,28 @@ def resolve(**kwargs):
         name does not exist in expression resolvers.
     """
 
-    return _RESOLVER_REGISTRY.resolve(**kwargs)
+    return _RESOLVER_REGISTRY.resolve(*args, **kwargs)
 
 def getname(exprresolver):
     """Get expression resolver name.
+
+    Expression resolver name is given by the attribute __resolver__.
+    If not exist, then the it is given by the attribute __name__.
+    Otherwise, given by the __class__.__name__ attribute.
 
     :raises: TypeError if exprresolver is not callable."""
 
     result = None
 
-    if isroutine(exprresolver):
-        result = exprresolver.__name__
-
-    elif isclass(exprresolver):
-        result = getattr(exprresolver, __RESOLVER__, exprresolver.__name__)
-
-    elif callable(exprresolver):
-        cls = exprresolver.__class__
-        result = getname(cls)
-
-    else:
+    if not callable(exprresolver):
         raise TypeError('Expression resolver must be a callable object.')
+
+    result = getattr(
+        exprresolver, __RESOLVER__, getattr(
+            exprresolver, '__name__', getattr(
+                exprresolver.__class__, '__name__'
+            )
+        )
+    )
 
     return result

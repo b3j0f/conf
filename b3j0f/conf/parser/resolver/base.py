@@ -57,9 +57,9 @@ class _MetaExprResolver(type):
 
     Register automatically ExprResolver classes."""
 
-    def __new__(mcs, *args, **kwargs):
+    def __new__(cls, *args, **kwargs):
 
-        result = type.__new__(mcs, *args, **kwargs)
+        result = super(_MetaExprResolver, cls).__new__(cls, *args, **kwargs)
 
         register(exprresolver=result)
 
@@ -72,10 +72,8 @@ class ExprResolver(object):
 
     All sub classes are automatically registered."""
 
-    __registry__ = None  #: registry name.
-
     def __call__(
-        self, expr, safe=True, tostr=False, scope=None, besteffort=True
+            self, expr, safe=True, tostr=False, scope=None, besteffort=True
     ):
         """Resolve input expression.
 

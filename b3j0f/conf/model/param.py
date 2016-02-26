@@ -127,7 +127,7 @@ class Parameter(ModelElement):
 
     __slots__ = (
         '_name', 'ptype', 'parser', '_svalue', '_value', '_error', 'conf',
-        'local', 'scope', 'configurable', 'serializer'
+        'local', 'scope', 'configurable', 'serializer', 'besteffort'
     ) + ModelElement.__slots__
 
     class Error(Exception):
@@ -142,12 +142,16 @@ class Parameter(ModelElement):
     DEFAULT_NAME = re_compile('.*')
     DEFAULT_VTYPE = object  #: default ptype.
     DEFAULT_LOCAL = True  #: default local value.
+    DEFAULT_BESTEFFORT = False  #: default best effort.
+    DEFAULT_SAFE = True  #: default safe
+    DEFAULT_SCOPE = None  #: default scope
 
     def __init__(
             self, name=DEFAULT_NAME, ptype=DEFAULT_VTYPE, value=None,
             parser=parse, serializer=serialize, svalue=None,
             conf=None, configurable=None,
-            local=DEFAULT_LOCAL, scope=None,
+            local=DEFAULT_LOCAL, scope=DEFAULT_SCOPE, safe=DEFAULT_SAFE,
+            besteffort=DEFAULT_BESTEFFORT,
             *args, **kwargs
     ):
         """
@@ -185,14 +189,18 @@ class Parameter(ModelElement):
         # init public attributes
         self.parser = parser
         self.serializer = serializer
-        self.name = name
         self.ptype = ptype
         self.conf = conf
         self.configurable = configurable
         self.local = local
+        self.scope = scope
+        self.besteffort = besteffort
+        self.safe = safe
+
+        # init setters
+        self.name = name
         self.svalue = svalue
         self.value = value
-        self.scope = scope
 
     def __eq__(self, other):
         """
@@ -318,22 +326,26 @@ class Parameter(ModelElement):
 
     def resolve(
             self,
-            configurable=None, conf=None, scope=None,
-            parser=None, error=True, safe=True
+            configurable=None, conf=None, scope=None, _type=None,
+            parser=None, error=True, svalue=None,
+            safe=None, besteffort=None
     ):
         """Resolve this parameter value related to a configurable and a
         configuration.
 
         Save error in this attribute `error` in case of failure.
 
+        :param str svalue: serialized value too resolve. Default is this svalue.
         :param Configurable configurable: configurable to use for foreign
             parameter resolution.
         :param Configuration conf: configuration to use for
             cross-value resolution.
         :param dict scope: variables to use for local expression evaluation.
+        :param type _type: return type. Default is this vtype.
         :param parser: specific parser to use. Default this parser.
         :param bool error: raise an error if True (False by default).
         :param bool safe: if True (default) resolve without builtins functions.
+        :param bool besteffort: best effort flag. Default is this besteffort.
         :return: newly resolved value.
         :raises: Parameter.Error for any raised exception.
         """
@@ -345,8 +357,14 @@ class Parameter(ModelElement):
 
             self._error = None  # nonify error.
 
+            if _type is None:
+                _type = self.ptype
+
             if parser is None:  # init parser
                 parser = self.parser
+
+            if svalue is None:
+                svalue = self._svalue
 
             if conf is None:  # init conf
                 conf = self.conf
@@ -361,12 +379,18 @@ class Parameter(ModelElement):
                 scope, selfscope = deepcopy(self.scope), scope
                 scope.update(selfscope)
 
+            if safe is None:
+                safe = self.safe
+
+            if besteffort is None:
+                besteffort = self.besteffort
+
             # parse value if str and if parser exists
             try:
                 result = self._value = parser(
-                    svalue=self._svalue, conf=conf,
-                    configurable=configurable, _type=self.ptype,
-                    scope=scope, safe=safe
+                    svalue=svalue, conf=conf,
+                    configurable=configurable, _type=_type,
+                    scope=scope, safe=safe, besteffort=besteffort
                 )
 
             except Exception as ex:
@@ -441,7 +465,9 @@ class Parameter(ModelElement):
         :return: new parameter.
         """
 
-        props = ('name', 'parser', 'local', 'ptype', 'conf', 'scope')
+        props = (
+            'name', 'parser', 'local', 'ptype', 'conf', 'scope', 'besteffort'
+        )
         for prop in props:
             kwargs.setdefault(prop, getattr(self, prop))
 
