@@ -36,6 +36,9 @@ from re import compile as re_compile, sub
 from copy import deepcopy
 
 from ..registry import register
+from ..core import (
+    DEFAULT_BESTEFFORT, DEFAULT_SAFE, DEFAULT_TOSTR, DEFAULT_SCOPE
+)
 
 
 MISSING_NAME = r'\'(?P<name>\w+)\''
@@ -63,7 +66,11 @@ def genrepl(scope):
 
 
 @register('py')
-def resolvepy(expr, safe=True, tostr=False, scope=None, besteffort=True):
+def resolvepy(
+        expr,
+        safe=DEFAULT_SAFE, tostr=DEFAULT_TOSTR, scope=DEFAULT_SCOPE,
+        besteffort=DEFAULT_BESTEFFORT
+    ):
     """Resolve input expression.
 
     :param str expr: configuration expression to resolve in this language.

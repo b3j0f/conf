@@ -24,49 +24,37 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-from __future__ import print_function
+"""core resolver module.
 
-"""Javascript expression resolver."""
+Contains signature of the resolver function and and default parameter values."""
 
-__all__ = ['resolvejs']
+__all__ = [
+    'DEFAULT_BESTEFFORT', 'DEFAULT_SAFE', 'DEFAULT_TOSTR', 'DEFAULT_SCOPE',
+    'resolver'
+]
 
-from ..registry import register
+DEFAULT_BESTEFFORT = True  #: default best effort execution context flag.
+DEFAULT_SAFE = True  #: default safe execuction context flag.
+DEFAULT_TOSTR = False  #: default conversion to str flag.
+DEFAULT_SCOPE = None  #: default scope execution context.
 
-from ..core import (
-    DEFAULT_BESTEFFORT, DEFAULT_SAFE, DEFAULT_TOSTR, DEFAULT_SCOPE
-)
+def resolver(
+        expr, safe=DEFAULT_SAFE, tostr=DEFAULT_TOSTR, scope=DEFAULT_SCOPE,
+        besteffort=DEFAULT_BESTEFFORT
+):
+    """Resolve input expression.
 
-try:
-	from PyV8 import JSContext
+    This function is given such as template resolution function. For wrapping
+    test for example.
 
-except ImportError:
+    :param str expr: configuration expression to resolve.
+    :param bool safe: if True (default), run safely execution context.
+    :param bool tostr: format the result.
+    :param dict scope: execution scope (contains references to expression
+        objects).
+    :param bool besteffort: if True (default), try to resolve unknown variable
+        name with execution runtime.
+    :return: resolved expression."""
 
-    from sys import stderr
-    print(
-        'Impossible to load the javascript resolver. Install the PyV8 before.',
-        file=stderr
-    )
-    def resolvejs(**_):
-        """Default resolvejs if PyV8 is not installed."""
-        pass
 
-else:
-    CTXT = JSContext()
-
-    @register('js')
-    @register('pyv8')
-    def resolvejs(
-            expr, tostr=DEFAULT_TOSTR, scope=DEFAULT_SCOPE, safe=DEFAULT_SAFE,
-            besteffort=DEFAULT_BESTEFFORT
-    ):
-        """Javascript resolver."""
-
-        _ctxt = CTXT if scope is None else JSContext(scope)
-
-        if tostr:
-            expr = '({0}).string'.format(expr)
-
-        result = _ctxt.eval(expr)
-
-        return result
-
+    raise NotImplementedError()

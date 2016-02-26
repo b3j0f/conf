@@ -49,7 +49,8 @@ And is loaded in three ways:
 
 __all__ = [
     'ResolverRegistry',
-    'names', 'resolve', 'register', 'loadresolvers', 'defaultname', 'getname'
+    'names', 'resolve', 'register', 'unregister', 'loadresolvers',
+    'defaultname', 'getname'
 ]
 
 from b3j0f.utils.path import lookup
@@ -60,6 +61,10 @@ from inspect import isclass
 from six import string_types
 
 from os import getenv
+
+from .core import (
+    DEFAULT_BESTEFFORT, DEFAULT_SAFE, DEFAULT_TOSTR, DEFAULT_SCOPE
+)
 
 #: env variable name of exprres modules.
 B3J0F_EXPRRES_PATH = 'B3J0F_EXPRRES_PATH'
@@ -73,21 +78,25 @@ if EXPRRES_PATH:  # load modules
 __RESOLVER__ = '__resolver__'  #: resolver name for class IoC
 
 
-class ResolverRegistry(object):
+class ResolverRegistry(OrderedDict):
     """Resolver registry."""
 
-    __slots__ = ('resolvers', '_default')
+    __slots__ = ('_default')
 
     def __init__(self, default=None, **resolvers):
 
+        super(ResolverRegistry, self).__init__(resolvers)
+
         self._default = None
 
-        self.resolvers = OrderedDict(resolvers)
         self.default = default
 
     @property
     def default(self):
         """Get default resolver name."""
+
+        if self._default is None or self._default not in self:
+            self._default = list(self.keys())[0] if self else None
 
         return self._default
 
@@ -95,32 +104,29 @@ class ResolverRegistry(object):
     def default(self, value):
         """Change of resolver name.
 
-        :param str value: new default value to use.
-        :raises: NameError if value is not registered."""
+        :param value: new default value to use.
+        :type value: str or callable
+        :raises: KeyError if value is a string not already registered."""
 
         if value is None:
-            if self.resolvers:
-                value = list(self.resolvers.keys())[0]
+            if self:
+                value = list(self.keys())[0]
 
         elif not isinstance(value, string_types):
             value = register(exprresolver=value, reg=self)
 
-        elif value not in self.resolvers:
-            raise NameError(
-                '{0} not registered in {1}'.format(value, self.resolvers)
+        elif value not in self:
+            raise KeyError(
+                '{0} not registered in {1}'.format(value, self)
             )
 
         self._default = value
 
-    @property
-    def names(self):
-        """Get all resolver names.
-
-        :rtype: list"""
-
-        return list(self.resolvers.keys())
-
-    def resolve(self, expr, name=None, safe=True, tostr=False, scope=None):
+    def resolve(
+            self, expr, name,
+            safe=DEFAULT_SAFE, tostr=DEFAULT_TOSTR, scope=DEFAULT_SCOPE,
+            besteffort=DEFAULT_BESTEFFORT
+    ):
         """Resolve an expression with possibly a dedicated expression resolvers.
 
         :param str name: expression resolver registered name. Default is the
@@ -141,9 +147,12 @@ class ResolverRegistry(object):
         if name is None:
             name = self.default
 
-        resolver = self.resolvers[name]
+        resolver = self[name]
 
-        result = resolver(expr=expr, safe=safe, tostr=tostr, scope=scope)
+        result = resolver(
+            expr=expr,
+            safe=safe, tostr=tostr, scope=scope, besteffort=besteffort
+        )
 
         return result
 
@@ -225,7 +234,7 @@ def register(name=None, exprresolver=None, params=None, reg=None):
         if _name is None:
             _name = getname(exprresolver)
 
-        reg.resolvers[_name] = _exprresolver
+        reg[_name] = _exprresolver
 
         if reg.default is None:
             reg.default = _name
@@ -248,6 +257,16 @@ def register(name=None, exprresolver=None, params=None, reg=None):
     return result
 
 
+def unregister(name):
+    """Unregister resolver.
+
+    :param str name: resolver name to unregister.
+    :return: named resolver.
+    :rtype: callable"""
+
+    return _RESOLVER_REGISTRY.pop(name)
+
+
 def defaultname(name=None):
     """Get default resolver name.
 
@@ -268,9 +287,13 @@ def names():
 
     :rtype: list"""
 
-    return _RESOLVER_REGISTRY.names
+    return list(_RESOLVER_REGISTRY.keys())
 
-def resolve(*args, **kwargs):
+def resolve(
+        expr, name=None,
+        safe=DEFAULT_SAFE, tostr=DEFAULT_TOSTR, scope=DEFAULT_SCOPE,
+        besteffort=DEFAULT_BESTEFFORT
+):
     """Resolve an expression with possibly a dedicated expression resolvers.
 
     :param str name: expression resolver registered name. Default is the
@@ -280,12 +303,16 @@ def resolve(*args, **kwargs):
     :param bool tostr: if True (False by default), transform the result into
         a string format.
     :param dict scope: scope execution resolution.
+    :param bool besteffort: if True (default) auto import unknown var.
 
     :raises: KeyError if no expression resolver has been registered or if
         name does not exist in expression resolvers.
     """
 
-    return _RESOLVER_REGISTRY.resolve(*args, **kwargs)
+    return _RESOLVER_REGISTRY.resolve(
+        expr=expr, name=name, safe=safe, tostr=tostr, scope=scope,
+        besteffort=besteffort
+    )
 
 def getname(exprresolver):
     """Get expression resolver name.

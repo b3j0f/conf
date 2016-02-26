@@ -33,7 +33,7 @@ from b3j0f.utils.ut import UTCase
 
 from ..registry import (
     ResolverRegistry, names, resolve, register, loadresolvers, defaultname,
-    getname
+    getname, unregister
 )
 
 
@@ -98,7 +98,7 @@ class ResolverRegistryTest(UTCase):
 
         self.assertIsNone(reg.default)
 
-        self.assertFalse(reg.resolvers)
+        self.assertFalse(reg)
 
     def test_defaultwithregistry(self):
 
@@ -108,7 +108,7 @@ class ResolverRegistryTest(UTCase):
 
         self.assertIs(reg.default, name)
 
-        self.assertTrue(reg.resolvers)
+        self.assertTrue(reg)
 
     def test_nodefaultwithoutregistry(self):
 
@@ -118,38 +118,38 @@ class ResolverRegistryTest(UTCase):
 
         self.assertIs(reg.default, func.__name__)
 
-        self.assertTrue(reg.resolvers)
+        self.assertTrue(reg)
 
     def test_defaultandregistry(self):
 
         reg = ResolverRegistry('test', test=lambda **_: None)
 
         self.assertEqual(reg.default, 'test')
-        self.assertIn('test', reg.resolvers)
+        self.assertIn('test', reg)
 
     def test_defaultnotinregistry(self):
 
         self.assertRaises(
-            NameError, ResolverRegistry, 'test2', test=lambda **_: None
+            KeyError, ResolverRegistry, 'test2', test=lambda **_: None
         )
 
     def test_nonames(self):
 
         reg = ResolverRegistry()
 
-        self.assertFalse(reg.names)
+        self.assertFalse(reg)
 
     def test_names(self):
 
         reg = ResolverRegistry(test=lambda **_: None, example=lambda **_: None)
 
-        self.assertEqual(set(reg.names), set(['test', 'example']))
+        self.assertEqual(set(reg.keys()), set(['test', 'example']))
 
     def test_setnotdefault(self):
 
         reg = ResolverRegistry()
 
-        self.assertRaises(NameError, setattr, reg, 'default', 'test')
+        self.assertRaises(KeyError, setattr, reg, 'default', 'test')
 
     def test_setdefault(self):
 
@@ -175,6 +175,21 @@ class DefaultTest(UTCase):
         _defaultname = defaultname()
 
         self.assertEqual(names()[0], _defaultname)
+
+    def test_defaultpamplemouse(self):
+
+        pamplemouse = 'pamplemouse'
+
+        self.assertRaises(KeyError, defaultname, name=pamplemouse)
+
+        register(name=pamplemouse, exprresolver=lambda x: pamplemouse)
+
+        _defaultname = defaultname(pamplemouse)
+
+        self.assertEqual(_defaultname, pamplemouse)
+
+        unregister(name=pamplemouse)
+
 
 if __name__ == '__main__':
     main()

@@ -51,6 +51,10 @@ from six import add_metaclass
 
 from .registry import register
 
+from .core import (
+    DEFAULT_BESTEFFORT, DEFAULT_SAFE, DEFAULT_TOSTR, DEFAULT_SCOPE
+)
+
 
 class _MetaExprResolver(type):
     """Expression Resolver meta class.
@@ -73,7 +77,9 @@ class ExprResolver(object):
     All sub classes are automatically registered."""
 
     def __call__(
-            self, expr, safe=True, tostr=False, scope=None, besteffort=True
+            self, expr,
+            safe=DEFAULT_SAFE, tostr=DEFAULT_TOSTR, scope=DEFAULT_SCOPE,
+            besteffort=DEFAULT_BESTEFFORT
     ):
         """Resolve input expression.
 
