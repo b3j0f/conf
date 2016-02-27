@@ -70,9 +70,9 @@ Examples:
 
     :header: expression, result, description
 
-    "te%:'test'[:-2]%", test, 'te' + 'st' in default (python) evaluator
+    "te%'test'[:-2]%", test, 'te' + 'st' in default (python) evaluator
     "te%js:'test'.substr(2)%", test, 'te' + 'st' in javascript evaluator
-    "test number %:2\%2%", "test number 0", "default evaluation of 2 modulo 2"
+    "test number %2\%2%", "test number 0", "default evaluation of 2 modulo 2"
 
 Expression value
 ----------------
@@ -101,9 +101,9 @@ For example:
     :header: expression, value
 
 
-    ``=:"example"``: string equals "example" from a python interpretor.
+    ``="example"``: string equals "example" from a python interpretor.
     ``=js:"2"``: string equals "2" from javascript interpretor.
-    ``=:None``: None.
+    ``=None``: None.
     `=js:3*4``: 12 in javascript.
 
 Reference to other parameters
@@ -148,19 +148,23 @@ For examples:
 
 from __future__ import absolute_import
 
-__all__ = ['parse', 'EXPR_PREFIX', 'serialize']
+__all__ = ['parse', 'serialize']
 
 
 from re import compile as re_compile
 
 from six import string_types
 
-from random import random
+from copy import deepcopy
+
+from .resolver.core import (
+    DEFAULT_BESTEFFORT, DEFAULT_SAFE, DEFAULT_TOSTR, DEFAULT_SCOPE
+)
 
 from .resolver.registry import resolve
 
-#: ref parameter.
-EVAL_REF = r'@((?P<path>([^@]|\\@)+)\/)?((?P<cat>\w+)\.)?(?P<depth>\.*)(?P<param>\w+)'
+#: _ref parameter.
+EVAL_REF = r'@((?P<path>([^@]|\\@)+)\/)?((?P<cname>\w+)\.)?(?P<history>\.*)(?P<pname>\w+)'
 
 REGEX_REF = re_compile(EVAL_REF)
 
@@ -168,36 +172,55 @@ EVAL_FORMAT = r'%(?P<lang>\w*:)?(?P<expr>([^%]|\\%)+[^\\])%'  #: programmatic la
 
 REGEX_FORMAT = re_compile(EVAL_FORMAT)
 
-EXPR_PREFIX = r'=(?P<lang>\w*):(?P<expr>.*)$'  #: interpreted expression prefix
-
 EVAL_STR = r'({0})|({1})'.format(EVAL_REF, EVAL_FORMAT)
 
 REGEX_STR = re_compile(EVAL_STR)
 
-REGEX_PREFIX = re_compile(EXPR_PREFIX)  #: interpreted expression regex comp
+EVAL_EXPR = r'=(?P<lang>\w*:)(?P<expr>.*)$'  #: interpreted expression prefix
+
+REGEX_EXPR = re_compile(EVAL_EXPR)  #: interpreted expression regex comp
 
 
-def eval(expr):
+def _repl(
+        configurable, conf,
+        scope=DEFAULT_SCOPE, safe=DEFAULT_SAFE, besteffort=DEFAULT_BESTEFFORT
+):
 
-    matches = REGEX_STR.finditer(expr)
+    def __repl(match):
 
-    for match in matches:
-        entries = match.groupdict()
+        groupdict = match.groupdict()
 
-        if entries['param']:
-            pvalue = resolve(
-                lang=entries['lang'],
-                cat=entries['cat'],
-                depth=len(entries['depth']),
-                param=entries['param']
+        if groupdict['pname']:
+
+            path = groupdict['path']
+            cname = groupdict['cname']
+            history = groupdict['history']
+            pname = groupdict['pname']
+
+            param = _ref(
+                configurable=configurable, conf=conf,
+                path=path, cname=cname, history=history, pname=pname
             )
 
-            result = str(pvalue)
+            result = param.svalue
 
-        elif entries['expr']:
-            result = langeval(lang=entries['lang'], expr=entries['expr'], tostr=True)
+        elif groupdict['expr']:
 
-    return result
+            lang = groupdict['lang'] or None
+            expr = groupdict['expr']
+
+            scope['configurable'] = configurable
+            scope['conf'] = conf
+
+            result = resolve(
+                scope=scope,
+                name=lang, expr=expr, safe=safe, besteffort=besteffort,
+                tostr=True
+            )
+
+        return result
+
+    return __repl
 
 
 def serialize(expr):
@@ -211,33 +234,35 @@ def serialize(expr):
         result = expr
 
     elif expr is not None:
-        result = '=:{0}'.format(expr)
+        result = '={0}'.format(expr)
 
     return result
 
 
 def parse(
         svalue, conf=None, configurable=None, vtype=object,
-        scope=None, safe=True
+        scope=DEFAULT_SCOPE, safe=DEFAULT_SAFE, besteffort=DEFAULT_BESTEFFORT
 ):
-    """Expression parser."""
+    """Parser which delegates parsing to expression or format parser."""
 
     result = None
 
-    compilation = REGEX_PREFIX.matches(svalue)
+    compilation = REGEX_EXPR.match(svalue)
 
     if compilation:
 
-        result = objectparser(
-            svalue=svalue, compilation=compilation, conf=conf,
-            configurable=configurable, vtype=vtype, scope=scope, safe=safe
+        lang, expr = compilation.groups()
+
+        result = _exprparser(
+            expr=expr, lang=lang, conf=conf, configurable=configurable,
+            scope=scope, safe=safe, besteffort=besteffort
         )
 
     else:
 
-        result = stringparser(
-            svalue=svalue, conf=conf, configurable=configurable, vtype=vtype,
-            scope=scope, safe=safe
+        result = _formatparser(
+            svalue=svalue, conf=conf, configurable=configurable,
+            scope=scope, safe=safe, besteffort=besteffort
         )
 
     # try to cast value in vtype
@@ -251,85 +276,53 @@ def parse(
     return result
 
 
-def objectparser(
-        compilation, conf=None, configurable=None, scope=None, safe=True
+def _exprparser(
+        expr, lang=None, conf=None, configurable=None, scope=DEFAULT_SCOPE,
+        safe=DEFAULT_SAFE, besteffort=DEFAULT_BESTEFFORT
 ):
-
-    lang, expr = compilation.groups()
+    """In charge of parsing an expression and return a python object."""
 
     default_scope = {
-        '_resolve': resolve,
         'configurable': configurable,
         'conf': conf,
         'true': True,
-        'false': False,
-        '_scope': scope
+        'false': False
     }
 
-    if scope is None:
-        scope = default_scope
+    _scope = {} if scope is None else deepcopy(scope)
 
-    else:
-        scope.update(default_scope)
+    _scope.update(default_scope)
 
     result = resolve(
-        expr=expr, name=lang, safe=safe, scope=scope, tostr=False
+        expr=expr, name=lang, safe=safe, scope=_scope, tostr=False,
+        besteffort=besteffort
     )
 
     return result
 
 
-def stringparser(svalue, safe=True, vtype=str, scope=None, configurable=None):
+def _formatparser(
+        svalue, safe=DEFAULT_SAFE, vtype=str, scope=DEFAULT_SCOPE,
+        configurable=None, conf=None, besteffort=DEFAULT_BESTEFFORT
+):
 
-    repl = _repl(safe=safe, scope=scope, configurable=configurable, tostr=True)
+    repl = _repl(
+        safe=safe, scope=scope, configurable=configurable,
+        conf=conf, besteffort=besteffort
+    )
 
-    result = EVAL_REGEX.sub(repl, svalue)
+    result = REGEX_STR.sub(repl, svalue)
 
     if issubclass(vtype, bool):
         result = result in ('1', 'True', 'true')
 
+    elif issubclass(vtype, list):
+        result = vtype(item.strip() for item in result.split(','))
+
     return result
 
 
-def _repl(scope, safe=True, tostr=True, conf=None, configurable=None):
-    """Replace matching expression in input match with corresponding
-    conf accessor."""
-
-    def __repl(match):
-        """Internal regex repl function."""
-
-        result = None
-
-        confpath, cname, history, pname, lang, expr = match.groups()
-
-        if expr:
-            result = resolve(
-                expr=expr, name=lang, safe=safe, tostr=tostr, scope=scope
-            )
-
-            if not tostr:
-                while True:
-                    var = '_{0}'.format(random()).replace('.', '_')
-                    if var not in scope:
-                        scope[var] = result
-                        result = var
-                        break
-
-        else:
-            result = lookup(
-                pname=pname, conf=conf, configurable=configurable, cname=cname,
-                path=confpath, history=history
-            )
-
-            if tostr:
-                result = str(result)
-
-        return result
-
-    return __repl
-
-
-def lookup(
+def _ref(
         pname, conf=None, configurable=None, cname=None, path=None, history=0
 ):
     """Resolve a parameter value.
