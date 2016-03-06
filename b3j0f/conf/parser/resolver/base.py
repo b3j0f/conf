@@ -65,7 +65,8 @@ class _MetaExprResolver(type):
 
         result = super(_MetaExprResolver, cls).__new__(cls, *args, **kwargs)
 
-        register(exprresolver=result)
+        if result.__register__:
+            register(exprresolver=result)
 
         return result
 
@@ -75,6 +76,8 @@ class ExprResolver(object):
     """Expression resolver class.
 
     All sub classes are automatically registered."""
+
+    __register__ = False  #: class registration flag.
 
     def __call__(
             self, expr,

@@ -27,7 +27,7 @@
 """Parameter parser module.
 
 The parser transforms a serializated parameter value to a parameter value,
-related to parameter properties (ptype, scope, safe, etc.).
+related to parameter properties (vtype, scope, safe, etc.).
 
 It takes in parameter:
 
@@ -155,6 +155,8 @@ from re import compile as re_compile
 
 from six import string_types
 
+from collections import Iterable
+
 from copy import deepcopy
 
 from .resolver.core import (
@@ -163,12 +165,14 @@ from .resolver.core import (
 
 from .resolver.registry import resolve
 
+from parser import ParserError
+
 #: _ref parameter.
 EVAL_REF = r'@((?P<path>([^@]|\\@)+)\/)?((?P<cname>\w+)\.)?(?P<history>\.*)(?P<pname>\w+)'
 
 REGEX_REF = re_compile(EVAL_REF)
 
-EVAL_FORMAT = r'%(?P<lang>\w*:)?(?P<expr>([^%]|\\%)+[^\\])%'  #: programmatic language expression.
+EVAL_FORMAT = r'%((?P<lang>\w+):)?(?P<expr>([^%]|\\%)+[^\\])%'  #: programmatic language expression.
 
 REGEX_FORMAT = re_compile(EVAL_FORMAT)
 
@@ -176,51 +180,9 @@ EVAL_STR = r'({0})|({1})'.format(EVAL_REF, EVAL_FORMAT)
 
 REGEX_STR = re_compile(EVAL_STR)
 
-EVAL_EXPR = r'=(?P<lang>\w*:)(?P<expr>.*)$'  #: interpreted expression prefix
+EVAL_EXPR = r'=((?P<lang>\w+):)?(?P<expr>.*)$'  #: interpreted expression prefix
 
 REGEX_EXPR = re_compile(EVAL_EXPR)  #: interpreted expression regex comp
-
-
-def _repl(
-        configurable, conf,
-        scope=DEFAULT_SCOPE, safe=DEFAULT_SAFE, besteffort=DEFAULT_BESTEFFORT
-):
-
-    def __repl(match):
-
-        groupdict = match.groupdict()
-
-        if groupdict['pname']:
-
-            path = groupdict['path']
-            cname = groupdict['cname']
-            history = groupdict['history']
-            pname = groupdict['pname']
-
-            param = _ref(
-                configurable=configurable, conf=conf,
-                path=path, cname=cname, history=history, pname=pname
-            )
-
-            result = param.svalue
-
-        elif groupdict['expr']:
-
-            lang = groupdict['lang'] or None
-            expr = groupdict['expr']
-
-            scope['configurable'] = configurable
-            scope['conf'] = conf
-
-            result = resolve(
-                scope=scope,
-                name=lang, expr=expr, safe=safe, besteffort=besteffort,
-                tostr=True
-            )
-
-        return result
-
-    return __repl
 
 
 def serialize(expr):
@@ -249,20 +211,22 @@ def parse(
 
     compilation = REGEX_EXPR.match(svalue)
 
+    _scope = {} if scope is None else deepcopy(scope)
+
     if compilation:
 
-        lang, expr = compilation.groups()
+        lang, expr = compilation.group('lang', 'expr')
 
         result = _exprparser(
             expr=expr, lang=lang, conf=conf, configurable=configurable,
-            scope=scope, safe=safe, besteffort=besteffort
+            scope=_scope, safe=safe, besteffort=besteffort
         )
 
     else:
 
         result = _formatparser(
             svalue=svalue, conf=conf, configurable=configurable,
-            scope=scope, safe=safe, besteffort=besteffort
+            scope=_scope, safe=safe, besteffort=besteffort
         )
 
     # try to cast value in vtype
@@ -277,24 +241,20 @@ def parse(
 
 
 def _exprparser(
-        expr, lang=None, conf=None, configurable=None, scope=DEFAULT_SCOPE,
-        safe=DEFAULT_SAFE, besteffort=DEFAULT_BESTEFFORT
+        expr, scope, lang=None, conf=None, configurable=None,
+        safe=DEFAULT_SAFE, besteffort=DEFAULT_BESTEFFORT, tostr=False
 ):
     """In charge of parsing an expression and return a python object."""
 
-    default_scope = {
+    scope.update({
         'configurable': configurable,
         'conf': conf,
         'true': True,
         'false': False
-    }
-
-    _scope = {} if scope is None else deepcopy(scope)
-
-    _scope.update(default_scope)
+    })
 
     result = resolve(
-        expr=expr, name=lang, safe=safe, scope=_scope, tostr=False,
+        expr=expr, name=lang, safe=safe, scope=scope, tostr=tostr,
         besteffort=besteffort
     )
 
@@ -306,20 +266,77 @@ def _formatparser(
         configurable=None, conf=None, besteffort=DEFAULT_BESTEFFORT
 ):
 
-    repl = _repl(
-        safe=safe, scope=scope, configurable=configurable,
-        conf=conf, besteffort=besteffort
+    result = REGEX_FORMAT.sub(
+        _formatrepl(
+            safe=safe, scope=scope, configurable=configurable,
+            conf=conf, besteffort=besteffort
+        ), svalue
     )
 
-    result = REGEX_STR.sub(repl, svalue)
+    result = REGEX_REF.sub(
+        _refrepl(configurable=configurable, conf=conf), svalue
+    )
 
     if issubclass(vtype, bool):
         result = result in ('1', 'True', 'true')
 
-    elif issubclass(vtype, list):
-        result = vtype(item.strip() for item in result.split(','))
+    elif issubclass(vtype, Iterable):
+        if result:
+            result = vtype(item.strip() for item in result.split(','))
+
+        else:
+            result = vtype()
 
     return result
+
+
+def _formatrepl(
+        configurable, conf,
+        scope=DEFAULT_SCOPE, safe=DEFAULT_SAFE, besteffort=DEFAULT_BESTEFFORT
+):
+    """Format replacement function."""
+
+    def __repl(match, scope=scope):
+        """Internal replacement function."""
+
+        lang, expr = match.group('lang', 'expr')
+
+        result = _exprparser(
+                expr=expr, lang=lang, conf=conf, configurable=configurable,
+                scope=scope, safe=safe, besteffort=besteffort, tostr=True
+        )
+
+        return result
+
+    return __repl
+
+
+def _refrepl(configurable, conf):
+    """Reference replacement function."""
+
+    def __repl(match):
+        """Internal replacement function."""
+
+        path, cname, history, pname = match.group(
+            'path', 'cname', 'history', 'pname'
+        )
+
+        if history:
+            history = len(history) - 1
+
+        else:
+            history = 0
+
+        param = _ref(
+            configurable=configurable, conf=conf,
+            path=path, cname=cname, history=history, pname=pname
+        )
+
+        result = param.svalue
+
+        return result
+
+    return __repl
 
 
 def _ref(
@@ -333,7 +350,8 @@ def _ref(
     :param str cname: category name.
     :param str path: conf path.
     :param int history: parameter history research.
-    :return: parameter
+    :return: parameter.
+    :raises: ParserError if conf and configurable are None.
     """
 
     result = None
@@ -351,6 +369,11 @@ def _ref(
         if conf is None:
             conf = configurable.getconf(**kwargs)
 
-    result = conf.pvalue(pname=pname, cname=cname, history=history)
+    if conf is None:
+        raise ParserError(
+            'Wrong ref parameters. Conf and configurable are both None.'
+        )
+
+    result = conf.param(pname=pname, cname=cname, history=history)
 
     return result

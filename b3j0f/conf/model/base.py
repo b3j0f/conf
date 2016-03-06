@@ -107,7 +107,7 @@ class ModelElement(object):
         return result
 
 
-class CompositeModelElement(ModelElement):
+class CompositeModelElement(ModelElement, dict):
     """Model element composed of model elements."""
 
     __contenttype__ = ModelElement  #: content type.
@@ -159,6 +159,10 @@ class CompositeModelElement(ModelElement):
             result = self._content[key]
 
         return result
+
+    def __deepcopy__(self, memo):
+
+        return self
 
     def __contains__(self, key):
 

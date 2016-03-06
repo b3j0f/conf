@@ -35,53 +35,53 @@ from six import string_types
 
 from b3j0f.utils.ut import UTCase
 
-from ..param import Parameter, PType
+from ..param import Parameter, VType
 from parser import ParserError
 
 
-class PTypeTest(UTCase):
-    """Test PType."""
+class VTypeTest(UTCase):
+    """Test VType."""
 
     def setUp(self):
 
-        self.ptype = PType(_type=Parameter)
+        self.vtype = VType(_type=Parameter)
 
     def test_isinstance(self):
         """Test if isinstance."""
 
-        self.assertIsInstance(Parameter(''), self.ptype)
+        self.assertIsInstance(Parameter(''), self.vtype)
 
-    def test_PTypeisinstance(self):
+    def test_VTypeisinstance(self):
         """Test isinstance of PTYpe."""
 
-        self.assertIsInstance(self.ptype, self.ptype)
+        self.assertIsInstance(self.vtype, self.vtype)
 
     def test_isnotinstance(self):
         """Test is not instance."""
 
-        self.assertNotIsInstance(None, self.ptype)
+        self.assertNotIsInstance(None, self.vtype)
 
     def test_issubclass(self):
         """Test is subclass."""
 
-        self.assertTrue(issubclass(Parameter, self.ptype))
+        self.assertTrue(issubclass(Parameter, self.vtype))
 
-    def test_PTypeissubclass(self):
-        """Test is subclass of PType."""
+    def test_VTypeissubclass(self):
+        """Test is subclass of VType."""
 
-        self.assertTrue(issubclass(PType, self.ptype))
+        self.assertTrue(issubclass(VType, self.vtype))
 
     def test_notissubclass(self):
         """Test is not subclass."""
 
-        self.assertFalse(issubclass(type(None), self.ptype))
+        self.assertFalse(issubclass(type(None), self.vtype))
 
     def test_instanciate(self):
         """Test to instanciate a parameter."""
 
         value = 'test'
 
-        param = self.ptype(value)
+        param = self.vtype(value)
 
         self.assertIsInstance(param, Parameter)
         self.assertEqual(value, param.name)
@@ -91,7 +91,7 @@ class PTypeTest(UTCase):
 
         value = {'name': 'test'}
 
-        param = self.ptype(value)
+        param = self.vtype(value)
 
         self.assertIsInstance(param, Parameter)
         self.assertEqual(value['name'], param.name)
@@ -101,7 +101,7 @@ class PTypeTest(UTCase):
 
         value = ['test']
 
-        param = self.ptype(value)
+        param = self.vtype(value)
 
         self.assertIsInstance(param, Parameter)
         self.assertEqual(value[0], param.name)
@@ -111,7 +111,7 @@ class PTypeTest(UTCase):
 
         svalue = 1
 
-        value = PType(str)(svalue)
+        value = VType(str)(svalue)
 
         self.assertIsInstance(value, str)
         self.assertEqual(value, str(1))
@@ -119,7 +119,7 @@ class PTypeTest(UTCase):
     def test_instanciateerror(self):
         """Test to instanciate with an error."""
 
-        self.assertRaises(ParserError, self.ptype, {'': None})
+        self.assertRaises(ParserError, self.vtype, {'': None})
 
 
 class ParameterTest(UTCase):
