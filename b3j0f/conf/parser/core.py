@@ -173,7 +173,7 @@ EVAL_REF = r'@((?P<path>([^@]|\\@)+)\/)?((?P<cname>\w+)\.)?(?P<history>\.*)(?P<p
 REGEX_REF = re_compile(EVAL_REF)
 
 #: programmatic language expression.
-EVAL_FORMAT = r'\%((?P<lang>\w+):)?(?P<expr>([^%]|\\%)+[^\\])\%'
+EVAL_FORMAT = r'\%((?P<lang>\w+):)?(?P<expr>([^%]|(\\%))*[^\\]?)\%'
 
 REGEX_FORMAT = re_compile(EVAL_FORMAT)
 
@@ -197,7 +197,7 @@ def serialize(expr):
         result = expr
 
     elif expr is not None:
-        result = '={0}'.format(expr)
+        result = '=py:{0}'.format(expr)
 
     return result
 
