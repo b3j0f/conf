@@ -107,73 +107,47 @@ class ModelElement(object):
         return result
 
 
-class CompositeModelElement(ModelElement, dict):
+class CompositeModelElement(ModelElement, OrderedDict):
     """Model element composed of model elements."""
 
     __contenttype__ = ModelElement  #: content type.
 
-    __slots__ = ('_content', ) + ModelElement.__slots__
+    __slots__ = ModelElement.__slots__
 
-    def __init__(self, *content):
+    def __init__(self, *melts):
+        """
+        :param tuple melts: model elements to add.
+        """
 
         super(CompositeModelElement, self).__init__()
 
-        # init protected attributes
-        self._content = OrderedDict()
+        for melt in melts:
+            self[melt.name] = melt
 
-        self.content = content
+    def __deepcopy__(self, _):
 
-    def __iter__(self):
-
-        return iter(self._content.values())
-
-    def __getitem__(self, key):
-
-        if isinstance(key, ModelElement):
-            key = key.name
-
-        return self._content[key]
-
-    def __setitem__(self, key, value):
-
-        if isinstance(key, ModelElement):
-            key = key.name
-
-        self._content[key] = value
-
-    def __delitem__(self, key):
-
-        if isinstance(key, ModelElement):
-            key = key.name
-
-        del self._content[key]
+        return self.copy()
 
     def __getattr__(self, key):
-
+        """Try to delegate key attribute to content name.
+        """
         result = None
 
         if key in self.__slots__:
             result = super(CompositeModelElement, self).__getattribute__(key)
 
         else:
-            result = self._content[key]
+            try:
+                result = self[key]
+
+            except KeyError:
+                raise AttributeError(
+                    '\'{0}\' object has no attribute \'{1}\''.format(
+                        self.__class__, key
+                    )
+                )
 
         return result
-
-    def __deepcopy__(self, memo):
-
-        return self
-
-    def __contains__(self, key):
-
-        if isinstance(key, ModelElement):
-            key = key.name
-
-        return key in self._content
-
-    def __len__(self):
-
-        return len(self._content)
 
     def __i(self, other, func):
         """Process input other with input func.
@@ -206,8 +180,7 @@ class CompositeModelElement(ModelElement, dict):
         :raise: TypeError if other is not a ModelElement(s)."""
 
         return self.__i(
-            other=other,
-            func=lambda melt: self._content.__setitem__(melt.name, melt)
+            other=other, func=lambda melt: self.__setitem__(melt.name, melt)
         )
 
     def __isub__(self, other):
@@ -217,10 +190,7 @@ class CompositeModelElement(ModelElement, dict):
         :return: self.
         :raise: TypeError if other is not a ModelElement(s)."""
 
-        return self.__i(
-            other=other,
-            func=lambda melt: self._content.pop(melt.name)
-        )
+        return self.__i(other=other, func=lambda melt: self.pop(melt.name))
 
     def __ixor__(self, other):
         """Put other element(s) which are not registered in this.
@@ -237,107 +207,26 @@ class CompositeModelElement(ModelElement, dict):
             )
         )
 
-    def __repr__(self):
-
-        result = super(CompositeModelElement, self).__repr__()
-
-        result = '{0}[{1}]'.format(result, self._content)
-
-        return result
-
-    def names(self):
-        """Get content names."""
-
-        return tuple(self._content.keys())
-
-    @property
-    def content(self):
-        """Get Content.
-
-        :rtype: tuple
-        """
-
-        return tuple(self._content.values())
-
-    @content.setter
-    def content(self, value):
-        """Change of content.
-
-        :param ModelElement(s) value: new content to use.
-        """
-
-        self._content.clear()
-
-        self += value
-
-    def put(self, value):
-        """Put a content value and return the previous one if exist.
-
-        :param ModelElement value: model element to put in this.
-        :return: previous model element registered at the same name.
-        :rtype: ModelElement
-        """
-
-        result = self.get(value.name)
-
-        self += value
-
-        return result
-
     def clean(self, *args, **kwargs):
 
-        for content in self._content.values():
+        for content in list(self.values()):
 
             content.clean(*args, **kwargs)
 
     def copy(self, cleaned=False, *args, **kwargs):
 
+        for slot in self.__slots__:
+            if slot not in kwargs:
+                attr = getattr(self, slot)
+                kwargs[slot] = attr
+
         result = super(CompositeModelElement, self).copy(*args, **kwargs)
 
-        for content in self._content.values():
+        for content in list(self.values()):
 
             result += content.copy(cleaned=cleaned)
 
         return result
-
-    def pop(self, name):
-        """Remove an element by name and return it.
-
-        :param str name: corresponding element name to remove.
-        :return: corresponding element name.
-        :rtype: ModelElement
-
-        :raises: KeyError if name is not registered in this."""
-
-        return self._content.pop(name)
-
-    def get(self, key, default=None):
-        """Get a content value by its name.
-
-        :param str key: content name.
-        :param ModelElement default: default value if key is not registered.
-        :return: related content model element.
-        :rtype: ModelElement
-        """
-
-        return self._content.get(key, default)
-
-    def setdefault(self, key, value):
-        """Register a content value with specific name if key not already used.
-
-        :param str key: content name.
-        :param ModelElement value: model element to register.
-        :return: existing model element or input value if no modelelt has
-            been registered with key.
-        :rtype: ModelElement
-        """
-
-        return self._content.setdefault(key, value)
-
-    def clear(self):
-        """Clear this composite model element from this content."""
-
-        self._content.clear()
 
     @property
     def params(self):
@@ -347,7 +236,7 @@ class CompositeModelElement(ModelElement, dict):
 
         result = set()
 
-        for content in self._content.values():
+        for content in list(self.values()):
 
             if isinstance(content, CompositeModelElement):
                 result = content.params | result

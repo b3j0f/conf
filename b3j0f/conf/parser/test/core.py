@@ -39,11 +39,11 @@ from ...configurable.core import Configurable
 from ...driver.test.base import TestConfDriver
 from ..core import (
     REGEX_REF, REGEX_FORMAT, REGEX_STR, REGEX_EXPR,
-    parse, serialize, _ref, ParserError, _formatparser
+    parse, serialize, _ref, ParserError, _strparser
 )
 
 
-class RefTest(UTCase):
+class RegexRefTest(UTCase):
     """Test the regex ref."""
 
     def test_pname(self):
@@ -112,14 +112,14 @@ class RefTest(UTCase):
         self.assertEqual(path, 'ex\@mpl/e')
 
 
-class FormatTest(UTCase):
+class RegexFormatTest(UTCase):
     """Test format expression regex."""
 
     def test_expr(self):
 
         test = '%test%'
 
-        lang, expr = REGEX_FORMAT.match(test).group('lang', 'expr')
+        lang, expr = REGEX_FORMAT.search(test).group('lang', 'expr')
 
         self.assertFalse(lang)
         self.assertEqual(expr, 'test')
@@ -128,10 +128,117 @@ class FormatTest(UTCase):
 
         test = '%py:test%'
 
-        lang, expr = REGEX_FORMAT.match(test).group('lang', 'expr')
+        lang, expr = REGEX_FORMAT.search(test).group('lang', 'expr')
 
         self.assertEqual(lang, 'py')
         self.assertEqual(expr, 'test')
+
+
+class RegexStrTest(UTCase):
+    """Test str expression regex."""
+
+    def test_expr(self):
+
+        test = '%test%'
+
+        lang, expr = REGEX_STR.search(test).group('lang', 'expr')
+
+        self.assertFalse(lang)
+        self.assertEqual(expr, 'test')
+
+    def test_lang(self):
+
+        test = '%py:test%'
+
+        lang, expr = REGEX_STR.search(test).group('lang', 'expr')
+
+        self.assertEqual(lang, 'py')
+        self.assertEqual(expr, 'test')
+
+    def test_pname(self):
+
+        test = '@test'
+
+        path, cname, history, pname = REGEX_STR.match(test).group(
+            'path', 'cname', 'history', 'pname'
+        )
+
+        self.assertEqual(pname, 'test')
+        self.assertFalse(path)
+        self.assertFalse(cname)
+        self.assertFalse(history)
+
+    def test_history_pname(self):
+
+        test = '@...test'
+
+        path, cname, history, pname = REGEX_STR.match(test).group(
+            'path', 'cname', 'history', 'pname'
+        )
+
+        self.assertEqual(pname, 'test')
+        self.assertEqual(history, '...')
+        self.assertFalse(path)
+        self.assertFalse(cname)
+
+    def test_cname_pname(self):
+
+        test = '@cat...test'
+
+        path, cname, history, pname = REGEX_STR.match(test).group(
+            'path', 'cname', 'history', 'pname'
+        )
+
+        self.assertEqual(pname, 'test')
+        self.assertEqual(history, '..')
+        self.assertEqual(cname, 'cat')
+        self.assertFalse(path)
+
+    def test_path_pname(self):
+
+        test = '@ex\@mpl/e/..test'
+
+        path, cname, history, pname = REGEX_STR.search(test).group(
+            'path', 'cname', 'history', 'pname'
+        )
+
+        self.assertEqual(pname, 'test')
+        self.assertEqual(history, '..')
+        self.assertFalse(cname)
+        self.assertEqual(path, 'ex\@mpl/e')
+
+    def test_path_cname_pname(self):
+
+        test = '@ex\@mpl/e/cat...test'
+
+        path, cname, history, pname = REGEX_STR.search(test).group(
+            'path', 'cname', 'history', 'pname'
+        )
+
+        self.assertEqual(pname, 'test')
+        self.assertEqual(history, '..')
+        self.assertEqual(cname, 'cat')
+        self.assertEqual(path, 'ex\@mpl/e')
+
+    def test_both(self):
+
+        test = '@a%b%@c%js:d%@e'
+
+        matches = REGEX_STR.finditer(test)
+
+        values = {
+            0: ['pname', 'a'],
+            1: ['expr', 'b'],
+            2: ['pname', 'c'],
+            3: ['expr', 'd'],
+            4: ['pname', 'e']
+        }
+
+        for index, match in enumerate(matches):
+            groupdict = match.groupdict()
+            print(groupdict, index, match)
+            value = values[index]
+            self.assertEqual(groupdict[value[0]], value[1])
 
 
 class ExprTest(UTCase):
@@ -181,82 +288,92 @@ class RefTest(UTCase):
 
         val = _ref(pname=self.pname, conf=self.conf)
 
-        self.assertEqual(self.count - 1, val)
+        self.assertEqual(self.count - 1, val.value)
 
     def test_cname(self):
 
         val = _ref(pname=self.pname, conf=self.conf, cname=str(self.count - 2))
 
-        self.assertEqual(val, self.count - 2)
+        self.assertEqual(val.value, self.count - 2)
 
     def test_history(self):
 
         val = _ref(pname=self.pname, history=0, conf=self.conf)
 
-        self.assertEqual(val, self.count - 1)
+        self.assertEqual(val.value, self.count - 1)
 
         val = _ref(pname=self.pname, history=1, conf=self.conf)
 
-        self.assertEqual(val, self.count - 2)
+        self.assertEqual(val.value, self.count - 2)
 
     def test_history_cname(self):
 
         val = _ref(pname=self.pname, history=0, conf=self.conf, cname=str(self.count - 2))
 
-        self.assertEqual(val, self.count - 2)
+        self.assertEqual(val.value, self.count - 2)
 
         val = _ref(pname=self.pname, history=1, conf=self.conf, cname=str(self.count - 2))
 
-        self.assertEqual(val, self.count - 3)
+        self.assertEqual(val.value, self.count - 3)
 
 
-class FormatParserTest(UTCase):
+class StrParserTest(UTCase):
 
     def test_empty(self):
 
-        value = _formatparser(svalue='')
+        value = _strparser(svalue='')
 
         self.assertEqual(value, '')
 
     def test_bool(self):
 
-        val = _formatparser(svalue='0', vtype=bool)
+        val = _strparser(svalue='0', vtype=bool)
 
         self.assertIs(val, False)
 
-        val = _formatparser(svalue='1', vtype=bool)
+        val = _strparser(svalue='1', vtype=bool)
 
         self.assertIs(val, True)
 
-        val = _formatparser(svalue='true', vtype=bool)
+        val = _strparser(svalue='true', vtype=bool)
 
         self.assertIs(val, True)
 
-        val = _formatparser(svalue='True', vtype=bool)
+        val = _strparser(svalue='True', vtype=bool)
 
         self.assertIs(val, True)
 
     def test_list(self):
 
-        val = _formatparser(svalue='1', vtype=list)
+        val = _strparser(svalue='1', vtype=list)
 
         self.assertEqual(val, ['1'])
 
-        val = _formatparser(svalue='', vtype=list)
+        val = _strparser(svalue='', vtype=list)
 
         self.assertFalse(val)
 
-        val = _formatparser(svalue='1, 2, 3', vtype=list)
+        val = _strparser(svalue='1, 2, 3', vtype=list)
 
         self.assertEqual(val, ['1', '2', '3'])
+
+    def test_format(self):
+
+        conf = Configuration(Category('', Parameter('se', value='es')))
+
+        svalue = 't%"es"%t'
+
+        val = _strparser(svalue=svalue, conf=conf, scope=None)
+
+        self.assertEqual(val, 'test')
 
     def test_format_expr(self):
 
         conf = Configuration(Category('', Parameter('se', value='es')))
 
-        svalue = '%"t"%@se%"t"'
+        svalue = '%"t"%@se%"t"%'
 
-        val = _formatparser(svalue=svalue, conf=conf, scope={})
+        val = _strparser(svalue=svalue, conf=conf, scope=None)
 
         self.assertEqual(val, 'test')
 

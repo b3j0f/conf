@@ -54,7 +54,7 @@ class Configuration(CompositeModelElement):
         :raises: Parameter.Error for any raised exception.
         """
 
-        for category in self._content.values():
+        for category in self.values():
 
             for param in category:
 
@@ -81,9 +81,10 @@ class Configuration(CompositeModelElement):
 
         categories = []  # list of categories containing input parameter name
 
-        for cat in self._content.values():
+        for cat in self.values():
 
             if pname in cat:
+
                 categories.append(cat)
 
                 if cname in (None, cat.name):
@@ -112,7 +113,7 @@ class Configuration(CompositeModelElement):
 
             if cat.name in self:
 
-                selfcat = self._content[cat.name]
+                selfcat = self[cat.name]
 
                 for param in cat:
 

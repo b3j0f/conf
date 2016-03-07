@@ -53,7 +53,7 @@ Simple value
 A simple value is a string. It is possible to format a dedicated programming
 language expression in respecting this syntax:
 
-*%[{lang}]:{expr}%* where:
+*%[{lang}:]{expr}%* where:
 
 - lang is an optional expression evaluator name (``py`` for python, ``js`` for
     javascript, etc.) Default is python.
@@ -114,7 +114,7 @@ and configuration.
 
 The syntax is the following:
 
-*'@'[{confpath}|][{cat}]{history}{param}* where:
+*'@'[{confpath}/][{cat}\.]{history}{param}* where:
 
 .. csv-table:
     :header: name, description
@@ -127,13 +127,15 @@ The syntax is the following:
         For example:
             - '.' designates the current/specified category.
             - '..' designates the previous one parameter."
+            - '...' designates the previous previous one parameter.
+            - '....' etc.
 
 For examples:
 
 .. csv-table::
     :header: expr, description
 
-    "@r|c.p", "parameter `p`, from the category `c` in the configuration
+    "@r/c.p", "parameter `p`, from the category `c` in the configuration
         resource `r` (history equals 0 from `c`)"
     "@c.p", "parameter `p` from the category `c` in the same configurable
         scope (history equals 0 from `c`)"
@@ -159,9 +161,7 @@ from collections import Iterable
 
 from copy import deepcopy
 
-from .resolver.core import (
-    DEFAULT_BESTEFFORT, DEFAULT_SAFE, DEFAULT_TOSTR, DEFAULT_SCOPE
-)
+from .resolver.core import DEFAULT_BESTEFFORT, DEFAULT_SAFE, DEFAULT_SCOPE
 
 from .resolver.registry import resolve
 
@@ -172,7 +172,8 @@ EVAL_REF = r'@((?P<path>([^@]|\\@)+)\/)?((?P<cname>\w+)\.)?(?P<history>\.*)(?P<p
 
 REGEX_REF = re_compile(EVAL_REF)
 
-EVAL_FORMAT = r'%((?P<lang>\w+):)?(?P<expr>([^%]|\\%)+[^\\])%'  #: programmatic language expression.
+#: programmatic language expression.
+EVAL_FORMAT = r'\%((?P<lang>\w+):)?(?P<expr>([^%]|\\%)+[^\\])\%'
 
 REGEX_FORMAT = re_compile(EVAL_FORMAT)
 
@@ -224,7 +225,7 @@ def parse(
 
     else:
 
-        result = _formatparser(
+        result = _strparser(
             svalue=svalue, conf=conf, configurable=configurable,
             scope=_scope, safe=safe, besteffort=besteffort
         )
@@ -246,6 +247,9 @@ def _exprparser(
 ):
     """In charge of parsing an expression and return a python object."""
 
+    if scope is None:
+        scope = {}
+
     scope.update({
         'configurable': configurable,
         'conf': conf,
@@ -261,78 +265,59 @@ def _exprparser(
     return result
 
 
-def _formatparser(
+def _strparser(
         svalue, safe=DEFAULT_SAFE, vtype=str, scope=DEFAULT_SCOPE,
         configurable=None, conf=None, besteffort=DEFAULT_BESTEFFORT
 ):
 
-    result = REGEX_FORMAT.sub(
-        _formatrepl(
+    result = REGEX_STR.sub(
+        _strrepl(
             safe=safe, scope=scope, configurable=configurable,
             conf=conf, besteffort=besteffort
         ), svalue
     )
 
-    result = REGEX_REF.sub(
-        _refrepl(configurable=configurable, conf=conf), svalue
-    )
+    if not issubclass(vtype, string_types):
 
-    if issubclass(vtype, bool):
-        result = result in ('1', 'True', 'true')
+        if issubclass(vtype, bool):
+            result = result in ('1', 'True', 'true')
 
-    elif issubclass(vtype, Iterable):
-        if result:
-            result = vtype(item.strip() for item in result.split(','))
+        elif issubclass(vtype, Iterable):
+            if result:
+                result = vtype((item.strip() for item in result.split(',')))
 
-        else:
-            result = vtype()
+            else:
+                result = vtype()
 
     return result
 
 
-def _formatrepl(
+def _strrepl(
         configurable, conf,
         scope=DEFAULT_SCOPE, safe=DEFAULT_SAFE, besteffort=DEFAULT_BESTEFFORT
 ):
-    """Format replacement function."""
 
     def __repl(match, scope=scope):
-        """Internal replacement function."""
 
-        lang, expr = match.group('lang', 'expr')
+        lang, expr, path, cname, history, pname = match.group(
+            'lang', 'expr', 'path', 'cname', 'history', 'pname'
+        )
 
-        result = _exprparser(
+        if expr:
+            result = _exprparser(
                 expr=expr, lang=lang, conf=conf, configurable=configurable,
                 scope=scope, safe=safe, besteffort=besteffort, tostr=True
-        )
-
-        return result
-
-    return __repl
-
-
-def _refrepl(configurable, conf):
-    """Reference replacement function."""
-
-    def __repl(match):
-        """Internal replacement function."""
-
-        path, cname, history, pname = match.group(
-            'path', 'cname', 'history', 'pname'
-        )
-
-        if history:
-            history = len(history) - 1
+            )
 
         else:
-            history = 0
+            history = (len(history) - 1) if history else 0
 
-        param = _ref(
-            configurable=configurable, conf=conf,
-            path=path, cname=cname, history=history, pname=pname
-        )
+            param = _ref(
+                configurable=configurable, conf=conf,
+                path=path, cname=cname, history=history, pname=pname
+            )
 
-        result = param.svalue
+            result = param.svalue
 
         return result
 

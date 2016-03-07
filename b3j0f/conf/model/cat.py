@@ -55,9 +55,7 @@ class Category(CompositeModelElement):
         :rtype: list
         """
 
-        return list(
-            cparam for cparam in self._content.values() if cparam == param
-        )
+        return list(cparam for cparam in self.values() if cparam == param)
 
     def copy(self, cleaned=False):
 
