@@ -110,7 +110,7 @@ class CompositeModelElementTest(UTCase):
     def test___iter__(self):
         """Test the __iter__ method."""
 
-        iterator = iter(self.cme)
+        iterator = iter(self.cme.values())
 
         counts = list(range(self.count))
 
@@ -124,12 +124,12 @@ class CompositeModelElementTest(UTCase):
     def test___getitem__(self):
         """Test the __getitem__ method."""
 
-        mes = list(self.cme.content)
+        mes = list(self.cme.values())
 
         for i in range(self.count):
 
             me = self.cme[str(i)]
-            me = self.cme[me]
+            me = self.cme[me.name]
             mes.remove(me)
 
         self.assertEqual(0, len(mes))
@@ -149,9 +149,9 @@ class CompositeModelElementTest(UTCase):
         for i in range(self.count):
 
             me = ModelElementTest.TestME(name=str(i))
-            self.cme[me] = me
+            self.cme[me.name] = me
 
-        names = set(me.name for me in self.cme)
+        names = set(me.name for me in self.cme.values())
 
         self.assertEqual(len(names), self.count)
 
@@ -168,7 +168,7 @@ class CompositeModelElementTest(UTCase):
 
             me = ModelElementTest.TestME(name=str(i))
             self.cme[str(i)] = me
-            del self.cme[me]
+            del self.cme[me.name]
 
         self.assertEqual(len(self.cme), 0)
 
@@ -188,7 +188,7 @@ class CompositeModelElementTest(UTCase):
             me = self.cme[str(i)]
 
             self.assertIn(str(i), self.cme)
-            self.assertIn(me, self.cme)
+            self.assertIn(me.name, self.cme)
 
         self.assertNotIn(str(i + 1), self.cme)
 
@@ -236,7 +236,7 @@ class CompositeModelElementTest(UTCase):
 
         self.assertFalse(ccme)
 
-        ccme += self.cme
+        ccme += self.cme.values()
 
         self.assertEqual(len(ccme), len(self.cme))
 
@@ -249,7 +249,7 @@ class CompositeModelElementTest(UTCase):
 
         self.assertFalse(ccme)
 
-        ccme += list(self.cme.content)
+        ccme += list(self.cme.values())
 
         self.assertEqual(len(ccme), len(self.cme))
 
@@ -270,14 +270,14 @@ class CompositeModelElementTest(UTCase):
     def test___isub__mes(self):
         """Test the method __isub__ with model elements."""
 
-        self.cme -= list(self.cme.content)
+        self.cme -= list(self.cme.values())
 
         self.assertFalse(self.cme)
 
     def test___isub__cme(self):
         """Test the method __isub__ with a CompositeModelElement."""
 
-        self.cme -= self.cme
+        self.cme -= self.cme.values()
 
         self.assertFalse(self.cme)
 
@@ -321,7 +321,7 @@ class CompositeModelElementTest(UTCase):
 
         self.assertFalse(ccme)
 
-        ccme ^= self.cme
+        ccme ^= self.cme.values()
 
         self.assertEqual(len(ccme), len(self.cme))
 
@@ -334,7 +334,7 @@ class CompositeModelElementTest(UTCase):
 
         self.assertFalse(ccme)
 
-        ccme ^= list(self.cme.content)
+        ccme ^= list(self.cme.values())
 
         self.assertEqual(len(ccme), len(self.cme))
 
@@ -346,42 +346,21 @@ class CompositeModelElementTest(UTCase):
     def test_keys(self):
         """Test the method keys."""
 
-        keys = self.cme.names()
+        keys = tuple(self.cme.keys())
         names = tuple(str(i) for i in range(self.count))
 
         self.assertEqual(names, keys)
 
-    def test_setcontent(self):
-        """Test to set content."""
-
-        content = self.cme.content
-
-        self.cme.content = []
-        self.assertFalse(self.cme)
-
-        self.cme.content = content
-        self.assertEqual(len(self.cme), self.count)
-
-    def test_put(self):
-        """Test to put element."""
-
-        for elt in self.cme.content:
-
-            oldelt = self.cme.put(elt.copy())
-
-            self.assertIs(elt, oldelt)
-            self.assertIsNot(elt, self.cme[elt.name])
-
     def test_clean(self):
         """Test the method clean."""
 
-        for elt in self.cme:
+        for elt in self.cme.values():
 
             elt.cleaned = False
 
         self.cme.clean()
 
-        for elt in self.cme:
+        for elt in self.cme.values():
 
             self.assertTrue(elt.cleaned)
 
@@ -390,18 +369,18 @@ class CompositeModelElementTest(UTCase):
 
         ccme = self.cme.copy()
 
-        for melt in ccme:
+        for melt in ccme.values():
 
-            selfmelt = self.cme[melt]
+            selfmelt = self.cme[melt.name]
 
             self.assertIsNot(selfmelt, melt)
             self.assertFalse(melt.cleaned)
 
         ccme = self.cme.copy(cleaned=True)
 
-        for melt in ccme:
+        for melt in ccme.values():
 
-            selfmelt = self.cme[melt]
+            selfmelt = self.cme[melt.name]
 
             self.assertIsNot(selfmelt, melt)
             self.assertTrue(melt.cleaned)
@@ -422,7 +401,7 @@ class CompositeModelElementTest(UTCase):
     def test_get(self):
         """Test the method get."""
 
-        for elt in self.cme:
+        for elt in list(self.cme.values()):
 
             melt = self.cme.get(elt.name)
 
@@ -437,7 +416,7 @@ class CompositeModelElementTest(UTCase):
     def test_setdefault(self):
         """Test the method setdefault."""
 
-        for elt in self.cme.content:
+        for elt in list(self.cme.values()):
 
             melt = elt.copy(cleaned=True)
             self.cme.setdefault(melt.name, melt)

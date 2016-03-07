@@ -57,7 +57,7 @@ class TestConfDriver(ConfDriver):
 
     def _cnames(self, resource):
 
-        return resource.names()
+        return list(resource.values())
 
     def _params(self, resource, cname):
 

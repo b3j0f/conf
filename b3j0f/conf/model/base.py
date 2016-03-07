@@ -202,9 +202,7 @@ class CompositeModelElement(ModelElement, OrderedDict):
         return self.__i(
             other=other,
             func=lambda melt:
-            melt.name not in self and self._content.__setitem__(
-                melt.name, melt
-            )
+            melt.name not in self and self.__setitem__(melt.name, melt)
         )
 
     def clean(self, *args, **kwargs):
