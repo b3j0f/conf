@@ -55,6 +55,8 @@ class ExprResolverTest(UTCase):
 
         class Test(ExprResolver):
 
+            __register__ = True
+
             __resolver__ = self.test
 
             def __call__(*args, **kwargs):
@@ -68,6 +70,8 @@ class ExprResolverTest(UTCase):
     def test__name__(self):
 
         class Test(ExprResolver):
+
+            __register__ = True
 
             def __call__(*args, **kwargs):
 
