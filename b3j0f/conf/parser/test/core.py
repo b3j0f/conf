@@ -326,33 +326,33 @@ class StrParserTest(UTCase):
 
     def test_bool(self):
 
-        val = _strparser(svalue='0', vtype=bool)
+        val = _strparser(svalue='0', ptype=bool)
 
         self.assertIs(val, False)
 
-        val = _strparser(svalue='1', vtype=bool)
+        val = _strparser(svalue='1', ptype=bool)
 
         self.assertIs(val, True)
 
-        val = _strparser(svalue='true', vtype=bool)
+        val = _strparser(svalue='true', ptype=bool)
 
         self.assertIs(val, True)
 
-        val = _strparser(svalue='True', vtype=bool)
+        val = _strparser(svalue='True', ptype=bool)
 
         self.assertIs(val, True)
 
     def test_list(self):
 
-        val = _strparser(svalue='1', vtype=list)
+        val = _strparser(svalue='1', ptype=list)
 
         self.assertEqual(val, ['1'])
 
-        val = _strparser(svalue='', vtype=list)
+        val = _strparser(svalue='', ptype=list)
 
         self.assertFalse(val)
 
-        val = _strparser(svalue='1, 2, 3', vtype=list)
+        val = _strparser(svalue='1, 2, 3', ptype=list)
 
         self.assertEqual(val, ['1', '2', '3'])
 

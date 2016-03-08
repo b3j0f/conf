@@ -28,7 +28,7 @@
 
 from __future__ import absolute_import
 
-__all__ = ['Parameter', 'VType']
+__all__ = ['Parameter', 'PType']
 
 from .base import ModelElement
 from ..parser.core import parse, serialize
@@ -43,45 +43,49 @@ from collections import Iterable
 
 from copy import deepcopy
 
+from ..parser.resolver.core import (
+    DEFAULT_SAFE, DEFAULT_BESTEFFORT, DEFAULT_SCOPE
+)
 
-class VType(object):
+
+class PType(object):
     """Dedicated to embed a specific type such as a parameter type in order to
     instanciate easily this embedded type from a parameter serialized value.
 
     Instanciation depends on type of serialiazed value (by order):
 
-    - str: first arg to this _type.
-    - dict: it is given such as a kwargs to this _type.
-    - iterable: it is given such as an args to this _type.
-    - object: it is given such as the only one argument to this _type.
+    - str: first arg to this ptype.
+    - dict: it is given such as a kwargs to this ptype.
+    - iterable: it is given such as an args to this ptype.
+    - object: it is given such as the only one argument to this ptype.
     """
 
-    __slots__ = ('_type')
+    __slots__ = ('ptype')
 
-    def __init__(self, _type, *args, **kwargs):
+    def __init__(self, ptype, *args, **kwargs):
 
-        super(VType, self).__init__(*args, **kwargs)
+        super(PType, self).__init__(*args, **kwargs)
 
-        self._type = _type
+        self.ptype = ptype
 
     def __instancecheck__(self, instance):
-        """Check instance such as this instance or self _type instance."""
+        """Check instance such as this instance or self ptype instance."""
 
-        return isinstance(instance, (VType, self._type))
+        return isinstance(instance, (PType, self.ptype))
 
     def __subclasscheck__(self, subclass):
-        """Check subclass such as this subclass or self _type subclass."""
+        """Check subclass such as this subclass or self ptype subclass."""
 
-        return issubclass(subclass, (VType, self._type))
+        return issubclass(subclass, (PType, self.ptype))
 
     def __call__(self, svalue):
-        """Instantiate a new instance of this _type related to input value.
+        """Instantiate a new instance of this ptype related to input value.
 
         :param ssvalue: Instanciation depends on type of serialiazed value (by order):
 
-        - dict: it is given such as a kwargs to this _type.
-        - iterable: it is given such as an args to this _type.
-        - object: it is given such as the only one argument to this _type."""
+        - dict: it is given such as a kwargs to this ptype.
+        - iterable: it is given such as an args to this ptype.
+        - object: it is given such as the only one argument to this ptype."""
 
         result = None
 
@@ -97,10 +101,10 @@ class VType(object):
             args = svalue
 
         try:
-            result = self._type(*args, **kwargs)
+            result = self.ptype(*args, **kwargs)
 
         except TypeError:
-            msg = 'Wrong value ({0}) with ({1}).'.format(svalue, self._type)
+            msg = 'Wrong value ({0}) with ({1}).'.format(svalue, self.ptype)
             reraise(ParserError, ParserError(msg))
 
         return result
@@ -126,7 +130,7 @@ class Parameter(ModelElement):
     """
 
     __slots__ = (
-        '_name', 'vtype', 'parser', '_svalue', '_value', '_error', 'conf',
+        '_name', 'ptype', 'parser', '_svalue', '_value', '_error', 'conf',
         'local', 'scope', 'configurable', 'serializer', 'besteffort', 'safe'
     ) + ModelElement.__slots__
 
@@ -140,14 +144,11 @@ class Parameter(ModelElement):
     _PARAM_NAME_COMPILER_MATCHER = re_compile(PARAM_NAME_REGEX).match
 
     DEFAULT_NAME = re_compile('.*')
-    DEFAULT_VTYPE = object  #: default vtype.
+    DEFAULT_PTYPE = object  #: default ptype.
     DEFAULT_LOCAL = True  #: default local value.
-    DEFAULT_BESTEFFORT = False  #: default best effort.
-    DEFAULT_SAFE = True  #: default safe
-    DEFAULT_SCOPE = None  #: default scope
 
     def __init__(
-            self, name=DEFAULT_NAME, vtype=DEFAULT_VTYPE, value=None,
+            self, name=DEFAULT_NAME, ptype=DEFAULT_PTYPE, value=None,
             parser=parse, serializer=serialize, svalue=None,
             conf=None, configurable=None,
             local=DEFAULT_LOCAL, scope=DEFAULT_SCOPE, safe=DEFAULT_SAFE,
@@ -161,7 +162,7 @@ class Parameter(ModelElement):
                 common properties (parser, value, conf, etc.).
 
             Default is the regex ``.*``.
-        :param type vtype: parameter value type.
+        :param type ptype: parameter value type.
         :param callable parser: param value deserializer which takes in param a
             str. Default is the expression parser.
         :param callable serializer: param serializer which takes in param an
@@ -189,7 +190,7 @@ class Parameter(ModelElement):
         # init public attributes
         self.parser = parser
         self.serializer = serializer
-        self.vtype = vtype
+        self.ptype = ptype
         self.conf = conf
         self.configurable = configurable
         self.local = local
@@ -236,12 +237,12 @@ class Parameter(ModelElement):
         return hash(self.name) + hash(Parameter)
 
     def __repr__(self):
-        """Display self name, value, svalue, vtype and error.
+        """Display self name, value, svalue, ptype and error.
 
         :rtype: str"""
 
         return 'Parameter({0}, {1}, {2}, {3}, {4})'.format(
-            self.name, self._value, self._svalue, self.vtype, self.error
+            self.name, self._value, self._svalue, self.ptype, self.error
         )
 
     @property
@@ -326,7 +327,7 @@ class Parameter(ModelElement):
 
     def resolve(
             self,
-            configurable=None, conf=None, scope=None, _type=None,
+            configurable=None, conf=None, scope=None, ptype=None,
             parser=None, error=True, svalue=None,
             safe=None, besteffort=None
     ):
@@ -341,7 +342,7 @@ class Parameter(ModelElement):
         :param Configuration conf: configuration to use for
             cross-value resolution.
         :param dict scope: variables to use for local expression evaluation.
-        :param type _type: return type. Default is this vtype.
+        :param type ptype: return type. Default is this ptype.
         :param parser: specific parser to use. Default this parser.
         :param bool error: raise an error if True (False by default).
         :param bool safe: if True (default) resolve without builtins functions.
@@ -357,8 +358,8 @@ class Parameter(ModelElement):
 
             self._error = None  # nonify error.
 
-            if _type is None:
-                _type = self.vtype
+            if ptype is None:
+                ptype = self.ptype
 
             if parser is None:  # init parser
                 parser = self.parser
@@ -389,7 +390,7 @@ class Parameter(ModelElement):
             try:
                 result = self._value = parser(
                     svalue=svalue, conf=conf,
-                    configurable=configurable, _type=_type,
+                    configurable=configurable, ptype=ptype,
                     scope=scope, safe=safe, besteffort=besteffort
                 )
 
@@ -411,7 +412,7 @@ class Parameter(ModelElement):
         calculate the new value from the serialized one.
 
         :return: parameter value.
-        :raises: TypeError if serialized value is not an instance of self vtype
+        :raises: TypeError if serialized value is not an instance of self ptype
             . ParserError if parsing step raised an error.
         """
 
@@ -437,12 +438,12 @@ class Parameter(ModelElement):
         If an error occured, it is stored in this error attribute.
 
         :param value: new value to use. If input value is not an instance of
-            self.vtype, self error
-        :raises: TypeError if input value is not an instance of self vtype.
+            self.ptype, self error
+        :raises: TypeError if input value is not an instance of self ptype.
         """
 
         if value is None or (
-                self.vtype is not None and isinstance(value, self.vtype)
+                self.ptype is not None and isinstance(value, self.ptype)
         ):
             self._value = value
 
@@ -450,7 +451,7 @@ class Parameter(ModelElement):
             # raise wrong type error
             error = TypeError(
                 'Wrong value type of ({0}). {1} expected.'.format(
-                    value, self.vtype
+                    value, self.ptype
                 )
             )
             self._error = error
@@ -466,7 +467,7 @@ class Parameter(ModelElement):
         """
 
         props = (
-            'name', 'parser', 'local', 'vtype', 'conf', 'scope', 'besteffort'
+            'name', 'parser', 'local', 'ptype', 'conf', 'scope', 'besteffort'
         )
         for prop in props:
             kwargs.setdefault(prop, getattr(self, prop))

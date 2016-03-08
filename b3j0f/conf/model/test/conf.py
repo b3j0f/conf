@@ -66,57 +66,41 @@ class ConfigurationTest(UTCase):
     def test_resolve(self):
         """Test the method resolve."""
 
-        for cat in self.conf:
-            for param in cat:
+        for cat in self.conf.values():
+            for param in cat.values():
                 param.svalue = '=1'
 
         self.conf.resolve()
 
-        for cat in self.conf:
-            for param in cat:
+        for cat in self.conf.values():
+            for param in cat.values():
                 self.assertEqual(param.value, 1)
 
-    def test_unify(self):
-        """Test the function unify."""
+    def test_params(self):
+        """Test the params property."""
 
-        unifiedconf = self.conf.unify()
+        params = self.conf.params
 
-        self.assertNotIn(Configuration.ERRORS, self.conf)
-        self.assertIn(Configuration.ERRORS, unifiedconf)
-
-        errors = unifiedconf[Configuration.ERRORS]
+        errors = list(param for param in params.values() if param.error)
         self.assertEqual(len(errors), (self.count * (self.count + 1) // 8) + 1)
-
-        self.assertNotIn(Configuration.VALUES, self.conf)
-        self.assertIn(Configuration.VALUES, unifiedconf)
-
-        self.assertNotIn(Configuration.FOREIGNS, self.conf)
-        self.assertIn(Configuration.FOREIGNS, unifiedconf)
-
-    def test_get_unified_category(self):
-        """Test the method get_unified_category."""
-
-        cat = self.conf.get_unified_category(name='test')
-
-        self.assertEqual(len(cat), self.count * 2)
 
     def test_pvalue(self):
         """Test the method pvalue."""
 
-        for cat in self.conf:
+        for cat in self.conf.values():
 
-            for param in cat:
+            for param in cat.values():
 
                 value = param.value
 
                 if value is None:
                     continue
 
-                pvalue = self.conf.pvalue(pname=param.name)
+                pvalue = self.conf.param(pname=param.name).value
 
                 self.assertEqual(value, pvalue)
 
-                pvalue = self.conf.pvalue(pname=param.name, cname=cat.name)
+                pvalue = self.conf.param(pname=param.name, cname=cat.name).value
 
                 self.assertEqual(value, pvalue)
 
@@ -126,7 +110,7 @@ class ConfigurationTest(UTCase):
         copiedcat = self.conf['0'].copy()
         copiedcat += Parameter('test', value=-1)
 
-        for param in copiedcat:
+        for param in copiedcat.values():
             param.value = -1
 
         conf = Configuration(
@@ -138,12 +122,12 @@ class ConfigurationTest(UTCase):
 
         self.assertIs(self.conf['test'], conf['test'])
 
-        for cat in conf:
+        for cat in conf.values():
             if cat.name == 'test':
                 self.assertIs(self.conf['test'], cat)
 
             else:
-                for param in cat:
+                for param in cat.values():
 
                     if cat.name == '0':
                         self.assertIn('test', cat)

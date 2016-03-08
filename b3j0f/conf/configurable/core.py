@@ -335,10 +335,10 @@ class Configurable(PrivateInterceptor):
         result = Configuration(
             Category(
                 Configurable.CATEGORY,
-                Parameter(name=Configurable.DRIVERS, vtype=tuple),
-                Parameter(name=Configurable.CONFPATHS, vtype=tuple),
-                Parameter(name=Configurable.INHERITEDCONF, vtype=bool),
-                Parameter(name=Configurable.STORE, vtype=bool)
+                Parameter(name=Configurable.DRIVERS, ptype=tuple),
+                Parameter(name=Configurable.CONFPATHS, ptype=tuple),
+                Parameter(name=Configurable.INHERITEDCONF, ptype=bool),
+                Parameter(name=Configurable.STORE, ptype=bool)
             )
         )
 

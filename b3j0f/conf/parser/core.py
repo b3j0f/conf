@@ -27,7 +27,7 @@
 """Parameter parser module.
 
 The parser transforms a serializated parameter value to a parameter value,
-related to parameter properties (vtype, scope, safe, etc.).
+related to parameter properties (ptype, scope, safe, etc.).
 
 It takes in parameter:
 
@@ -39,7 +39,7 @@ It takes in parameter:
     configurable, the configurable
     logger, a logger
     scope, dictionary of variables for expression evaluation
-    vtype, final value type to check
+    ptype, final value type to check
 
 There are two kind of values:
 
@@ -203,7 +203,7 @@ def serialize(expr):
 
 
 def parse(
-        svalue, conf=None, configurable=None, vtype=object,
+        svalue, conf=None, configurable=None, ptype=object,
         scope=DEFAULT_SCOPE, safe=DEFAULT_SAFE, besteffort=DEFAULT_BESTEFFORT
 ):
     """Parser which delegates parsing to expression or format parser."""
@@ -230,10 +230,10 @@ def parse(
             scope=_scope, safe=safe, besteffort=besteffort
         )
 
-    # try to cast value in vtype
-    if not isinstance(result, vtype):
+    # try to cast value in ptype
+    if not isinstance(result, ptype):
         try:
-            result = vtype(result)
+            result = ptype(result)
 
         except TypeError:
             result = result
@@ -266,7 +266,7 @@ def _exprparser(
 
 
 def _strparser(
-        svalue, safe=DEFAULT_SAFE, vtype=str, scope=DEFAULT_SCOPE,
+        svalue, safe=DEFAULT_SAFE, ptype=str, scope=DEFAULT_SCOPE,
         configurable=None, conf=None, besteffort=DEFAULT_BESTEFFORT
 ):
 
@@ -277,17 +277,17 @@ def _strparser(
         ), svalue
     )
 
-    if not issubclass(vtype, string_types):
+    if not issubclass(ptype, string_types):
 
-        if issubclass(vtype, bool):
+        if issubclass(ptype, bool):
             result = result in ('1', 'True', 'true')
 
-        elif issubclass(vtype, Iterable):
+        elif issubclass(ptype, Iterable):
             if result:
-                result = vtype((item.strip() for item in result.split(',')))
+                result = ptype((item.strip() for item in result.split(',')))
 
             else:
-                result = vtype()
+                result = ptype()
 
     return result
 

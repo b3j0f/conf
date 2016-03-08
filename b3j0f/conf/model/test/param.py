@@ -35,53 +35,53 @@ from six import string_types
 
 from b3j0f.utils.ut import UTCase
 
-from ..param import Parameter, VType
+from ..param import Parameter, PType
 from parser import ParserError
 
 
-class VTypeTest(UTCase):
-    """Test VType."""
+class PTypeTest(UTCase):
+    """Test PType."""
 
     def setUp(self):
 
-        self.vtype = VType(_type=Parameter)
+        self.ptype = PType(ptype=Parameter)
 
     def test_isinstance(self):
         """Test if isinstance."""
 
-        self.assertIsInstance(Parameter(''), self.vtype)
+        self.assertIsInstance(Parameter(''), self.ptype)
 
-    def test_VTypeisinstance(self):
+    def test_PTypeisinstance(self):
         """Test isinstance of PTYpe."""
 
-        self.assertIsInstance(self.vtype, self.vtype)
+        self.assertIsInstance(self.ptype, self.ptype)
 
     def test_isnotinstance(self):
         """Test is not instance."""
 
-        self.assertNotIsInstance(None, self.vtype)
+        self.assertNotIsInstance(None, self.ptype)
 
     def test_issubclass(self):
         """Test is subclass."""
 
-        self.assertTrue(issubclass(Parameter, self.vtype))
+        self.assertTrue(issubclass(Parameter, self.ptype))
 
-    def test_VTypeissubclass(self):
-        """Test is subclass of VType."""
+    def test_PTypeissubclass(self):
+        """Test is subclass of PType."""
 
-        self.assertTrue(issubclass(VType, self.vtype))
+        self.assertTrue(issubclass(PType, self.ptype))
 
     def test_notissubclass(self):
         """Test is not subclass."""
 
-        self.assertFalse(issubclass(type(None), self.vtype))
+        self.assertFalse(issubclass(type(None), self.ptype))
 
     def test_instanciate(self):
         """Test to instanciate a parameter."""
 
         value = 'test'
 
-        param = self.vtype(value)
+        param = self.ptype(value)
 
         self.assertIsInstance(param, Parameter)
         self.assertEqual(value, param.name)
@@ -91,7 +91,7 @@ class VTypeTest(UTCase):
 
         value = {'name': 'test'}
 
-        param = self.vtype(value)
+        param = self.ptype(value)
 
         self.assertIsInstance(param, Parameter)
         self.assertEqual(value['name'], param.name)
@@ -101,7 +101,7 @@ class VTypeTest(UTCase):
 
         value = ['test']
 
-        param = self.vtype(value)
+        param = self.ptype(value)
 
         self.assertIsInstance(param, Parameter)
         self.assertEqual(value[0], param.name)
@@ -111,7 +111,7 @@ class VTypeTest(UTCase):
 
         svalue = 1
 
-        value = VType(str)(svalue)
+        value = PType(str)(svalue)
 
         self.assertIsInstance(value, str)
         self.assertEqual(value, str(1))
@@ -119,7 +119,7 @@ class VTypeTest(UTCase):
     def test_instanciateerror(self):
         """Test to instanciate with an error."""
 
-        self.assertRaises(ParserError, self.vtype, {'': None})
+        self.assertRaises(ParserError, self.ptype, {'': None})
 
 
 class ParameterTest(UTCase):
@@ -256,10 +256,10 @@ class ParameterTest(UTCase):
 
         self.assertEqual(value, 1)
 
-    def test_value_error_vtype(self):
+    def test_value_error_ptype(self):
         """Test to set value with wrong type."""
 
-        self.param.vtype = int
+        self.param.ptype = int
 
         self.assertRaises(
             TypeError, lambda x: setattr(self.param, 'value', x), '3'
@@ -277,7 +277,7 @@ class ParameterTest(UTCase):
         param = Parameter(
             name='test',
             local=not Parameter.DEFAULT_LOCAL,
-            vtype=int,
+            ptype=int,
             conf=1,
             value=1,
             svalue='=1'
@@ -287,7 +287,7 @@ class ParameterTest(UTCase):
 
         self.assertEqual(param.name, cparam.name)
         self.assertEqual(param.local, cparam.local)
-        self.assertEqual(param.vtype, cparam.vtype)
+        self.assertEqual(param.ptype, cparam.ptype)
         self.assertEqual(param.conf, cparam.conf)
         self.assertEqual(param.value, cparam.value)
         self.assertEqual(param.svalue, cparam.svalue)
@@ -298,7 +298,7 @@ class ParameterTest(UTCase):
         param = Parameter(
             name='test',
             local=not Parameter.DEFAULT_LOCAL,
-            vtype=int,
+            ptype=int,
             conf=1,
             value=1,
             svalue='=1'
@@ -308,7 +308,7 @@ class ParameterTest(UTCase):
 
         self.assertEqual(param.name, cparam.name)
         self.assertEqual(param.local, cparam.local)
-        self.assertEqual(param.vtype, cparam.vtype)
+        self.assertEqual(param.ptype, cparam.ptype)
         self.assertEqual(param.conf, cparam.conf)
         self.assertIsNone(cparam.value)
         self.assertIsNone(cparam.svalue)

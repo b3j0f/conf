@@ -228,18 +228,18 @@ class CompositeModelElement(ModelElement, OrderedDict):
 
     @property
     def params(self):
-        """Get set of parameters.
+        """Get set of parameters by names.
 
-        :rtype: list"""
+        :rtype: dict"""
 
-        result = set()
+        result = {}
 
         for content in list(self.values()):
 
             if isinstance(content, CompositeModelElement):
-                result = content.params | result
+                result.update(content.params)
 
             else:
-                result.add(content)
+                result[content.name] = content
 
-        return list(result)
+        return result

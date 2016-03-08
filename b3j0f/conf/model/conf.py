@@ -43,7 +43,7 @@ class Configuration(CompositeModelElement):
     __slots__ = CompositeModelElement.__slots__
 
     def resolve(
-            self, configurable=None, scope=None, safe=True
+            self, configurable=None, scope=None, safe=True, besteffort=True
     ):
         """Resolve all parameters.
 
@@ -56,11 +56,11 @@ class Configuration(CompositeModelElement):
 
         for category in self.values():
 
-            for param in category:
+            for param in category.values():
 
                 param.resolve(
                     configurable=configurable, conf=self,
-                    scope=scope, safe=safe
+                    scope=scope, safe=safe, besteffort=besteffort
                 )
 
     def param(self, pname, cname=None, history=0):
@@ -109,13 +109,13 @@ class Configuration(CompositeModelElement):
         :param Configuration conf: configuration from where get parameter values
             and svalues."""
 
-        for cat in conf:
+        for cat in conf.values():
 
             if cat.name in self:
 
                 selfcat = self[cat.name]
 
-                for param in cat:
+                for param in list(cat.values()):
 
                     paramstoupdate = selfcat.getparams(param=param)
 

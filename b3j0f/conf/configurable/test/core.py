@@ -56,14 +56,14 @@ class ConfigurableTest(UTCase):
         self.conf = Configuration(
             Category(
                 'A',
-                Parameter('a', value='a', vtype=str),
-                Parameter('_', value=2, vtype=int),
-                Parameter('error', vtype=float, svalue='error')
+                Parameter('a', value='a', ptype=str),
+                Parameter('_', value=2, ptype=int),
+                Parameter('error', ptype=float, svalue='error')
             ),
             Category(
                 'B',
-                Parameter('a', value='b', vtype=str),
-                Parameter('b', value='b', vtype=str)
+                Parameter('a', value='b', ptype=str),
+                Parameter('b', value='b', ptype=str)
             )
         )
 
