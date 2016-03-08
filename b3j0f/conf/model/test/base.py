@@ -105,7 +105,7 @@ class CompositeModelElementTest(UTCase):
             ModelElementTest.TestME(name=str(i)) for i in range(self.count)
         ]
 
-        self.cme = CompositeModelElementTest.TestCME(*content)
+        self.cme = CompositeModelElementTest.TestCME(melts=content)
 
     def test___iter__(self):
         """Test the __iter__ method."""

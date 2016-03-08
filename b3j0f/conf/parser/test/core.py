@@ -275,7 +275,7 @@ class RefTest(UTCase):
 
         for i in range(self.count):
             cat = Category(
-                str(i), Parameter(name=self.pname, value=i)
+                str(i), melts=[Parameter(name=self.pname, value=i)]
             )
             self.conf += cat
 
@@ -358,7 +358,9 @@ class StrParserTest(UTCase):
 
     def test_format(self):
 
-        conf = Configuration(Category('', Parameter('se', value='es')))
+        conf = Configuration(
+            melts=[Category('', melts=[Parameter('se', value='es')])]
+        )
 
         svalue = 't%"es"%t'
 
@@ -368,7 +370,9 @@ class StrParserTest(UTCase):
 
     def test_format_expr(self):
 
-        conf = Configuration(Category('', Parameter('se', value='es')))
+        conf = Configuration(
+            melts=[Category('', melts=[Parameter('se', value='es')])]
+    )
 
         svalue = '%"t"%@se%"t"%'
 
@@ -395,7 +399,7 @@ class ConfigurationTest(UTCase):
             self.pvalues[i] = i + 1
             category = Category(
                 self.cnames[i],
-                Parameter('param', value=self.pvalues[i])
+                melts=[Parameter('param', value=self.pvalues[i])]
             )
             self.conf += category
 

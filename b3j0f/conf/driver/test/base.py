@@ -57,7 +57,7 @@ class TestConfDriver(ConfDriver):
 
     def _cnames(self, resource):
 
-        return list(resource.values())
+        return list(resource)
 
     def _params(self, resource, cname):
 
@@ -66,7 +66,7 @@ class TestConfDriver(ConfDriver):
         for pname in resource[cname]:
             parameter = resource[cname][pname]
             pvalue = parameter.value
-            result.append((pname.name, pvalue))
+            result.append((pname, pvalue))
 
         return result
 

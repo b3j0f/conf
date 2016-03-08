@@ -114,15 +114,16 @@ class CompositeModelElement(ModelElement, OrderedDict):
 
     __slots__ = ModelElement.__slots__
 
-    def __init__(self, *melts):
+    def __init__(self, melts=None):
         """
         :param tuple melts: model elements to add.
         """
 
         super(CompositeModelElement, self).__init__()
 
-        for melt in melts:
-            self[melt.name] = melt
+        if melts is not None:
+            for melt in melts:
+                self[melt.name] = melt
 
     def __deepcopy__(self, _):
 
@@ -218,11 +219,9 @@ class CompositeModelElement(ModelElement, OrderedDict):
                 attr = getattr(self, slot)
                 kwargs[slot] = attr
 
-        result = super(CompositeModelElement, self).copy(*args, **kwargs)
+        melts = list(melt.copy(cleaned=cleaned) for melt in self.values())
 
-        for content in list(self.values()):
-
-            result += content.copy(cleaned=cleaned)
+        result = super(CompositeModelElement, self).copy(melts=melts, *args, **kwargs)
 
         return result
 

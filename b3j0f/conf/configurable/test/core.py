@@ -106,7 +106,7 @@ class ConfigurableTest(UTCase):
 
         param = 'test'
 
-        conf = Configuration(Category('TEST', Parameter(param, value=True)))
+        conf = Configuration(melts=Category('TEST', Parameter(param, value=True)))
 
         self.configurable.configure(conf=conf, toconfigure=toconfigure)
         self.assertTrue(toconfigure.test)

@@ -70,8 +70,8 @@ class TestFileConfDriver(FileConfDriver):
 
     def _setconf(self, resource, rscpath, conf):
 
-        for cat in conf:
-            for param in cat:
+        for cat in conf.values():
+            for param in cat.values():
                 resource.setdefault(cat.name, {})[param.name] = param.svalue
 
         with open(rscpath, 'wb') as handle:

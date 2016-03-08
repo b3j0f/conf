@@ -31,6 +31,10 @@ __all__ = ['Configuration']
 from .base import CompositeModelElement
 from .cat import Category
 
+from ..parser.resolver.core import (
+    DEFAULT_SAFE, DEFAULT_BESTEFFORT, DEFAULT_SCOPE
+)
+
 
 class Configuration(CompositeModelElement):
     """Manage conf such as a list of Categories.
@@ -40,10 +44,23 @@ class Configuration(CompositeModelElement):
 
     __contenttype__ = Category  #: content type.
 
-    __slots__ = CompositeModelElement.__slots__
+    __slots__ = (
+        'safe', 'besteffort', 'scope'
+    ) + CompositeModelElement.__slots__
+
+    def __init__(
+            self, safe=DEFAULT_SAFE, besteffort=DEFAULT_BESTEFFORT,
+            scope=DEFAULT_SCOPE, *args, **kwargs
+        ):
+
+            super(Configuration, self).__init__(*args, **kwargs)
+
+            self.safe = safe
+            self.besteffort = besteffort
+            self.scope = scope
 
     def resolve(
-            self, configurable=None, scope=None, safe=True, besteffort=True
+            self, configurable=None, scope=None, safe=None, besteffort=None
     ):
         """Resolve all parameters.
 
@@ -53,6 +70,15 @@ class Configuration(CompositeModelElement):
         :param bool safe: safe execution (remove builtins functions).
         :raises: Parameter.Error for any raised exception.
         """
+
+        if scope is None:
+            scope = self.scope
+
+        if safe is None:
+            safe = self.safe
+
+        if besteffort is None:
+            besteffort = self.besteffort
 
         for category in self.values():
 

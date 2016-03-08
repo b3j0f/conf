@@ -114,8 +114,10 @@ class ConfigurationTest(UTCase):
             param.value = -1
 
         conf = Configuration(
-            Category('test', Parameter('test')),
-            copiedcat
+            melts=[
+                Category('test', melts=[Parameter('test')]),
+                copiedcat
+            ]
         )
 
         self.conf.update(conf)
