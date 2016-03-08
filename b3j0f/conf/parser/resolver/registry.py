@@ -66,11 +66,19 @@ from .core import (
     DEFAULT_BESTEFFORT, DEFAULT_SAFE, DEFAULT_TOSTR, DEFAULT_SCOPE
 )
 
+
+def loadresolvers(paths):
+    """Load input path modules in order to register external resolvers.
+
+    :param list paths: list of paths to load."""
+
+    for path in paths:
+        lookup(path)
+
 #: env variable name of exprres modules.
 B3J0F_EXPRRES_PATH = 'B3J0F_EXPRRES_PATH'
 
 EXPRRES_PATH = getenv(B3J0F_EXPRRES_PATH)  #: expression resolver modules.
-
 
 if EXPRRES_PATH:  # load modules
     loadresolvers(EXPRRES_PATH.split(','))
@@ -157,14 +165,6 @@ class ResolverRegistry(OrderedDict):
         return result
 
 _RESOLVER_REGISTRY = ResolverRegistry()  #: default registry
-
-def loadresolvers(paths):
-    """Load input path modules in order to register external resolvers.
-
-    :param list paths: list of paths to load."""
-
-    for path in paths:
-        lookup(path)
 
 
 def register(name=None, exprresolver=None, params=None, reg=None):

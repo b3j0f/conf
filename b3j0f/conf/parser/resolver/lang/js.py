@@ -24,9 +24,9 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-from __future__ import print_function
-
 """Javascript expression resolver."""
+
+from __future__ import print_function
 
 __all__ = ['resolvejs']
 
@@ -37,7 +37,7 @@ from ..core import (
 )
 
 try:
-	from PyV8 import JSContext
+    from PyV8 import JSContext
 
 except ImportError:
 

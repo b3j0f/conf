@@ -588,7 +588,7 @@ class Configurable(PrivateInterceptor):
 
                 if sub_conf_name in sub_confs:
 
-                    cat = sub_confs[sub_conf_name]
+                    cat = conf[sub_conf_name]
 
                     kwargs = {}
 
