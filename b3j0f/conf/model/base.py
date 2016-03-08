@@ -159,7 +159,7 @@ class CompositeModelElement(ModelElement, OrderedDict):
         :raise: TypeError if other is not a ModelElement(s)."""
 
         if isinstance(other, type(self)):
-            other = tuple(other.content)
+            other = tuple(other)
 
         elif isinstance(other, self.__contenttype__):
             other = (other, )

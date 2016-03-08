@@ -38,12 +38,15 @@ from b3j0f.utils.version import getcallargs
 
 from b3j0f.annotation import PrivateInterceptor
 
-from ..model.conf import Configuration
-from ..model.cat import Category
+from ..model.conf import Configuration, configuration
+from ..model.cat import Category, category
 from ..model.param import Parameter
 from ..driver.file.json import JSONFileConfDriver
 from ..driver.file.ini import INIFileConfDriver
 from ..driver.file.xml import XMLFileConfDriver
+from ..parser.resolver.core import (
+    DEFAULT_SAFE, DEFAULT_SCOPE, DEFAULT_BESTEFFORT
+)
 
 __CONFIGURABLES__ = '__configurables__'
 
@@ -58,6 +61,8 @@ class Configurable(PrivateInterceptor):
 
     CATEGORY = 'CONFIGURABLE'  #: configuration category name.
 
+    CONF = 'conf'  #: self configuration attribute name.
+
     CONFPATHS = 'paths'  #: paths attribute name.
     DRIVERS = 'drivers'  #: drivers attribute name.
     INHERITEDCONF = 'inheritedconf'  #: usecls conf attribute name.
@@ -66,6 +71,8 @@ class Configurable(PrivateInterceptor):
     FOREIGNS = 'foreigns'  #: not specified params setting attribute name.
     AUTOCONF = 'autoconf'  #: auto conf attribute name.
     SAFE = 'safe'  #: safe attribute name.
+    SCOPE = 'scope'  #: scope attribute name.
+    BESTEFFORT = 'besteffort'  #: best effort attribute name.
 
     DEFAULT_CONFPATHS = ('b3j0fconf-configurable.conf', )  #: default conf path.
     DEFAULT_INHERITEDCONF = True  #: default inheritedconf value.
@@ -76,7 +83,6 @@ class Configurable(PrivateInterceptor):
         JSONFileConfDriver(), INIFileConfDriver(), XMLFileConfDriver()
     )
     DEFAULT_AUTOCONF = True  #: default value for auto configuration.
-    DEFAULT_SAFE = True  #: default value for safe attribute.
 
     SUB_CONF_PREFIX = ':'  #: sub conf prefix.
 
@@ -85,7 +91,8 @@ class Configurable(PrivateInterceptor):
             conf=None, inheritedconf=DEFAULT_INHERITEDCONF, confpath=None,
             store=DEFAULT_STORE, paths=None, drivers=DEFAULT_DRIVERS,
             foreigns=DEFAULT_FOREIGNS, autoconf=DEFAULT_AUTOCONF,
-            toconfigure=(), safe=DEFAULT_SAFE, modules=None, callparams=True,
+            toconfigure=(), safe=DEFAULT_SAFE, scope=DEFAULT_SCOPE,
+            besteffort=DEFAULT_BESTEFFORT, modules=None, callparams=True,
             *args, **kwargs
     ):
         """
@@ -112,6 +119,8 @@ class Configurable(PrivateInterceptor):
         :param bool safe: if True (default), expression parser are used in a
             safe context to resolve python object. For example, if safe,
             builtins function such as `open` are not resolvable.
+        :param dict scope: expression resolver scope.
+        :param bool besteffort: expression resolver best effort flag.
         :param list modules: required modules.
         :param bool callparams: if True (default), use parameters in the
             configured callable function."""
@@ -138,6 +147,8 @@ class Configurable(PrivateInterceptor):
         self.confpath = confpath
         self.paths = paths
         self.safe = safe
+        self.scope = scope
+        self.besteffort = besteffort
         self.autoconf = autoconf  # end of dirty hack
         self.modules = modules
         self.callparams = callparams
@@ -148,7 +159,7 @@ class Configurable(PrivateInterceptor):
 
             conf = self.conf
 
-            params = conf.params
+            params = conf.params.values()
 
             args, kwargs = joinpoint.args, joinpoint.kwargs
 
@@ -236,8 +247,8 @@ class Configurable(PrivateInterceptor):
 
         conf = self.getconf(paths=value)
         # force to get parameters if values are parameters
-        for cat in conf:
-            for param in cat:
+        for cat in conf.values():
+            for param in cat.values():
                 if isinstance(param.value, Parameter):
                     conf[cat.name] = param.value
 
@@ -320,7 +331,7 @@ class Configurable(PrivateInterceptor):
 
         if self.inheritedconf:
             self._conf = self.clsconf()
-            self._conf += value
+            self._conf.update(value)
 
         else:
             self._conf = value
@@ -332,13 +343,17 @@ class Configurable(PrivateInterceptor):
     def clsconf(cls):
         """Method to override in order to specify class configuration."""
 
-        result = Configuration(
-            Category(
+        result = configuration(
+            category(
                 Configurable.CATEGORY,
+                Parameter(name=Configurable.CONF, ptype=Configuration),
                 Parameter(name=Configurable.DRIVERS, ptype=tuple),
                 Parameter(name=Configurable.CONFPATHS, ptype=tuple),
                 Parameter(name=Configurable.INHERITEDCONF, ptype=bool),
-                Parameter(name=Configurable.STORE, ptype=bool)
+                Parameter(name=Configurable.STORE, ptype=bool),
+                Parameter(name=Configurable.SCOPE, ptype=dict),
+                Parameter(name=Configurable.SAFE, ptype=bool),
+                Parameter(name=Configurable.BESTEFFORT, ptype=bool)
             )
         )
 
@@ -382,7 +397,7 @@ class Configurable(PrivateInterceptor):
 
     def applyconfiguration(
             self, conf=None, paths=None, drivers=None, logger=None,
-            toconfigure=None, _locals=None, _globals=None
+            toconfigure=None, scope=None, safe=None, besteffort=None
     ):
         """Apply conf on a destination in those phases:
 
@@ -397,11 +412,17 @@ class Configurable(PrivateInterceptor):
             automatically putted into a list.
         :type paths: list of str
         :param toconfigure: object to configure. self by default.
-        :param dict _locals: local variable to use for local python expression
-            resolution.
-        :param dict _globals: global variable to use for local python
-            expression resolution.
+        :param dict scope: local variables to use for expression resolution.
         """
+
+        if scope is None:
+            scope = self.scope
+
+        if safe is None:
+            safe = self.safe
+
+        if besteffort is None:
+            besteffort = self.besteffort
 
         if toconfigure is None:  # init toconfigure
             toconfigure = self.toconfigure
@@ -412,8 +433,8 @@ class Configurable(PrivateInterceptor):
 
                 self.applyconfiguration(
                     conf=conf, paths=paths, drivers=drivers,
-                    logger=logger, toconfigure=target,
-                    _locals=_locals, _globals=_globals
+                    logger=logger, toconfigure=target, scope=scope, safe=safe,
+                    besteffort=besteffort
                 )
 
         else:
@@ -424,7 +445,7 @@ class Configurable(PrivateInterceptor):
             # resolve all values
             conf.resolve(
                 configurable=self,
-                _globals=_globals, _locals=_locals, safe=self.safe
+                scope=scope, safe=safe, besteffort=besteffort
             )
             # configure resolved configuration
             self.configure(conf=conf, toconfigure=toconfigure)
@@ -543,15 +564,15 @@ class Configurable(PrivateInterceptor):
             sub_confs = []
             params = []
 
-            for category in conf:
-                if category.name.startswith(self.SUB_CONF_PREFIX):
-                    sub_confs.append(category.name)
+            for cat in conf.values():
+                if cat.name.startswith(self.SUB_CONF_PREFIX):
+                    sub_confs.append(cat.name)
 
                 else:
-                    cparams = category.params
-                    params += cparams
+                    cparams = cat.params
+                    params += cparams.values()
 
-                    for param in cparams:
+                    for param in cparams.values():
 
                         value = param.value
 
@@ -567,10 +588,11 @@ class Configurable(PrivateInterceptor):
 
                 if sub_conf_name in sub_confs:
 
-                    category = sub_confs[sub_conf_name]
+                    cat = sub_confs[sub_conf_name]
 
                     kwargs = {}
-                    for param in category.params:
+
+                    for param in cat.params:
 
                         kwargs[param.name] = param.value
 

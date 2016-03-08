@@ -51,13 +51,13 @@ class Configuration(CompositeModelElement):
     def __init__(
             self, safe=DEFAULT_SAFE, besteffort=DEFAULT_BESTEFFORT,
             scope=DEFAULT_SCOPE, *args, **kwargs
-        ):
+    ):
 
-            super(Configuration, self).__init__(*args, **kwargs)
+        super(Configuration, self).__init__(*args, **kwargs)
 
-            self.safe = safe
-            self.besteffort = besteffort
-            self.scope = scope
+        self.safe = safe
+        self.besteffort = besteffort
+        self.scope = scope
 
     def resolve(
             self, configurable=None, scope=None, safe=None, besteffort=None
@@ -163,3 +163,9 @@ class Configuration(CompositeModelElement):
 
             else:
                 self += cat
+
+
+def configuration(*cats):
+    """Quick instanciaton of Configuration with categories."""
+
+    return Configuration(melts=cats)

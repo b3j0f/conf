@@ -31,8 +31,8 @@ from unittest import main
 
 from b3j0f.utils.ut import UTCase
 
-from ..conf import Configuration
-from ..cat import Category
+from ..conf import Configuration, configuration
+from ..cat import Category, category
 from ..param import Parameter
 
 
@@ -113,11 +113,9 @@ class ConfigurationTest(UTCase):
         for param in copiedcat.values():
             param.value = -1
 
-        conf = Configuration(
-            melts=[
-                Category('test', melts=[Parameter('test')]),
-                copiedcat
-            ]
+        conf = configuration(
+            category('test', Parameter('test')),
+            copiedcat
         )
 
         self.conf.update(conf)

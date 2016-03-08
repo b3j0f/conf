@@ -191,15 +191,17 @@ class Logger(Configurable):
         result = Configurable.clsconf()
 
         result += Category(
-            Logger.LOG,
-            Parameter(name=Logger.LOG_NAME),
-            Parameter(name=Logger.LOG_PATH),
-            Parameter(name=Logger.LOG_LVL),
-            Parameter(name=Logger.LOG_DEBUG_FORMAT),
-            Parameter(name=Logger.LOG_INFO_FORMAT),
-            Parameter(name=Logger.LOG_WARNING_FORMAT),
-            Parameter(name=Logger.LOG_ERROR_FORMAT),
-            Parameter(name=Logger.LOG_CRITICAL_FORMAT)
+            name=Logger.LOG,
+            melts=[
+                Parameter(name=Logger.LOG_NAME),
+                Parameter(name=Logger.LOG_PATH),
+                Parameter(name=Logger.LOG_LVL),
+                Parameter(name=Logger.LOG_DEBUG_FORMAT),
+                Parameter(name=Logger.LOG_INFO_FORMAT),
+                Parameter(name=Logger.LOG_WARNING_FORMAT),
+                Parameter(name=Logger.LOG_ERROR_FORMAT),
+                Parameter(name=Logger.LOG_CRITICAL_FORMAT)
+            ]
         )
 
         return result

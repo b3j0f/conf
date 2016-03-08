@@ -92,12 +92,16 @@ class ConfDriverTest(UTCase):
         self.conf = Configuration(
             Category(
                 'A',
-                Parameter('a', value=0, ptype=int),  # a is 0
-                Parameter('b', value=True, ptype=bool)
+                melts=[
+                    Parameter('a', value=0, ptype=int),  # a is 0
+                    Parameter('b', value=True, ptype=bool)
+                ]
             ),  # b is overriden
             Category(
                 'B',
-                Parameter('b', value=1, ptype=int),  # b is 1
+                melts=[
+                    Parameter('b', value=1, ptype=int),  # b is 1
+                ]
             )
         )
 
@@ -131,7 +135,7 @@ class ConfDriverTest(UTCase):
                 self.assertTrue(rscpath.endswith(path))
 
                 conf = self.conf.copy()
-                conf += Category('test', Parameter('test'))
+                conf += Category('test', melts=[Parameter('test')])
 
                 self.driver.setconf(rscpath=rscpath, conf=conf)
 

@@ -31,15 +31,13 @@ from unittest import main
 from b3j0f.utils.ut import UTCase
 
 from ..core import Configurable, getconfigurables, applyconfiguration
-from ...model.conf import Configuration
-from ...model.cat import Category
+from ...model.conf import Configuration, configuration
+from ...model.cat import Category, category
 from ...model.param import Parameter
 
 from ...driver.test.base import TestConfDriver
 
 from tempfile import NamedTemporaryFile
-
-from os import remove
 
 
 class ConfigurableTest(UTCase):
@@ -53,14 +51,14 @@ class ConfigurableTest(UTCase):
 
         self.configurable = Configurable()
 
-        self.conf = Configuration(
-            Category(
+        self.conf = configuration(
+            category(
                 'A',
                 Parameter('a', value='a', ptype=str),
                 Parameter('_', value=2, ptype=int),
                 Parameter('error', ptype=float, svalue='error')
             ),
-            Category(
+            category(
                 'B',
                 Parameter('a', value='b', ptype=str),
                 Parameter('b', value='b', ptype=str)
@@ -106,7 +104,7 @@ class ConfigurableTest(UTCase):
 
         param = 'test'
 
-        conf = Configuration(melts=Category('TEST', Parameter(param, value=True)))
+        conf = configuration(category('TEST', Parameter(param, value=True)))
 
         self.configurable.configure(conf=conf, toconfigure=toconfigure)
         self.assertTrue(toconfigure.test)
@@ -115,7 +113,7 @@ class ConfigurableTest(UTCase):
         """Test to configure an object without inheritance."""
 
         @Configurable(
-            conf=Category('TEST', Parameter('test', value=True))
+            conf=category('TEST', Parameter('test', value=True))
         )
         class ToConfigure(object):
             """Class to configure."""
@@ -154,19 +152,19 @@ class ConfigurableTest(UTCase):
     def test_inheritance(self):
         """Test with inheritance between toconfigure objects."""
 
-        conf0 = Configuration(
-            Category(
+        conf0 = configuration(
+            category(
                 'test0',
                 Parameter('test0', value=0)
             ),
-            Category(
+            category(
                 'test1',
                 Parameter('test1', value=1)
             )
         )
 
-        conf1 = Configuration(
-            Category(
+        conf1 = configuration(
+            category(
                 'test1',
                 Parameter('test1', value=2)
             )
@@ -224,22 +222,22 @@ class ConfigurableTest(UTCase):
 
         tcd0, tcd1 = TestConfDriver(), TestConfDriver()
 
-        tcd0.confbypath['test0'] = Configuration(
-            Category(
+        tcd0.confbypath['test0'] = configuration(
+            category(
                 'test',
                 Parameter('test0', value='0')
             )
         )
-        tcd0.confbypath['test1'] = Configuration(
-            Category(
+        tcd0.confbypath['test1'] = configuration(
+            category(
                 'test',
                 Parameter('test1', value='1')
             )
         )
-        tcd1.confbypath['test1'] = Configuration(
-            Category(
+        tcd1.confbypath['test1'] = configuration(
+            category(
                 'test',
-                Parameter('test2', value='=@://test0/test.test0 + @://test1/test.test1'),
+                Parameter('test2', value='@test0/test.test0 + @test1/test.test1'),
                 Parameter('test3', value=3)
             )
         )
@@ -258,8 +256,8 @@ class ConfigurableTest(UTCase):
     def test_safe(self):
         """Test to configurate a configurable in a safe context."""
 
-        conf = Configuration(
-            Category(
+        conf = configuration(
+            category(
                 'test',
                 Parameter('test', svalue='=open')
             )
@@ -276,8 +274,8 @@ class ConfigurableTest(UTCase):
     def test_unsafe(self):
         """Test to configurate a configurable in an unsafe context."""
 
-        conf = Configuration(
-            Category(
+        conf = configuration(
+            category(
                 'test',
                 Parameter('test', svalue='=int')
             )
@@ -285,9 +283,7 @@ class ConfigurableTest(UTCase):
 
         configurable = Configurable(conf=conf, safe=False)
 
-        configurable.applyconfiguration(
-            toconfigure=configurable, paths='test'
-        )
+        configurable.applyconfiguration(toconfigure=configurable, paths='test')
 
         self.assertIs(configurable.test, int)
 

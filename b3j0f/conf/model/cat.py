@@ -60,3 +60,9 @@ class Category(CompositeModelElement):
     def copy(self, cleaned=False):
 
         return super(Category, self).copy(name=self.name)
+
+
+def category(name, *params):
+    """Quick instanciation of category with parameteres."""
+
+    return Category(name=name, melts=params)
