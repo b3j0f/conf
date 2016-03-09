@@ -72,11 +72,11 @@ class JSONConfDriver(ConfDriver):
 
     def _setconf(self, conf, resource, rscpath):
 
-        for category in conf:
+        for category in conf.values():
 
             cat = resource.setdefault(category.name, {})
 
-            for parameter in category:
+            for parameter in category.values():
 
                 cat[parameter.name] = parameter.svalue
 

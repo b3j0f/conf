@@ -63,12 +63,12 @@ class INIFileConfDriver(FileConfDriver):
 
     def _setconf(self, conf, resource, rscpath):
 
-        for category in conf:
+        for category in conf.values():
 
             if not resource.has_section(category.name):
                 resource.add_section(category.name)
 
-            for param in category:
+            for param in category.values():
                 resource.set(category.name, param.name, param.svalue)
 
         with open(rscpath, 'w') as fps:

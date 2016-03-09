@@ -31,13 +31,13 @@ from unittest import main
 
 from .base import FileConfDriverTest
 
-from ..json import JSONConfDriver
+from ..json import JSONFileConfDriver
 
 
 class JSONConfDriverTest(FileConfDriverTest):
     """Test JSONConfDriver."""
 
-    __driverclass__ = JSONConfDriver
+    __driverclass__ = JSONFileConfDriver
 
 
 if __name__ == '__main__':

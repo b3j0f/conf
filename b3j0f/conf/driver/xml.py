@@ -77,7 +77,7 @@ class XMLConfDriver(ConfDriver):
 
     def _setconf(self, conf, resource, rscpath):
 
-        for cat in conf:
+        for cat in conf.values():
 
             cquery = '{0}[@name={1}]'.format(XMLConfDriver.CATEGORY, cat.name)
 
@@ -87,7 +87,7 @@ class XMLConfDriver(ConfDriver):
                 ecat = Element(XMLConfDriver.CATEGORY, name=cat.name)
                 resource.append(ecat)
 
-            for param in cat:
+            for param in cat.values():
 
                 pquery = '{0}[@name={1}]'.format(
                     XMLConfDriver.PARAMETER, param.name
