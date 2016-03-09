@@ -30,13 +30,10 @@
 from unittest import main
 
 from b3j0f.utils.ut import UTCase
-from b3j0f.utils.path import getpath
 
-from ...model.conf import Configuration
-from ...model.cat import Category
+from ...model.conf import Configuration, configuration
+from ...model.cat import category
 from ...model.param import Parameter
-from ...configurable.core import Configurable
-from ...driver.test.base import TestConfDriver
 from ..core import (
     REGEX_REF, REGEX_FORMAT, REGEX_STR, REGEX_EXPR,
     parse, serialize, _ref, ParserError, _strparser
@@ -274,9 +271,7 @@ class RefTest(UTCase):
         self.conf = Configuration()
 
         for i in range(self.count):
-            cat = Category(
-                str(i), melts=[Parameter(name=self.pname, value=i)]
-            )
+            cat = category(str(i), Parameter(name=self.pname, value=i))
             self.conf += cat
 
     def test_error(self):
@@ -358,9 +353,7 @@ class StrParserTest(UTCase):
 
     def test_format(self):
 
-        conf = Configuration(
-            melts=[Category('', melts=[Parameter('se', value='es')])]
-        )
+        conf = configuration(category('', Parameter('se', value='es')))
 
         svalue = 't%"es"%t'
 
@@ -370,9 +363,7 @@ class StrParserTest(UTCase):
 
     def test_format_expr(self):
 
-        conf = Configuration(
-            melts=[Category('', melts=[Parameter('se', value='es')])]
-    )
+        conf = configuration(category('', Parameter('se', value='es')))
 
         svalue = '%"t"%@se%"t"%'
 
@@ -397,11 +388,11 @@ class ConfigurationTest(UTCase):
         for i in range(self.count):
             self.cnames[i] = 'c{0}'.format(i)
             self.pvalues[i] = i + 1
-            category = Category(
+            cat = category(
                 self.cnames[i],
-                melts=[Parameter('param', value=self.pvalues[i])]
+                Parameter('param', value=self.pvalues[i])
             )
-            self.conf += category
+            self.conf += cat
 
 
 class SerializerTest(ConfigurationTest):
@@ -467,6 +458,15 @@ class ParseTest(ConfigurationTest):
 
         self.assertEqual(value, 'test')
 
+    def test_expr_ref(self):
+
+        pname = 'test'
+
+        conf = configuration(category('', Parameter('test', value='ify')))
+
+        value = parse(svalue='="test" + "@test"', conf=conf)
+
+        self.assertEqual(value, 'testify')
 
 if __name__ == '__main__':
     main()

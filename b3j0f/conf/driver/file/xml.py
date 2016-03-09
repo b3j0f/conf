@@ -51,9 +51,6 @@ class XMLFileConfDriver(FileConfDriver, XMLConfDriver):
             conf=conf, resource=resource, rscpath=rscpath
         )
 
-        try:
-            resource.write(rscpath)
-        except Exception as e:
-            print(e, rscpath, resource.getroot().items())
+        resource.write(rscpath)
 
         return resource.getroot().text

@@ -86,7 +86,7 @@ Such expression must respects this syntax:
 
 *=[{lang}]:{expr}* where:
 
-- expr is the expression to evaluate
+- expr is the expression to evaluate.
 - lang is the dedicated programming language keyword (for example, ``py`` for
     python, ``js`` for javascript). Default is python.
 
@@ -250,6 +250,8 @@ def _exprparser(
     if scope is None:
         scope = {}
 
+    expr = REGEX_REF.sub(_refrepl(configurable=configurable, conf=conf), expr)
+
     scope.update({
         'configurable': configurable,
         'conf': conf,
@@ -290,6 +292,28 @@ def _strparser(
                 result = ptype()
 
     return result
+
+
+def _refrepl(configurable, conf):
+
+    def __repl(match):
+
+        path, cname, history, pname = match.group(
+            'path', 'cname', 'history', 'pname'
+        )
+
+        history = (len(history) - 1) if history else 0
+
+        param = _ref(
+            configurable=configurable, conf=conf,
+            path=path, cname=cname, history=history, pname=pname
+        )
+
+        result = param.svalue
+
+        return result
+
+    return __repl
 
 
 def _strrepl(
