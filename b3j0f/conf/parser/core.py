@@ -153,6 +153,8 @@ from __future__ import absolute_import
 __all__ = ['parse', 'serialize']
 
 
+from random import random
+
 from re import compile as re_compile
 
 from six import string_types
@@ -250,14 +252,19 @@ def _exprparser(
     if scope is None:
         scope = {}
 
-    expr = REGEX_REF.sub(_refrepl(configurable=configurable, conf=conf), expr)
-
     scope.update({
         'configurable': configurable,
         'conf': conf,
         'true': True,
         'false': False
     })
+
+    expr = REGEX_REF.sub(
+        _refrepl(
+            configurable=configurable, conf=conf, safe=safe, scope=scope,
+            besteffort=besteffort
+        ), expr
+    )
 
     result = resolve(
         expr=expr, name=lang, safe=safe, scope=scope, tostr=tostr,
@@ -294,9 +301,9 @@ def _strparser(
     return result
 
 
-def _refrepl(configurable, conf):
+def _refrepl(configurable, conf, scope, safe, besteffort):
 
-    def __repl(match):
+    def __repl(match, scope=scope, safe=safe, besteffort=besteffort):
 
         path, cname, history, pname = match.group(
             'path', 'cname', 'history', 'pname'
@@ -309,9 +316,14 @@ def _refrepl(configurable, conf):
             path=path, cname=cname, history=history, pname=pname
         )
 
-        result = param.svalue
+        var = '_____{0}'.format(random()).replace('.', '_')
 
-        return result
+        scope[var] = param.resolve(
+            configurable=configurable, conf=conf, scope=scope, safe=safe,
+            besteffort=besteffort
+        )
+
+        return var
 
     return __repl
 

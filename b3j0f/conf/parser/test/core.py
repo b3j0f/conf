@@ -464,7 +464,7 @@ class ParseTest(ConfigurationTest):
 
         conf = configuration(category('', Parameter('test', value='ify')))
 
-        value = parse(svalue='="test" + "@test"', conf=conf)
+        value = parse(svalue='="test" + @test', conf=conf)
 
         self.assertEqual(value, 'testify')
 
