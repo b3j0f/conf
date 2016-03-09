@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # --------------------------------------------------------------------
@@ -24,36 +25,20 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-"""XML configuration file driver."""
+"""XML ConfDriver UTs."""
 
-from __future__ import absolute_import
+from unittest import main
 
-__all__ = ['XMLFileConfDriver']
+from .base import FileConfDriverTest
 
-from xml.etree.ElementTree import parse
-
-from .base import FileConfDriver
-from ..xml import XMLConfDriver
+from ..xml import XMLFileConfDriver
 
 
-class XMLFileConfDriver(FileConfDriver, XMLConfDriver):
-    """Manage xml resource configuration from file."""
+class XMLConfDriverTest(FileConfDriverTest):
+    """Test XMLConfDriver."""
 
-    def _pathresource(self, rscpath):
+    __driverclass__ = XMLFileConfDriver
 
-        result = parse(rscpath)
 
-        return result
-
-    def _setconf(self, conf, resource, rscpath):
-
-        super(XMLFileConfDriver, self)._setconf(
-            conf=conf, resource=resource, rscpath=rscpath
-        )
-
-        try:
-            resource.write(rscpath)
-        except Exception as e:
-            print(e, rscpath, resource.getroot().items())
-
-        return resource.getroot().text
+if __name__ == '__main__':
+    main()

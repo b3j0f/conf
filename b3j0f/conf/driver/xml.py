@@ -30,7 +30,7 @@ from __future__ import absolute_import
 
 __all__ = ['XMLConfDriver']
 
-from xml.etree.ElementTree import fromstring, Element
+from xml.etree.ElementTree import fromstring, Element, ElementTree
 
 from .base import ConfDriver
 
@@ -48,7 +48,7 @@ class XMLConfDriver(ConfDriver):
 
     def resource(self):
 
-        return Element(XMLConfDriver.CONFIGURATION)
+        return ElementTree(Element(XMLConfDriver.CONFIGURATION))
 
     def _pathresource(self, rscpath):
 
@@ -66,11 +66,15 @@ class XMLConfDriver(ConfDriver):
 
     def _params(self, resource, cname):
 
-        query = '[@name={0}]'.format(cname)
+        query = '{0}[@name=\'{1}\']/{2}'.format(
+            XMLConfDriver.CATEGORY,
+            cname,
+            XMLConfDriver.PARAMETER
+        )
 
         result = list(
-            param.get('name')
-            for param in resource.find(query).iter(XMLConfDriver.PARAMETER)
+            (param.get('name'), param.get('svalue'))
+            for param in resource.findall(query)
         )
 
         return result
@@ -79,17 +83,19 @@ class XMLConfDriver(ConfDriver):
 
         for cat in conf.values():
 
-            cquery = '{0}[@name={1}]'.format(XMLConfDriver.CATEGORY, cat.name)
+            cquery = '{0}[@name=\'{1}\']'.format(
+                XMLConfDriver.CATEGORY, cat.name
+            )
 
             ecat = resource.find(cquery)
 
             if ecat is None:
                 ecat = Element(XMLConfDriver.CATEGORY, name=cat.name)
-                resource.append(ecat)
+                resource.getroot().append(ecat)
 
             for param in cat.values():
 
-                pquery = '{0}[@name={1}]'.format(
+                pquery = '{0}[@name=\'{1}\']'.format(
                     XMLConfDriver.PARAMETER, param.name
                 )
 
@@ -99,6 +105,7 @@ class XMLConfDriver(ConfDriver):
                     eparam = Element(XMLConfDriver.PARAMETER, name=param.name)
                     ecat.append(eparam)
 
-                eparam.set('svalue', param.svalue)
+                if param.svalue is not None:
+                    eparam.set('svalue', param.svalue)
 
-        return resource.toxml()
+        return resource.getroot().text
