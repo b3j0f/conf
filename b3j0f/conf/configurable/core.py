@@ -62,11 +62,9 @@ class Configurable(PrivateInterceptor):
     CATEGORY = 'CONFIGURABLE'  #: configuration category name.
 
     CONF = 'conf'  #: self configuration attribute name.
-
     CONFPATHS = 'paths'  #: paths attribute name.
     DRIVERS = 'drivers'  #: drivers attribute name.
     INHERITEDCONF = 'inheritedconf'  #: usecls conf attribute name.
-    CONFPATH = 'confpath'  #: conf path attribute name.
     STORE = 'store'  #: store attribute name.
     FOREIGNS = 'foreigns'  #: not specified params setting attribute name.
     AUTOCONF = 'autoconf'  #: auto conf attribute name.
@@ -88,7 +86,7 @@ class Configurable(PrivateInterceptor):
 
     def __init__(
             self,
-            conf=None, inheritedconf=DEFAULT_INHERITEDCONF, confpath=None,
+            conf=None, inheritedconf=DEFAULT_INHERITEDCONF,
             store=DEFAULT_STORE, paths=None, drivers=DEFAULT_DRIVERS,
             foreigns=DEFAULT_FOREIGNS, autoconf=DEFAULT_AUTOCONF,
             toconfigure=(), safe=DEFAULT_SAFE, scope=DEFAULT_SCOPE,
@@ -99,7 +97,6 @@ class Configurable(PrivateInterceptor):
         :param Configuration conf: conf to use at instance level.
         :param bool inheritedconf: if True (default) add conf and paths to cls
             conf and paths.
-        :param str confpath: instance configuration path.
         :param toconfigure: object(s) to reconfigure. Such object may
             implement the methods configure applyconfiguration and configure.
         :type toconfigure: list or instance.
@@ -131,29 +128,34 @@ class Configurable(PrivateInterceptor):
         self._paths = None
         self._conf = None
         self._toconfigure = []
-        self._confpath = confpath
         self._modules = []
 
         # init public attributes
-        self.store = store
 
+        # dirty hack: falsify autoconf in order to avoid auto applyconfiguration
+        self.autoconf = False
+
+        self.store = store
         self.inheritedconf = inheritedconf
         self.drivers = drivers
         self.foreigns = foreigns
         self.toconfigure = toconfigure
-        # dirty hack: falsify autoconf in order to avoid auto applyconfiguration
-        self.autoconf = False
         self.conf = conf
-        self.confpath = confpath
         self.paths = paths
         self.safe = safe
         self.scope = scope
         self.besteffort = besteffort
-        self.autoconf = autoconf  # end of dirty hack
         self.modules = modules
         self.callparams = callparams
 
+        self.autoconf = autoconf  # end of dirty hack
+
+        if self.autoconf:
+            self.applyconfiguration()
+
     def _interception(self, joinpoint):
+
+        target = joinpoint.target
 
         if self.callparams:
 
@@ -163,14 +165,12 @@ class Configurable(PrivateInterceptor):
 
             args, kwargs = joinpoint.args, joinpoint.kwargs
 
-            target = joinpoint.target
-
             try:
                 argspec = getargspec(target)
 
             except TypeError:
                 argspec = None
-                callargs = None
+                callargs = ()
 
             else:
                 callargs = getcallargs(
@@ -180,6 +180,7 @@ class Configurable(PrivateInterceptor):
             for param in params:
 
                 if argspec is None:
+
                     args.append(param.value)
 
                 elif param.name not in callargs and (
@@ -227,32 +228,6 @@ class Configurable(PrivateInterceptor):
         if value:
             for module in value:
                 reload_module(lookup(module))
-
-    @property
-    def confpath(self):
-        """Get configuration path.
-
-        :rtype: str"""
-
-        return self._confpath
-
-    @confpath.setter
-    def confpath(self, value):
-        """Change of configuration path.
-
-        :param str value: new conf path to use."""
-
-        if value is None:
-            value = ''
-
-        conf = self.getconf(paths=value)
-        # force to get parameters if values are parameters
-        for cat in conf.values():
-            for param in cat.values():
-                if isinstance(param.value, Parameter):
-                    conf[cat.name] = param.value
-
-        self.conf = conf
 
     @property
     def toconfigure(self):

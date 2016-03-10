@@ -170,7 +170,7 @@ class ConfigurableTest(UTCase):
             )
         )
 
-        @Configurable(conf=conf0)
+        @Configurable(conf=conf0, callparams=False)
         class Parent(object):
             pass
 
