@@ -175,17 +175,23 @@ EVAL_REF = r'@((?P<path>([^@]|\\@)+)\/)?((?P<cname>\w+)\.)?(?P<history>\.*)(?P<p
 REGEX_REF = re_compile(EVAL_REF)
 
 #: programmatic language expression.
-EVAL_FORMAT = r'\%((?P<lang>\w+):)?(?P<expr>([^%]|(\\%))*[^\\]?)\%'
+EVAL_FORMAT = r'\%((?P<lang>\w+):)?(?P<expr>([^%]|(\\%))*[^\\])\%'
 
 REGEX_FORMAT = re_compile(EVAL_FORMAT)
 
-EVAL_STR = r'({0})|({1})'.format(EVAL_REF, EVAL_FORMAT)
+EVAL_ANTISLASH = r'(\\(?P<antislash>[@\%\\]))'
+
+EVAL_STR = r'({0})|({1}|({2}))'.format(EVAL_ANTISLASH, EVAL_REF, EVAL_FORMAT)
 
 REGEX_STR = re_compile(EVAL_STR)
 
 EVAL_EXPR = r'=((?P<lang>\w+):)?(?P<expr>.*)$'  #: interpreted expression prefix
 
 REGEX_EXPR = re_compile(EVAL_EXPR)  #: interpreted expression regex comp
+
+EVAL_EXPR_R = r'(({0})|({1}))'.format(EVAL_ANTISLASH, EVAL_REF)
+
+REGEX_EXPR_R = re_compile(EVAL_EXPR_R)
 
 
 def serialize(expr):
@@ -259,7 +265,7 @@ def _exprparser(
         'false': False
     })
 
-    expr = REGEX_REF.sub(
+    expr = REGEX_EXPR_R.sub(
         _refrepl(
             configurable=configurable, conf=conf, safe=safe, scope=scope,
             besteffort=besteffort
@@ -305,25 +311,29 @@ def _refrepl(configurable, conf, scope, safe, besteffort):
 
     def __repl(match, scope=scope, safe=safe, besteffort=besteffort):
 
-        path, cname, history, pname = match.group(
-            'path', 'cname', 'history', 'pname'
+        antislash, path, cname, history, pname = match.group(
+            'antislash', 'path', 'cname', 'history', 'pname'
         )
 
-        history = (len(history) - 1) if history else 0
+        if antislash:
+            result = antislash
 
-        param = _ref(
-            configurable=configurable, conf=conf,
-            path=path, cname=cname, history=history, pname=pname
-        )
+        else:
+            history = (len(history) - 1) if history else 0
 
-        var = '_____{0}'.format(random()).replace('.', '_')
+            param = _ref(
+                configurable=configurable, conf=conf,
+                path=path, cname=cname, history=history, pname=pname
+            )
 
-        scope[var] = param.resolve(
-            configurable=configurable, conf=conf, scope=scope, safe=safe,
-            besteffort=besteffort
-        )
+            result = '_____{0}'.format(random()).replace('.', '_')
 
-        return var
+            scope[result] = param.resolve(
+                configurable=configurable, conf=conf, scope=scope, safe=safe,
+                besteffort=besteffort
+            )
+
+        return result
 
     return __repl
 
@@ -335,11 +345,14 @@ def _strrepl(
 
     def __repl(match, scope=scope):
 
-        lang, expr, path, cname, history, pname = match.group(
-            'lang', 'expr', 'path', 'cname', 'history', 'pname'
+        antislash, lang, expr, path, cname, history, pname = match.group(
+            'antislash', 'lang', 'expr', 'path', 'cname', 'history', 'pname'
         )
 
-        if expr:
+        if antislash:
+            result = antislash
+
+        elif expr:
             result = _exprparser(
                 expr=expr, lang=lang, conf=conf, configurable=configurable,
                 scope=scope, safe=safe, besteffort=besteffort, tostr=True

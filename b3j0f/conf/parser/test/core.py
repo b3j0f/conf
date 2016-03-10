@@ -223,13 +223,36 @@ class RegexStrTest(UTCase):
 
         matches = REGEX_STR.finditer(test)
 
-        values = {
-            0: ['pname', 'a'],
-            1: ['expr', 'b'],
-            2: ['pname', 'c'],
-            3: ['expr', 'd'],
-            4: ['pname', 'e']
-        }
+        values = [
+            ['pname', 'a'],
+            ['expr', 'b'],
+            ['pname', 'c'],
+            ['expr', 'd'],
+            ['pname', 'e']
+        ]
+
+        for index, match in enumerate(matches):
+            groupdict = match.groupdict()
+            value = values[index]
+            self.assertEqual(groupdict[value[0]], value[1])
+
+    def test_wrong_both(self):
+
+        test = '\%@a%b%\\@k@c%js:d%@e\@\\'
+
+        matches = REGEX_STR.finditer(test)
+
+        values = [
+            ['antislash', '%'],
+            ['pname', 'a'],
+            ['expr', 'b'],
+            ['antislash', '@'],
+            ['pname', 'c'],
+            ['expr', 'd'],
+            ['pname', 'e'],
+            ['antislash', '@'],
+            ['antislash', '\\'],
+        ]
 
         for index, match in enumerate(matches):
             groupdict = match.groupdict()
@@ -371,6 +394,16 @@ class StrParserTest(UTCase):
 
         self.assertEqual(val, 'test')
 
+    def test_wrong_format_expr(self):
+
+        conf = configuration(category('', Parameter('se', value='es')))
+
+        svalue = '\@e%"t"%\%@se%"t"%\\'
+
+        val = _strparser(svalue=svalue, conf=conf, scope=None)
+
+        self.assertEqual(val, '@et%est\\')
+
 
 class ConfigurationTest(UTCase):
     """Base class of test which uses a local configuration."""
@@ -467,6 +500,17 @@ class ParseTest(ConfigurationTest):
         value = parse(svalue='="test" + @test', conf=conf)
 
         self.assertEqual(value, 'testify')
+
+    def test_expr_wrong(self):
+
+        pname = 'test'
+
+        conf = configuration(category('', Parameter('test', value='ify')))
+
+        value = parse(svalue='="test" + "\@fgg"', conf=conf)
+
+        self.assertEqual(value, 'test@fgg')
+
 
 if __name__ == '__main__':
     main()
