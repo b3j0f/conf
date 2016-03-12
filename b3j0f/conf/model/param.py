@@ -81,7 +81,8 @@ class PType(object):
     def __call__(self, svalue):
         """Instantiate a new instance of this ptype related to input value.
 
-        :param ssvalue: Instanciation depends on type of serialiazed value (by order):
+        :param ssvalue: Instanciation depends on type of serialiazed value
+            (by order):
 
         - dict: it is given such as a kwargs to this ptype.
         - iterable: it is given such as an args to this ptype.
@@ -108,6 +109,30 @@ class PType(object):
             reraise(ParserError, ParserError(msg))
 
         return result
+
+
+class Bool(PType):
+    """Parameter type dedicated to boolean values."""
+
+    def __init__(self, *args, **kwargs):
+
+        super(Bool, self).__init__(ptype=bool, *args, **kwargs)
+
+    def __call__(self, svalue):
+
+        return svalue in ('true', 'True', '1')
+
+
+class Array(PType):
+    """Parameter type dedicated to array value."""
+
+    def __init__(self, *args, **kwargs):
+
+        super(Array, self).__init__(ptype=Iterable, *args, **kwargs)
+
+    def __call__(self, svalue):
+
+        return list(item.trim() for item in svalue.split(','))
 
 
 class Parameter(ModelElement):
@@ -148,7 +173,7 @@ class Parameter(ModelElement):
     DEFAULT_LOCAL = True  #: default local value.
 
     def __init__(
-            self, name=DEFAULT_NAME, ptype=DEFAULT_PTYPE, value=None,
+            self, name=DEFAULT_NAME, value=None, ptype=DEFAULT_PTYPE,
             parser=parse, serializer=serialize, svalue=None,
             conf=None, configurable=None,
             local=DEFAULT_LOCAL, scope=DEFAULT_SCOPE, safe=DEFAULT_SAFE,
@@ -162,13 +187,13 @@ class Parameter(ModelElement):
                 common properties (parser, value, conf, etc.).
 
             Default is the regex ``.*``.
+        :param value: param value. None if not given.
         :param type ptype: parameter value type.
         :param callable parser: param value deserializer which takes in param a
             str. Default is the expression parser.
         :param callable serializer: param serializer which takes in param an
             object and retuns a string. Default is the expression serializer.
         :param str svalue: serialized value.
-        :param value: param value. None if not given.
         :param dict conf: parameter configuration used to init the parameter
             value if not None. In this case, the parameter value must be
             callable.

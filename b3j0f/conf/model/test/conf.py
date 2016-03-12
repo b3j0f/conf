@@ -118,7 +118,7 @@ class ConfigurationTest(UTCase):
             copiedcat
         )
 
-        self.conf.update(conf)
+        self.conf.update(conf, copy=False)
 
         self.assertIs(self.conf['test'], conf['test'])
 

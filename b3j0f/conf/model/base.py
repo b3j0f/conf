@@ -26,8 +26,6 @@
 
 """Configuration definition objects."""
 
-from __future__ import absolute_import
-
 __all__ = ['ModelElement', 'CompositeModelElement']
 
 from b3j0f.utils.version import OrderedDict
@@ -37,7 +35,10 @@ class ModelElement(object):
     """Base configuration elementParameter.
 
     Use a name and a provide a python value in ordr to ease serialization.
-    """
+
+    A model element uses a local flag in order to indicates if it has been
+    created with the upper composite model element or if it has been added after
+    updating."""
 
     class Error(Exception):
         """Handle ModelElement errors."""
@@ -96,7 +97,7 @@ class ModelElement(object):
                 continue
 
             slotattr = getattr(self, __slot__)
-            slotsrepr = '{0}{1}, '.format(slotsrepr, slotattr)
+            slotsrepr = '{0}{1}={2}, '.format(slotsrepr, __slot__, slotattr)
 
         else:
             if slotsrepr:
@@ -105,6 +106,43 @@ class ModelElement(object):
         result = '{0}({1})'.format(type(self).__name__, slotsrepr)
 
         return result
+
+    def raw(self):
+
+        result = {}
+
+        for slot in self.__slots__:
+            result[slot] = getattr(self, slot)
+
+        return result
+
+    def update(self, other, copy=True, cleaned=False, *args, **kwargs):
+        """Update this element related to other element.
+
+        :param other: same type than this.
+        :param bool copy: copy other before update attributes.
+        :param bool cleaned: do a cleaned copy.
+        :param tuple args: copy args.
+        :param dict kwargs: copy kwargs.
+        :return: this"""
+
+        if isinstance(other, self.__class__):
+
+            if copy:
+                other = other.copy(cleaned=cleaned, *args, **kwargs)
+
+            for slot in self.__slots__:
+                oattr = getattr(other, slot)
+
+                if oattr is not None:
+                    setattr(self, slot, oattr)
+
+        else:
+            raise TypeError(
+                'Wrong element to update with {0}: {1}'.format(self, other)
+            )
+
+        return self
 
 
 class CompositeModelElement(ModelElement, OrderedDict):
@@ -130,8 +168,7 @@ class CompositeModelElement(ModelElement, OrderedDict):
         return self.copy()
 
     def __getattr__(self, key):
-        """Try to delegate key attribute to content name.
-        """
+        """Try to delegate key attribute to content name."""
         result = None
 
         if key in self.__slots__:
@@ -206,6 +243,14 @@ class CompositeModelElement(ModelElement, OrderedDict):
             melt.name not in self and self.__setitem__(melt.name, melt)
         )
 
+    def __repr__(self):
+
+        result = super(CompositeModelElement, self).__repr__()
+
+        result += OrderedDict.__repr__(self)[len(self.__class__.__name__) + 2: -2]
+
+        return result
+
     def clean(self, *args, **kwargs):
 
         for content in list(self.values()):
@@ -224,6 +269,47 @@ class CompositeModelElement(ModelElement, OrderedDict):
         result = super(CompositeModelElement, self).copy(melts=melts, *args, **kwargs)
 
         return result
+
+    def update(self, other, copy=True, cleaned=False, *args, **kwargs):
+        """Update this composite model element with other element content.
+
+        :param other: element to update with this. Must be the same type of this
+            or this __contenttype__.
+        :param bool copy: copy other before updating.
+        :param bool cleaned: in addition to the copy request, do a cleaned copy.
+        """
+
+        super(CompositeModelElement, self).update(
+            other, copy=copy, cleaned=cleaned, *args, **kwargs
+        )
+
+        contents = []
+
+        if isinstance(other, self.__class__):
+            contents = list(other.values())
+
+        elif isinstance(other, self.__contenttype__):
+            contents = [other]
+
+        else:
+            raise TypeError(
+                'Wrong element to update with {0}: {0}'.format(self, other)
+            )
+
+        for content in contents:
+
+            selfcontent = self.get(content.name)
+
+            if selfcontent is None:
+
+                if copy:
+                    content = content.copy(cleaned=cleaned, local=False)
+                self[content.name] = content
+
+            else:
+                selfcontent.update(
+                    content, copy=copy, cleaned=cleaned, *args, **kwargs
+                )
 
     @property
     def params(self):

@@ -35,7 +35,6 @@ from inspect import getargspec, isclass
 
 from b3j0f.utils.path import lookup
 from b3j0f.utils.version import getcallargs
-
 from b3j0f.annotation import PrivateInterceptor
 
 from ..model.conf import Configuration, configuration
@@ -71,6 +70,8 @@ class Configurable(PrivateInterceptor):
     SAFE = 'safe'  #: safe attribute name.
     SCOPE = 'scope'  #: scope attribute name.
     BESTEFFORT = 'besteffort'  #: best effort attribute name.
+    MODULES = 'modules'  #: modules attribute name.
+    CALLPARAMS = 'callparams'  #: call params attribute name.
 
     DEFAULT_CONFPATHS = ('b3j0fconf-configurable.conf', )  #: default conf path.
     DEFAULT_INHERITEDCONF = True  #: default inheritedconf value.
@@ -81,6 +82,11 @@ class Configurable(PrivateInterceptor):
         JSONFileConfDriver(), INIFileConfDriver(), XMLFileConfDriver()
     )
     DEFAULT_AUTOCONF = True  #: default value for auto configuration.
+    DEFAULT_CALLPARAMS = True  #: default value for callparams.
+    DEFAULT_MODULES = None  #: default value for modules.
+    DEFAULT_SAFE = DEFAULT_SAFE  #: default value for safe.
+    DEFAULT_SCOPE = DEFAULT_SCOPE  #: default value for scope.
+    DEFAULT_BESTEFFORT = DEFAULT_BESTEFFORT  #: default value for besteffort.
 
     SUB_CONF_PREFIX = ':'  #: sub conf prefix.
 
@@ -90,7 +96,8 @@ class Configurable(PrivateInterceptor):
             store=DEFAULT_STORE, paths=None, drivers=DEFAULT_DRIVERS,
             foreigns=DEFAULT_FOREIGNS, autoconf=DEFAULT_AUTOCONF,
             toconfigure=(), safe=DEFAULT_SAFE, scope=DEFAULT_SCOPE,
-            besteffort=DEFAULT_BESTEFFORT, modules=None, callparams=True,
+            besteffort=DEFAULT_BESTEFFORT, modules=DEFAULT_MODULES,
+            callparams=DEFAULT_CALLPARAMS,
             *args, **kwargs
     ):
         """
@@ -157,25 +164,23 @@ class Configurable(PrivateInterceptor):
 
         target = joinpoint.target
 
+        args, kwargs = joinpoint.args, joinpoint.kwargs
+
         if self.callparams:
 
             conf = self.conf
 
             params = conf.params.values()
 
-            args, kwargs = joinpoint.args, joinpoint.kwargs
-
             try:
                 argspec = getargspec(target)
 
             except TypeError:
                 argspec = None
-                callargs = ()
+                callargs = {}
 
             else:
-                callargs = getcallargs(
-                    target, args, kwargs
-                )
+                callargs = getcallargs(target, *args, **kwargs)
 
             for param in params:
 
@@ -183,17 +188,19 @@ class Configurable(PrivateInterceptor):
 
                     args.append(param.value)
 
-                elif param.name not in callargs and (
-                        param.name in argspec.args or self.foreigns
+                elif (
+                    callargs.get(param.name) is None
+                    and param.name in argspec.args
                 ):
-
                     kwargs[param.name] = param.value
 
         toconfigure = result = joinpoint.proceed()
 
         if self.autoconf:
 
-            if isclass(target):
+            cls = joinpoint.ctx if isclass(joinpoint.ctx) else target
+
+            if isclass(cls):
 
                 if toconfigure is None:
                     if 'self' in kwargs:
@@ -202,7 +209,7 @@ class Configurable(PrivateInterceptor):
                     else:
                         toconfigure = args[0]
 
-                if isinstance(toconfigure, target):
+                if isinstance(toconfigure, cls):
 
                     self.toconfigure += [toconfigure]
 
@@ -281,6 +288,9 @@ class Configurable(PrivateInterceptor):
 
         self._toconfigure = value
 
+        if self.autoconf:
+            self.applyconfiguration()
+
     @property
     def conf(self):
         """Get conf with parsers and self property values.
@@ -302,7 +312,7 @@ class Configurable(PrivateInterceptor):
             value = Configuration()
 
         elif isinstance(value, Category):
-            value = Configuration(value)
+            value = configuration(value)
 
         if self.inheritedconf:
             self._conf = self.clsconf()
@@ -322,15 +332,54 @@ class Configurable(PrivateInterceptor):
             category(
                 Configurable.CATEGORY,
                 Parameter(name=Configurable.CONF, ptype=Configuration),
-                Parameter(name=Configurable.DRIVERS, ptype=tuple),
-                Parameter(name=Configurable.CONFPATHS, ptype=tuple),
-                Parameter(name=Configurable.INHERITEDCONF, ptype=bool),
-                Parameter(name=Configurable.STORE, ptype=bool),
-                Parameter(name=Configurable.SCOPE, ptype=dict),
-                Parameter(name=Configurable.SAFE, ptype=bool),
-                Parameter(name=Configurable.BESTEFFORT, ptype=bool)
+                Parameter(
+                    name=Configurable.DRIVERS, ptype=tuple,
+                    value=Configurable.DEFAULT_DRIVERS
+                ),
+                Parameter(
+                    name=Configurable.CONFPATHS, ptype=tuple,
+                    value=Configurable.DEFAULT_CONFPATHS
+                ),
+                Parameter(
+                    name=Configurable.INHERITEDCONF, ptype=bool,
+                    value=Configurable.DEFAULT_INHERITEDCONF
+                ),
+                Parameter(
+                    name=Configurable.STORE, ptype=bool,
+                    value=Configurable.DEFAULT_STORE
+                ),
+                Parameter(
+                    name=Configurable.SCOPE, ptype=dict,
+                    value=Configurable.DEFAULT_SCOPE
+                ),
+                Parameter(
+                    name=Configurable.SAFE, ptype=bool,
+                    value=Configurable.DEFAULT_SAFE
+                ),
+                Parameter(
+                    name=Configurable.BESTEFFORT, ptype=bool,
+                    value=Configurable.DEFAULT_BESTEFFORT
+                ),
+                Parameter(
+                    name=Configurable.CALLPARAMS, ptype=bool,
+                    value=Configurable.DEFAULT_CALLPARAMS
+                ),
+                Parameter(
+                    name=Configurable.MODULES, ptype=tuple,
+                    value=Configurable.DEFAULT_MODULES
+                ),
+                Parameter(
+                    name=Configurable.AUTOCONF, ptype=bool,
+                    value=Configurable.DEFAULT_AUTOCONF
+                ),
+                Parameter(
+                    name=Configurable.FOREIGNS, ptype=bool,
+                    value=Configurable.DEFAULT_FOREIGNS
+                )
             )
         )
+
+        result[Configurable.CATEGORY][Configurable.CONF].value = result
 
         return result
 
@@ -465,7 +514,7 @@ class Configurable(PrivateInterceptor):
                     result = rscconf
 
                 else:
-                    result.update(conf=rscconf)
+                    result.update(rscconf)
 
             if result is None:
                 # if no conf found, display a warning log message
@@ -505,8 +554,24 @@ class Configurable(PrivateInterceptor):
                 )
 
         else:
+            autoconf = self.autoconf
+            self.autoconf = False
 
-            self._configure(conf=conf, logger=logger, toconfigure=toconfigure)
+            try:
+                self._configure(
+                    conf=conf, logger=logger, toconfigure=toconfigure
+                )
+
+            except Exception as ex:
+                if logger is not None:
+                    logger.error(
+                        'Error {0} raised while configuring {1}/{2}'.format(
+                            ex, self, toconfigure
+                        )
+                    )
+
+            finally:
+                self.autoconf = autoconf
 
     def _configure(self, conf=None, logger=None, toconfigure=None):
         """Configure this class with input conf only if auto_conf or
@@ -535,7 +600,6 @@ class Configurable(PrivateInterceptor):
                 )
 
         else:
-
             sub_confs = []
             params = []
 
@@ -555,11 +619,14 @@ class Configurable(PrivateInterceptor):
                             continue
 
                         if self.foreigns or param.local:
+
                             setattr(toconfigure, param.name, value)
 
             for param in params:
 
-                sub_conf_name = '{0}{1}'.format(self.SUB_CONF_PREFIX, param.name)
+                sub_conf_name = '{0}{1}'.format(
+                    self.SUB_CONF_PREFIX, param.name
+                )
 
                 if sub_conf_name in sub_confs:
 

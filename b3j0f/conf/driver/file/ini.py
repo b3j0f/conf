@@ -26,13 +26,12 @@
 
 """Ini configuration file driver."""
 
-from __future__ import absolute_import
-
 __all__ = ['INIFileConfDriver']
 
 from six.moves.configparser import RawConfigParser
 
 from .base import FileConfDriver
+from ...model.param import Parameter
 
 
 class INIFileConfDriver(FileConfDriver):
@@ -59,7 +58,9 @@ class INIFileConfDriver(FileConfDriver):
 
     def _params(self, resource, cname):
 
-        return resource.items(cname)
+        return list(
+            Parameter(item[0], svalue=item[1]) for item in resource.items(cname)
+        )
 
     def _setconf(self, conf, resource, rscpath):
 

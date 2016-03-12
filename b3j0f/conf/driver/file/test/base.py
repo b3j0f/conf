@@ -30,8 +30,8 @@
 from unittest import main
 
 from ..base import FileConfDriver, CONF_DIRS
-
 from ...test.base import ConfDriverTest
+from ....model.param import Parameter
 
 from pickle import load, dump
 
@@ -53,7 +53,8 @@ class TestFileConfDriver(FileConfDriver):
     def _params(self, resource, cname):
 
         result = [
-            (pname, resource[cname][pname]) for pname in resource[cname]
+            Parameter(pname, svalue=resource[cname][pname])
+            for pname in resource[cname]
         ]
 
         return result

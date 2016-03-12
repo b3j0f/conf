@@ -37,6 +37,7 @@ except ImportError:
     from simplejson import loads, dumps
 
 from .base import ConfDriver
+from ..model.param import Parameter
 
 
 class JSONConfDriver(ConfDriver):
@@ -65,7 +66,7 @@ class JSONConfDriver(ConfDriver):
         params = resource[cname]
 
         result = [
-            (key, params[key]) for key in params
+            Parameter(name=key, svalue=params[key]) for key in params
         ]
 
         return result

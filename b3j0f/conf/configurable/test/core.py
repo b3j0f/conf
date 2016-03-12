@@ -31,7 +31,7 @@ from unittest import main
 from b3j0f.utils.ut import UTCase
 
 from ..core import Configurable, getconfigurables, applyconfiguration
-from ...model.conf import Configuration, configuration
+from ...model.conf import configuration
 from ...model.cat import Category, category
 from ...model.param import Parameter
 
@@ -112,13 +112,11 @@ class ConfigurableTest(UTCase):
     def test_configure_without_inheritance(self):
         """Test to configure an object without inheritance."""
 
-        @Configurable(
-            conf=category('TEST', Parameter('test', value=True))
-        )
+        @Configurable(conf=category('TEST', Parameter('test', value=True)))
         class ToConfigure(object):
             """Class to configure."""
 
-            def __init__(self):
+            def __init__(self, fuck=None):
 
                 super(ToConfigure, self).__init__()
 
@@ -149,6 +147,38 @@ class ConfigurableTest(UTCase):
             len(_configurable.conf)
         )
 
+    def test_class_callparams(self):
+        """Test to call params on a class."""
+
+        @Configurable(conf=category('', Parameter('test', value=True)))
+        class Test(object):
+
+            def __init__(self, test=None):
+
+                super(Test, self).__init__()
+
+                self.testy = test
+
+        test = Test()
+
+        self.assertTrue(test.test)
+        self.assertTrue(test.testy)
+
+    def test_function_callparams(self):
+        """Test to call params on a function."""
+
+        @Configurable(conf=category('', Parameter('test', value=True)))
+        def twist(test=None):
+            return test
+
+        value = twist()
+
+        self.assertTrue(value)
+
+        value = twist(False)
+
+        self.assertFalse(value)
+
     def test_inheritance(self):
         """Test with inheritance between toconfigure objects."""
 
@@ -170,7 +200,7 @@ class ConfigurableTest(UTCase):
             )
         )
 
-        @Configurable(conf=conf0, callparams=False)
+        @Configurable(conf=conf0)
         class Parent(object):
             pass
 
@@ -193,7 +223,7 @@ class ConfigurableTest(UTCase):
 
         self.assertFalse(configurables)
 
-        configurable.toconfigure += [configurable]
+        configurable(configurable)
 
         configurables = getconfigurables(configurable)
 
@@ -202,20 +232,21 @@ class ConfigurableTest(UTCase):
     def test_applyconfiguration(self):
         """Test the function applyconfiguration."""
 
-        configurable = Configurable()
-        configurable.toconfigure += [configurable]
+        @Configurable(
+            conf=configuration(category('', Parameter('test', value=True)))
+        )
+        class Test(object):
+            pass
 
-        store = configurable.store
+        test = Test()
 
-        self.assertEqual(store, Configurable.DEFAULT_STORE)
+        self.assertTrue(test.test)
 
-        configurable.store = not store
+        test.test = False
 
-        self.assertEqual(configurable.store, not Configurable.DEFAULT_STORE)
+        applyconfiguration(toconfigure=test)
 
-        applyconfiguration(toconfigure=configurable)
-
-        self.assertEqual(configurable.store, Configurable.DEFAULT_STORE)
+        self.assertTrue(test.test)
 
     def test_multiconf(self):
         """Test to get configuration from multi resources."""

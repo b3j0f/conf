@@ -233,6 +233,7 @@ Perspectives
 
 - wait feedbacks during 6 months before passing it to a stable version.
 - Cython implementation.
+- add GUI.
 
 Donation
 --------

@@ -40,6 +40,8 @@ class ModelElementTest(UTCase):
     class TestME(ModelElement):
         """ModelElement test."""
 
+        __slots__ = ModelElement.__slots__ + ('name', 'cleaned')
+
         def __init__(self, name=None, *args, **kwargs):
 
             super(ModelElementTest.TestME, self).__init__(
@@ -87,6 +89,27 @@ class ModelElementTest(UTCase):
         me = self.me.copy(cleaned=True)
 
         self.assertTrue(me.cleaned)
+
+    def test_update(self):
+        """Test the method update."""
+
+        self.assertIsNone(self.me.name)
+
+        copiedme = self.me.copy()
+
+        self.assertIsNone(copiedme.name)
+
+        copiedme.name = 'test'
+
+        self.me.update(copiedme)
+
+        self.assertEqual(self.me.name, 'test')
+
+        self.assertFalse(self.me.cleaned)
+
+        self.me.update(copiedme, copy=True, cleaned=True)
+
+        self.assertTrue(self.me.cleaned)
 
 
 class CompositeModelElementTest(UTCase):

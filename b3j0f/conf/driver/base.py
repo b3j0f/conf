@@ -43,11 +43,10 @@ __all__ = ['ConfDriver']
 
 from ..model.conf import Configuration
 from ..model.cat import Category
-from ..model.param import Parameter
 
 from sys import exc_info
 
-from six import reraise, string_types
+from six import reraise
 
 
 class ConfDriver(object):
@@ -137,7 +136,7 @@ class ConfDriver(object):
                     result = pathconf
 
                 else:
-                    result.update(conf=pathconf)
+                    result.update(pathconf)
 
         return result
 
@@ -191,13 +190,7 @@ class ConfDriver(object):
 
                 result += category
 
-                for name, value in self._params(resource=resource, cname=cname):
-
-                    if not isinstance(value, string_types):
-                        param = Parameter(name=name, value=value)
-
-                    else:
-                        param = Parameter(name=name, svalue=value)
+                for param in self._params(resource=resource, cname=cname):
 
                     category += param
 
@@ -240,14 +233,12 @@ class ConfDriver(object):
         raise NotImplementedError()
 
     def _params(self, resource, cname):
-        """Get list of (parameter name, parameter serialized value) from a
-        category name and a specific configuration resource.
+        """Get list of category parameters.
 
-        :param resource: resource from where get parameter names and serialized
-            values.
+        :param resource: resource from where get parameters.
         :param str cname: related category name.
         :param Logger logger: logger to use.
-        :return: list of resource parameter
+        :return: list of category parameters.
         :rtype: list
         """
 

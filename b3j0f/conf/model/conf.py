@@ -128,41 +128,20 @@ class Configuration(CompositeModelElement):
 
         return result
 
-    def update(self, conf):
-        """Update this configuration with other configuration parameter values
-        and svalues.
+    def update(self, other, copy=True, cleaned=False, *args, **kwargs):
+        """Update this configuration and ensure new parameters are not local."""
 
-        :param Configuration conf: configuration from where get parameter values
-            and svalues."""
+        oldparams = self.params
 
-        for cat in conf.values():
+        super(Configuration, self).update(
+            other, copy=copy, cleaned=cleaned, *args, **kwargs
+        )
 
-            if cat.name in self:
+        lastparams = self.params
 
-                selfcat = self[cat.name]
-
-                for param in list(cat.values()):
-
-                    paramstoupdate = selfcat.getparams(param=param)
-
-                    if paramstoupdate:
-
-                        for paramtoupdate in paramstoupdate:
-
-                            paramtoupdate.svalue = param.svalue
-
-                            try:
-                                paramtoupdate.value = param.value
-
-                            except TypeError:
-                                pass
-
-                    else:
-                        # mark the param such as foreign
-                        selfcat += param.copy(local=False)
-
-            else:
-                self += cat
+        for pname in lastparams:
+            if pname not in oldparams:
+                lastparams[pname].local = False  # new params are not locals
 
 
 def configuration(*cats):

@@ -63,10 +63,10 @@ class TestConfDriver(ConfDriver):
 
         result = []
 
-        for pname in resource[cname]:
-            parameter = resource[cname][pname]
-            pvalue = parameter.value
-            result.append((pname, pvalue))
+        result = list(
+            Parameter(pname, resource[cname][pname].value)
+            for pname in resource[cname]
+        )
 
         return result
 

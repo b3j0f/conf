@@ -33,6 +33,7 @@ __all__ = ['XMLConfDriver']
 from xml.etree.ElementTree import fromstring, Element, ElementTree
 
 from .base import ConfDriver
+from ..model.param import Parameter
 
 
 class XMLConfDriver(ConfDriver):
@@ -73,8 +74,7 @@ class XMLConfDriver(ConfDriver):
         )
 
         result = list(
-            (param.get('name'), param.get('svalue'))
-            for param in resource.findall(query)
+            Parameter(**param.attrib) for param in resource.findall(query)
         )
 
         return result

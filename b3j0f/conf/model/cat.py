@@ -37,9 +37,9 @@ class Category(CompositeModelElement):
 
     __contenttype__ = Parameter  #: content type.
 
-    __slots__ = ('name', ) + CompositeModelElement.__slots__
+    __slots__ = ('name', 'local') + CompositeModelElement.__slots__
 
-    def __init__(self, name, *args, **kwargs):
+    def __init__(self, name, local=True, *args, **kwargs):
         """
         :param str name: category name to use.
         """
@@ -47,6 +47,7 @@ class Category(CompositeModelElement):
         super(Category, self).__init__(*args, **kwargs)
 
         self.name = name
+        self.local = local
 
     def getparams(self, param):
         """Get parameters which match with input param.
@@ -57,9 +58,9 @@ class Category(CompositeModelElement):
 
         return list(cparam for cparam in self.values() if cparam == param)
 
-    def copy(self, cleaned=False):
+    def copy(self, cleaned=False, *args, **kwargs):
 
-        return super(Category, self).copy(name=self.name)
+        return super(Category, self).copy(name=self.name, *args, **kwargs)
 
 
 def category(name, *params):
