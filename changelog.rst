@@ -1,6 +1,13 @@
 ChangeLog
 =========
 
+0.3.0 (2016/03/12)
+------------------
+
+- Huge changes...
+- a Configurable inherits from an b3j0f.annotation.Annotation
+- a configurable can inject configuration in function parameters.
+
 0.2.5 (2016/02/20)
 ------------------
 
