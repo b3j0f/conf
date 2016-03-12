@@ -285,6 +285,32 @@ Configure function parameters
 
   assert getcountry() == 'fr'
 
+Configure embedded objects
+##########################
+
+.. code-block:: python
+
+  from b3j0f.conf import configuration, category, Parameter
+
+  class SubTest(object):
+      pass
+
+  @Configurable(
+      conf=(
+          configuration(
+              category('', Parameter('subtest', value=SubTest)),
+              category(':subtest', Parameter('test', value=True))
+          )
+      )
+  )
+  class Test(object):
+      pass
+
+  test = Test()
+
+  assert isinstance(test.subtest, SubTest)
+  assert test.subtest.test
+
 Perspectives
 ------------
 

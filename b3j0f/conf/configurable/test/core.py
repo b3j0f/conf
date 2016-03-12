@@ -76,20 +76,6 @@ class ConfigurableTest(UTCase):
 
         self.assertEqual(configurable.paths, self.paths)
 
-    def test_store(self):
-
-        configurable = Configurable()
-
-        self.assertEqual(configurable.store, Configurable.DEFAULT_STORE)
-
-        configurable = Configurable(store=not Configurable.DEFAULT_STORE)
-
-        self.assertEqual(configurable.store, not Configurable.DEFAULT_STORE)
-
-        configurable.store = Configurable.DEFAULT_STORE
-
-        self.assertEqual(configurable.store, Configurable.DEFAULT_STORE)
-
     def test_configure_to_reconfigure_param(self):
         """Test to reconfigure an object with targets parameter."""
 
@@ -100,14 +86,14 @@ class ConfigurableTest(UTCase):
                 super(ToConfigure, self).__init__()
                 self.test = None
 
-        targets = ToConfigure()
+        target = ToConfigure()
 
         param = 'test'
 
         conf = configuration(category('TEST', Parameter(param, value=True)))
 
-        self.configurable.configure(conf=conf, targets=targets)
-        self.assertTrue(targets.test)
+        self.configurable.configure(conf=conf, targets=[target])
+        self.assertTrue(target.test)
 
     def test_configure_without_inheritance(self):
         """Test to configure an object without inheritance."""
@@ -116,7 +102,7 @@ class ConfigurableTest(UTCase):
         class ToConfigure(object):
             """Class to configure."""
 
-            def __init__(self, fuck=None):
+            def __init__(self, test=None):
 
                 super(ToConfigure, self).__init__()
 
@@ -238,9 +224,9 @@ class ConfigurableTest(UTCase):
     def test_applyconfiguration(self):
         """Test the function applyconfiguration."""
 
-        @Configurable(
-            conf=configuration(category('', Parameter('test', value=True)))
-        )
+        conf = configuration(category('', Parameter('test', value=True)))
+
+        @Configurable(conf=conf)
         class Test(object):
             pass
 
@@ -250,7 +236,18 @@ class ConfigurableTest(UTCase):
 
         test.test = False
 
-        applyconfiguration(targets=test)
+        applyconfiguration(targets=[test])
+
+        self.assertTrue(test.test)
+
+        class Test(object):
+            pass
+
+        test = Test()
+
+        self.assertFalse(hasattr(test, 'test'))
+
+        applyconfiguration(targets=[test], conf=conf)
 
         self.assertTrue(test.test)
 
@@ -271,7 +268,7 @@ class ConfigurableTest(UTCase):
 
         test.test = False
 
-        applyconfiguration(targets=test)
+        applyconfiguration(targets=[test])
 
         self.assertTrue(test.test)
 
@@ -293,7 +290,7 @@ class ConfigurableTest(UTCase):
 
         test.test = False
 
-        applyconfiguration(targets=test)
+        applyconfiguration(targets=[test])
 
         self.assertTrue(test.test)
 
@@ -325,7 +322,7 @@ class ConfigurableTest(UTCase):
         configurable = Configurable(drivers=[tcd0, tcd1])
 
         configurable.applyconfiguration(
-            targets=configurable, paths=['test0', 'test1']
+            targets=[configurable], paths=['test0', 'test1']
         )
 
         self.assertEqual(configurable.test0, '0')
@@ -343,7 +340,13 @@ class ConfigurableTest(UTCase):
             )
         )
 
-        configurable = Configurable(conf=conf)
+        self.assertRaises(
+            Parameter.Error,
+            Configurable,
+            conf=conf
+        )
+
+        configurable = Configurable(conf=conf, autoconf=False)
 
         self.assertRaises(
             Parameter.Error,
@@ -363,9 +366,24 @@ class ConfigurableTest(UTCase):
 
         configurable = Configurable(conf=conf, safe=False)
 
-        configurable.applyconfiguration(targets=configurable, paths='test')
+        configurable.applyconfiguration(targets=[configurable], paths='test')
 
         self.assertIs(configurable.test, int)
+
+    def test_subconf(self):
+
+        class Test(object):
+            pass
+
+        conf = configuration(
+            category('test', Parameter('a', value=Test)),
+            category(':a', Parameter('b', value=Test))
+        )
+
+        test = Test()
+        applyconfiguration(conf=conf, targets=[test])
+
+        self.assertIs(test.a.b, Test)
 
 
 if __name__ == '__main__':

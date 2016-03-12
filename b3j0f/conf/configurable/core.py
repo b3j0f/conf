@@ -31,7 +31,7 @@ __all__ = ['Configurable']
 from six import string_types
 from six.moves import reload_module
 
-from inspect import getargspec, isclass
+from inspect import getargspec, isclass, isroutine
 
 from b3j0f.utils.path import lookup
 from b3j0f.utils.version import getcallargs
@@ -87,7 +87,7 @@ class Configurable(PrivateInterceptor):
         land.conf['land']['country'].value = 'en'
 
         # update all configuration on an object
-        applyconfiguration(world)
+        applyconfiguration([world])
 
         assert world.country == 'en'
 
@@ -117,7 +117,6 @@ class Configurable(PrivateInterceptor):
     CONFPATHS = 'paths'  #: paths attribute name.
     DRIVERS = 'drivers'  #: drivers attribute name.
     INHERITEDCONF = 'inheritedconf'  #: usecls conf attribute name.
-    STORE = 'store'  #: store attribute name.
     FOREIGNS = 'foreigns'  #: not specified params setting attribute name.
     AUTOCONF = 'autoconf'  #: auto conf attribute name.
     SAFE = 'safe'  #: safe attribute name.
@@ -128,7 +127,6 @@ class Configurable(PrivateInterceptor):
 
     DEFAULT_CONFPATHS = ('b3j0fconf-configurable.conf', )  #: default conf path.
     DEFAULT_INHERITEDCONF = True  #: default inheritedconf value.
-    DEFAULT_STORE = True  #: default store value.
     DEFAULT_FOREIGNS = True  #: default value for setting not specified params.
     # default drivers which are json and ini.
     DEFAULT_DRIVERS = (
@@ -145,12 +143,11 @@ class Configurable(PrivateInterceptor):
 
     def __init__(
             self,
-            conf=None, inheritedconf=DEFAULT_INHERITEDCONF,
-            store=DEFAULT_STORE, paths=None, drivers=DEFAULT_DRIVERS,
-            foreigns=DEFAULT_FOREIGNS, autoconf=DEFAULT_AUTOCONF,
-            targets=None, safe=DEFAULT_SAFE, scope=DEFAULT_SCOPE,
-            besteffort=DEFAULT_BESTEFFORT, modules=DEFAULT_MODULES,
-            callparams=DEFAULT_CALLPARAMS,
+            conf=None, inheritedconf=DEFAULT_INHERITEDCONF, paths=None,
+            drivers=DEFAULT_DRIVERS, foreigns=DEFAULT_FOREIGNS,
+            autoconf=DEFAULT_AUTOCONF, targets=None, safe=DEFAULT_SAFE,
+            scope=DEFAULT_SCOPE, besteffort=DEFAULT_BESTEFFORT,
+            modules=DEFAULT_MODULES, callparams=DEFAULT_CALLPARAMS, logger=None,
             *args, **kwargs
     ):
         """
@@ -160,9 +157,6 @@ class Configurable(PrivateInterceptor):
         :param targets: object(s) to reconfigure. Such object may
             implement the methods configure applyconfiguration and configure.
         :type targets: list or instance.
-        :param bool store: if True (default) and targets is given,
-            store this instance into targets instance with the attribute
-            ``STORE_ATTR``.
         :param paths: paths to parse.
         :type paths: Iterable or str
         :param bool foreigns: if True (default), set parameters not specified by
@@ -182,7 +176,8 @@ class Configurable(PrivateInterceptor):
         :param bool callparams: if True (default), use parameters in the
             configured callable function.
         :param bool autoresolve: if True (default), call auto resolve on
-            retrieved configurations."""
+            retrieved configurations.
+        :param Logger logger: this logger."""
 
         super(Configurable, self).__init__(*args, **kwargs)
 
@@ -197,7 +192,6 @@ class Configurable(PrivateInterceptor):
         # dirty hack: falsify autoconf in order to avoid auto applyconfiguration
         self.autoconf = False
 
-        self.store = store
         self.inheritedconf = inheritedconf
         self.drivers = drivers
         self.foreigns = foreigns
@@ -209,6 +203,7 @@ class Configurable(PrivateInterceptor):
         self.besteffort = besteffort
         self.modules = modules
         self.callparams = callparams
+        self.logger = logger
 
         self.autoconf = autoconf  # end of dirty hack
 
@@ -223,52 +218,76 @@ class Configurable(PrivateInterceptor):
 
         if self.callparams:
 
-            conf = self.conf
+            args, kwargs = self.getcallparams(
+                conf=self.conf, target=target, args=list(args), kwargs=kwargs
+            )
 
-            params = conf.params.values()
+            joinpoint.args = list(args)
+            joinpoint.kwargs = kwargs
 
-            try:
-                argspec = getargspec(target)
-
-            except TypeError:
-                argspec = None
-                callargs = {}
-
-            else:
-                callargs = getcallargs(target, *args, **kwargs)
-
-            for param in params:
-
-                if argspec is None:
-
-                    args.append(param.value)
-
-                elif (
-                        callargs.get(param.name) is None
-                        and param.name in argspec.args
-                ):
-                    kwargs[param.name] = param.value
-
-        targets = result = joinpoint.proceed()
+        result = joinpoint.proceed()
 
         if self.autoconf:
+
+            targets = [result]
 
             cls = joinpoint.ctx if isclass(joinpoint.ctx) else target
 
             if isclass(cls):
 
-                if targets is None:
+                if target.__name__ == '__init__':  # if target is the method __init__
                     if 'self' in kwargs:
-                        targets = kwargs['self']
+                        targets = [kwargs['self']]
 
                     else:
-                        targets = args[0]
+                        targets = [args[0]]
 
-                if isinstance(targets, cls):
+                if isinstance(targets[0], cls):
 
                     self.applyconfiguration(targets=targets)
 
         return result
+
+    @staticmethod
+    def getcallparams(target, conf, args=None, kwargs=None):
+        """Get target call parameters.
+
+        :param list args: target call arguments.
+        :param dict kwargs: target call keywords.
+        :return: args, kwargs
+        :rtype: tuple"""
+
+        if args is None:
+            args = []
+
+        if kwargs is None:
+            kwargs = {}
+
+        params = conf.params.values()
+
+        try:
+            argspec = getargspec(target)
+
+        except TypeError:
+            argspec = None
+            callargs = {}
+
+        else:
+            callargs = getcallargs(target, *args, **kwargs)
+
+        for param in params:
+
+            if argspec is None:
+
+                args.append(param.value)
+
+            elif (
+                    callargs.get(param.name) is None
+                    and param.name in argspec.args
+            ):
+                kwargs[param.name] = param.value
+
+        return args, kwargs
 
     @property
     def modules(self):
@@ -342,10 +361,6 @@ class Configurable(PrivateInterceptor):
                 Parameter(
                     name=Configurable.INHERITEDCONF, ptype=bool,
                     value=Configurable.DEFAULT_INHERITEDCONF
-                ),
-                Parameter(
-                    name=Configurable.STORE, ptype=bool,
-                    value=Configurable.DEFAULT_STORE
                 ),
                 Parameter(
                     name=Configurable.SCOPE, ptype=dict,
@@ -434,7 +449,7 @@ class Configurable(PrivateInterceptor):
         :param paths: conf files to parse. If paths is a str, it is
             automatically putted into a list.
         :type paths: list of str
-        :param targets: object to configure. self by default.
+        :param Iterable targets: object(s) to configure. self targets by default.
         :param dict scope: local variables to use for expression resolution.
         """
 
@@ -447,24 +462,17 @@ class Configurable(PrivateInterceptor):
         if besteffort is None:
             besteffort = self.besteffort
 
-        if targets is None:  # init targets
+        if targets is None:
             targets = self.targets
 
-        if type(targets) is set:
+        if logger is None:
+            logger = self.logger
 
-            for target in targets:
-
-                self.applyconfiguration(
-                    conf=conf, paths=paths, drivers=drivers,
-                    logger=logger, targets=target, scope=scope, safe=safe,
-                    besteffort=besteffort
-                )
-
-        else:
-            # get conf from drivers and paths
-            conf = self.getconf(
-                conf=conf, paths=paths, logger=logger, drivers=drivers
-            )
+        # get conf from drivers and paths
+        conf = self.getconf(
+            conf=conf, paths=paths, logger=logger, drivers=drivers
+        )
+        if conf is not None:
             # resolve all values
             conf.resolve(
                 configurable=self,
@@ -498,6 +506,9 @@ class Configurable(PrivateInterceptor):
 
         if drivers is None:
             drivers = self.drivers
+
+        if logger is None:
+            logger = self.logger
 
         # iterate on all paths
         for path in paths:
@@ -535,7 +546,7 @@ class Configurable(PrivateInterceptor):
 
         :param Configuration conf: configuration model to configure. Default is
             this conf.
-        :param targets: object to configure. self if equals None.
+        :param Iterable targets: objects to configure. self targets by default.
         :param Logger logger: specific logger to use.
         :raises: Parameter.Error for any raised exception.
         """
@@ -543,24 +554,20 @@ class Configurable(PrivateInterceptor):
         if conf is None:
             conf = self.conf
 
-        if targets is None:  # init targets
+        if targets is None:
             targets = self.targets
 
-        if type(targets) is list:
+        if logger is None:
+            logger = self.logger
 
-            for targets in targets:
+        for target in targets:
 
-                self.configure(
-                    conf=conf, targets=targets, logger=logger
-                )
-
-        else:
             autoconf = self.autoconf
             self.autoconf = False
 
             try:
                 self._configure(
-                    conf=conf, logger=logger, targets=targets
+                    conf=conf, logger=logger, target=target
                 )
 
             except Exception as ex:
@@ -571,10 +578,10 @@ class Configurable(PrivateInterceptor):
                         )
                     )
 
-            finally:
+            else:
                 self.autoconf = autoconf
 
-    def _configure(self, conf=None, logger=None, targets=None):
+    def _configure(self, target, conf=None, logger=None):
         """Configure this class with input conf only if auto_conf or
         configure is true.
 
@@ -583,69 +590,72 @@ class Configurable(PrivateInterceptor):
         :param Configuration conf: configuration model to configure. Default is
             this conf.
         :param bool configure: if True, force full self conf
-        :param targets: object to configure. self if equals None.
+        :param target: object to configure. self targets by default.
         """
 
         if conf is None:
             conf = self.conf
 
-        if targets is None:  # init targets
-            targets = self.targets
+        if logger is None:
+            logger = self.logger
 
-        if type(targets) is list:
+        sub_confs = []  # sort local configuration and sub configurations
+        params = []  # self parameters
 
-            for targets in targets:
+        autoconf = self.autoconf
+        self.autoconf = False
 
-                self._configure(
-                    conf=conf, logger=logger, targets=targets
-                )
+        for cat in conf.values():  # separate sub params and params
+            if cat.name.startswith(self.SUB_CONF_PREFIX):
+                sub_confs.append(cat.name)
 
-        else:
-            sub_confs = []
-            params = []
+            else:
+                cparams = cat.params
+                params += cparams.values()
 
-            for cat in conf.values():
-                if cat.name.startswith(self.SUB_CONF_PREFIX):
-                    sub_confs.append(cat.name)
+        for param in params:
+
+            sub_conf_name = '{0}{1}'.format(
+                self.SUB_CONF_PREFIX, param.name
+            )
+
+            value = param.value
+
+            if sub_conf_name in sub_confs:  # if sub param
+
+                cat = conf[sub_conf_name]
+
+                extendedcat = cat.copy(name='extended')
+
+                subconf = configuration(extendedcat)
+
+                subparams = conf.params
+
+                if isclass(value) or isroutine(value):
+                    args, kwargs = self.getcallparams(
+                        conf=configuration(extendedcat), target=value
+                    )
+                    value = value(*args, **kwargs)
+                    if len(subparams) < len(args) + len(kwargs):
+                        subparams = False
+
+                if subparams:
+                    applyconfiguration(targets=[value], conf=subconf)
+
+            if param.error:
+                continue
+
+            if self.foreigns or param.local:
+                if param.name == Configurable.AUTOCONF:
+                    autoconf = param.value
 
                 else:
-                    cparams = cat.params
-                    params += cparams.values()
+                    setattr(target, param.name, value)
 
-                    for param in cparams.values():
-
-                        value = param.value
-
-                        if param.error:
-                            continue
-
-                        if self.foreigns or param.local:
-
-                            setattr(targets, param.name, value)
-
-            for param in params:
-
-                sub_conf_name = '{0}{1}'.format(
-                    self.SUB_CONF_PREFIX, param.name
-                )
-
-                if sub_conf_name in sub_confs:
-
-                    cat = conf[sub_conf_name]
-
-                    kwargs = {}
-
-                    for param in cat.params:
-
-                        kwargs[param.name] = param.value
-
-                    value = param.value(**kwargs)
-
-                    self._configure(
-                        targets=value, logger=logger, conf=value
-                    )
+        self.autoconf = autoconf
 
     def _bind_target(self, target, ctx=None, *args, **kwargs):
+        """Allow to bind to not callable objects."""
 
         newtarget = target not in self.targets
 
@@ -660,7 +670,7 @@ class Configurable(PrivateInterceptor):
             )
 
         if newtarget and self.autoconf:
-            self.applyconfiguration(targets=target)
+            self.applyconfiguration(targets=[target])
 
         return result
 
@@ -668,14 +678,22 @@ class Configurable(PrivateInterceptor):
 def applyconfiguration(targets, *args, **kwargs):
     """Apply configuration on input targets.
 
+    If targets are not annotated by a Configurable, a new one is instanciated.
+
+    :param Iterable targets: targets to configurate.
     :param tuple args: applyconfiguration var args.
     :param dict kwargs: applyconfiguration keywords.
     """
 
-    configurables = Configurable.get_annotations(targets)
+    for target in targets:
 
-    for configurable in configurables:
+        configurables = Configurable.get_annotations(target)
 
-        configurable.applyconfiguration(
-            targets=targets, *args, **kwargs
-        )
+        if not configurables:
+            configurables = [Configurable()]
+
+        for configurable in configurables:
+
+            configurable.applyconfiguration(
+                targets=[target], *args, **kwargs
+            )
