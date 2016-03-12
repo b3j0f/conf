@@ -40,9 +40,9 @@ class ModelElementTest(UTCase):
     class TestME(ModelElement):
         """ModelElement test."""
 
-        __slots__ = ModelElement.__slots__ + ('name', 'cleaned')
+        __slots__ = ModelElement.__slots__ + ('name', 'cleaned', 'local')
 
-        def __init__(self, name=None, *args, **kwargs):
+        def __init__(self, name=None, local=False, *args, **kwargs):
 
             super(ModelElementTest.TestME, self).__init__(
                 *args, **kwargs
@@ -50,6 +50,7 @@ class ModelElementTest(UTCase):
 
             self.cleaned = False
             self.name = name
+            self.local = local
 
         def clean(self, *args, **kwargs):
 
@@ -465,6 +466,21 @@ class CompositeModelElementTest(UTCase):
 
         self.assertFalse(self.cme)
 
+    def test_update(self):
+        """Test the method update."""
+
+        me = ModelElementTest.TestME(name='test')
+        cme = CompositeModelElementTest.TestCME(melts=[me])
+
+        self.cme.update(cme, copy=True)
+
+        for selfme in self.cme.values():
+
+            if me.name == 'test':
+                self.assertFalse(me.local)
+
+            else:
+                self.assertTrue(me.local)
 
 if __name__ == '__main__':
     main()

@@ -208,9 +208,9 @@ class Parameter(ModelElement):
 
         # init protected attributes
         self._name = None
-        self._value = None
+        self._value = value
         self._error = None
-        self._svalue = None
+        self._svalue = svalue
 
         # init public attributes
         self.parser = parser
@@ -225,8 +225,8 @@ class Parameter(ModelElement):
 
         # init setters
         self.name = name
-        self.svalue = svalue
-        self.value = value
+        #self.svalue = svalue
+        #self.value = value
 
     def __eq__(self, other):
         """

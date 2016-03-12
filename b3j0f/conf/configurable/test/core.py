@@ -268,7 +268,7 @@ class ConfigurableTest(UTCase):
         tcd1.confbypath['test1'] = configuration(
             category(
                 'test',
-                Parameter('test2', value='=@test0/test.test0 + @test1/test.test1'),
+                Parameter('test2', svalue='=@test0/test.test0 + @test1/test.test1'),
                 Parameter('test3', value=3)
             )
         )

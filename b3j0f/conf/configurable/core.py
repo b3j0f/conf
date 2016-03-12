@@ -72,6 +72,7 @@ class Configurable(PrivateInterceptor):
     BESTEFFORT = 'besteffort'  #: best effort attribute name.
     MODULES = 'modules'  #: modules attribute name.
     CALLPARAMS = 'callparams'  #: call params attribute name.
+    AUTORESOLVE = 'autoresolve'  #: conf auto resolution attribute name.
 
     DEFAULT_CONFPATHS = ('b3j0fconf-configurable.conf', )  #: default conf path.
     DEFAULT_INHERITEDCONF = True  #: default inheritedconf value.
@@ -87,6 +88,7 @@ class Configurable(PrivateInterceptor):
     DEFAULT_SAFE = DEFAULT_SAFE  #: default value for safe.
     DEFAULT_SCOPE = DEFAULT_SCOPE  #: default value for scope.
     DEFAULT_BESTEFFORT = DEFAULT_BESTEFFORT  #: default value for besteffort.
+    DEFAULT_AUTORESOLVE = True  #: default value for auto resolution.
 
     SUB_CONF_PREFIX = ':'  #: sub conf prefix.
 
@@ -97,7 +99,7 @@ class Configurable(PrivateInterceptor):
             foreigns=DEFAULT_FOREIGNS, autoconf=DEFAULT_AUTOCONF,
             toconfigure=(), safe=DEFAULT_SAFE, scope=DEFAULT_SCOPE,
             besteffort=DEFAULT_BESTEFFORT, modules=DEFAULT_MODULES,
-            callparams=DEFAULT_CALLPARAMS,
+            callparams=DEFAULT_CALLPARAMS, autoresolve=True,
             *args, **kwargs
     ):
         """
@@ -127,7 +129,9 @@ class Configurable(PrivateInterceptor):
         :param bool besteffort: expression resolver best effort flag.
         :param list modules: required modules.
         :param bool callparams: if True (default), use parameters in the
-            configured callable function."""
+            configured callable function.
+        :param bool autoresolve: if True (default), call auto resolve on
+            retrieved configurations."""
 
         super(Configurable, self).__init__(*args, **kwargs)
 
@@ -154,6 +158,7 @@ class Configurable(PrivateInterceptor):
         self.besteffort = besteffort
         self.modules = modules
         self.callparams = callparams
+        self.autoresolve = autoresolve
 
         self.autoconf = autoconf  # end of dirty hack
 
@@ -375,6 +380,10 @@ class Configurable(PrivateInterceptor):
                 Parameter(
                     name=Configurable.FOREIGNS, ptype=bool,
                     value=Configurable.DEFAULT_FOREIGNS
+                ),
+                Parameter(
+                    name=Configurable.AUTORESOLVE, ptype=bool,
+                    value=Configurable.DEFAULT_AUTORESOLVE
                 )
             )
         )
@@ -474,13 +483,18 @@ class Configurable(PrivateInterceptor):
             # configure resolved configuration
             self.configure(conf=conf, toconfigure=toconfigure)
 
-    def getconf(self, conf=None, paths=None, drivers=None, logger=None):
+    def getconf(
+            self, conf=None, paths=None, drivers=None, logger=None, resolve=None
+    ):
         """Get a configuration from paths.
 
         :param Configuration conf: conf to update. Default this conf.
         :param str(s) paths: list of conf files. Default this paths.
         :param Logger logger: logger to use for logging info/error messages.
         :param list drivers: ConfDriver to use. Default this drivers.
+        :param bool resolve: resolve the configuration (default is this
+            autoresolve).
+        :rtype: Configuration
         """
 
         result = None
@@ -497,6 +511,9 @@ class Configurable(PrivateInterceptor):
 
         if drivers is None:
             drivers = self.drivers
+
+        if resolve is None:
+            resolve = self.autoresolve
 
         # iterate on all paths
         for path in paths:
@@ -524,6 +541,12 @@ class Configurable(PrivateInterceptor):
                             drivers, path
                         )
                     )
+
+        if result is not None and resolve:
+            result.resolve(
+                configurable=self, scope=self.scope, safe=self.safe,
+                besteffort=self.besteffort
+            )
 
         return result
 

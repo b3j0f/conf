@@ -104,42 +104,6 @@ class ConfigurationTest(UTCase):
 
                 self.assertEqual(value, pvalue)
 
-    def test_update(self):
-        """Test the method update."""
-
-        copiedcat = self.conf['0'].copy()
-        copiedcat += Parameter('test', value=-1)
-
-        for param in copiedcat.values():
-            param.value = -1
-
-        conf = configuration(
-            category('test', Parameter('test')),
-            copiedcat
-        )
-
-        self.conf.update(conf, copy=False)
-
-        self.assertIs(self.conf['test'], conf['test'])
-
-        for cat in conf.values():
-            if cat.name == 'test':
-                self.assertIs(self.conf['test'], cat)
-
-            else:
-                for param in cat.values():
-
-                    if cat.name == '0':
-                        self.assertIn('test', cat)
-
-                        self.assertEqual(param.value, -1)
-
-                    elif param._error is None:
-
-                        self.assertEqual(
-                            param.value, int(cat.name) + int(param.name)
-                        )
-
 
 if __name__ == '__main__':
     main()

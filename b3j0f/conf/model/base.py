@@ -99,20 +99,10 @@ class ModelElement(object):
             slotattr = getattr(self, __slot__)
             slotsrepr = '{0}{1}={2}, '.format(slotsrepr, __slot__, slotattr)
 
-        else:
-            if slotsrepr:
-                slotsrepr = slotsrepr[:-2]
+        if slotsrepr:
+            slotsrepr = slotsrepr[:-2]
 
-        result = '{0}({1})'.format(type(self).__name__, slotsrepr)
-
-        return result
-
-    def raw(self):
-
-        result = {}
-
-        for slot in self.__slots__:
-            result[slot] = getattr(self, slot)
+        result = '{0}[{1}]'.format(type(self).__name__, slotsrepr)
 
         return result
 

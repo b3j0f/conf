@@ -128,21 +128,6 @@ class Configuration(CompositeModelElement):
 
         return result
 
-    def update(self, other, copy=True, cleaned=False, *args, **kwargs):
-        """Update this configuration and ensure new parameters are not local."""
-
-        oldparams = self.params
-
-        super(Configuration, self).update(
-            other, copy=copy, cleaned=cleaned, *args, **kwargs
-        )
-
-        lastparams = self.params
-
-        for pname in lastparams:
-            if pname not in oldparams:
-                lastparams[pname].local = False  # new params are not locals
-
 
 def configuration(*cats):
     """Quick instanciaton of Configuration with categories."""

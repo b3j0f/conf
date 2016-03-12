@@ -61,14 +61,7 @@ class TestConfDriver(ConfDriver):
 
     def _params(self, resource, cname):
 
-        result = []
-
-        result = list(
-            Parameter(pname, resource[cname][pname].value)
-            for pname in resource[cname]
-        )
-
-        return result
+        return resource[cname].values()
 
     def _setconf(self, conf, resource, rscpath):
 
