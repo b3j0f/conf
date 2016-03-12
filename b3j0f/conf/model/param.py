@@ -261,15 +261,6 @@ class Parameter(ModelElement):
 
         return hash(self.name) + hash(Parameter)
 
-    def __repr__(self):
-        """Display self name, value, svalue, ptype and error.
-
-        :rtype: str"""
-
-        return 'Parameter({0}, {1}, {2}, {3}, {4})'.format(
-            self.name, self._value, self._svalue, self.ptype, self.error
-        )
-
     @property
     def error(self):
         """Get encountered error.
@@ -402,7 +393,7 @@ class Parameter(ModelElement):
                 scope = self.scope
 
             else:
-                scope, selfscope = deepcopy(self.scope), scope
+                scope, selfscope = self.scope.copy(), scope
                 scope.update(selfscope)
 
             if safe is None:

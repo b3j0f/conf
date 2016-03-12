@@ -273,7 +273,16 @@ class Configurable(PrivateInterceptor):
             callargs = {}
 
         else:
-            callargs = getcallargs(target, *args, **kwargs)
+            try:
+                callargs = getcallargs(target, *args, **kwargs)
+
+            except TypeError as tex:
+                if tex.args[0].endswith('\'self\''):
+                    args = [None]
+
+                callargs = getcallargs(target, *args, **kwargs)
+
+                args = []
 
         for param in params:
 
@@ -571,6 +580,7 @@ class Configurable(PrivateInterceptor):
                 )
 
             except Exception as ex:
+                print(ex)
                 if logger is not None:
                     logger.error(
                         'Error {0} raised while configuring {1}/{2}'.format(
@@ -635,6 +645,7 @@ class Configurable(PrivateInterceptor):
                     args, kwargs = self.getcallparams(
                         conf=configuration(extendedcat), target=value
                     )
+
                     value = value(*args, **kwargs)
                     if len(subparams) < len(args) + len(kwargs):
                         subparams = False

@@ -33,8 +33,6 @@ from b3j0f.utils.path import lookup
 
 from re import compile as re_compile, sub
 
-from copy import deepcopy
-
 from ..registry import register
 from ..core import (
     DEFAULT_BESTEFFORT, DEFAULT_SAFE, DEFAULT_TOSTR, DEFAULT_SCOPE
@@ -85,14 +83,14 @@ def resolvepy(
 
     _eval = safe_eval if safe else eval
 
-    _scope = {} if scope is None else deepcopy(scope)
-
     _expr = expr
+
+    scope = {} if scope is None else scope.copy()
 
     while True:
 
         try:
-            result = _eval(_expr, _scope)
+            result = _eval(_expr, scope)
 
         except (AttributeError, NameError) as nex:
 
@@ -105,7 +103,7 @@ def resolvepy(
             try:
                 _expr = sub(
                     MISSING_VARIABLE.format(missing),
-                    genrepl(scope=_scope),
+                    genrepl(scope=scope),
                     _expr
                 )
 

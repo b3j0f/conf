@@ -94,7 +94,11 @@ class ModelElement(object):
         for __slot__ in self.__slots__:
 
             if __slot__.startswith('_'):
-                continue
+                if hasattr(self, __slot__):
+                    __slot__ = __slot__[1:]
+
+                else:
+                    continue
 
             slotattr = getattr(self, __slot__)
             slotsrepr = '{0}{1}={2}, '.format(slotsrepr, __slot__, slotattr)

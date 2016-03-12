@@ -161,8 +161,6 @@ from six import string_types
 
 from collections import Iterable
 
-from copy import deepcopy
-
 from .resolver.core import DEFAULT_BESTEFFORT, DEFAULT_SAFE, DEFAULT_SCOPE
 
 from .resolver.registry import resolve
@@ -220,7 +218,7 @@ def parse(
 
     compilation = REGEX_EXPR.match(svalue)
 
-    _scope = {} if scope is None else deepcopy(scope)
+    _scope = {} if scope is None else scope.copy()
 
     if compilation:
 
@@ -328,10 +326,12 @@ def _refrepl(configurable, conf, scope, safe, besteffort):
 
             result = '_____{0}'.format(random()).replace('.', '_')
 
-            scope[result] = param.resolve(
+            value = param.resolve(
                 configurable=configurable, conf=conf, scope=scope, safe=safe,
                 besteffort=besteffort
             )
+
+            scope[result] = value
 
         return result
 

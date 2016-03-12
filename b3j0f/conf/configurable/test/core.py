@@ -375,15 +375,27 @@ class ConfigurableTest(UTCase):
         class Test(object):
             pass
 
+        class Test2(object):
+            def __init__(self, a=None):
+                self.a = a
+
         conf = configuration(
-            category('test', Parameter('a', value=Test)),
-            category(':a', Parameter('b', value=Test))
+            category('test',
+                Parameter('test', value=Test),
+                Parameter('test2', value=Test2)
+            ),
+            category(':test', Parameter('a', value=Test)),
+            category(':test2', Parameter('a', value=Test2)),
+            category('test3', Parameter('test3', value=Test())),
+            category(':test3', Parameter('a', svalue='=@test3'))
         )
 
         test = Test()
         applyconfiguration(conf=conf, targets=[test])
 
-        self.assertIs(test.a.b, Test)
+        self.assertIs(test.test.a, Test)
+        self.assertIs(test.test2.a, Test2)
+        self.assertIs(test.test3.a, test.test3)
 
 
 if __name__ == '__main__':
