@@ -149,7 +149,7 @@ Let the following configuration file ``~/etc/myobject.conf`` in ini format:
 
   [MYOBJECT]
   myattr = myvalue
-  twelve = = @six * 2.0
+  twelve = =@six * 2.0
 
 Let the following configuration file ``~/.config/myobject.conf`` in json format:
 
@@ -165,68 +165,125 @@ The following code permits to load upper configuration to a python object.
 
 .. code-block:: python
 
-    from b3j0f.conf import Configurable
+  from b3j0f.conf import Configurable
 
-    # instantiate a business class
-    @Configurable(paths='myobject.conf')
-    class MyObject(object):
-        pass
+  # instantiate a business class
+  @Configurable(paths='myobject.conf')
+  class MyObject(object):
+      pass
 
-    myobject = MyObject()
+  myobject = MyObject()
 
-    # assert attributes
-    assert myobject.myattr == 'myvalue'
-    assert myobject.six == 6
-    assert myobject.twelve == 12
+  # assert attributes
+  assert myobject.myattr == 'myvalue'
+  assert myobject.six == 6
+  assert myobject.twelve == 12
 
 The following code permits to load upper configuration to a python function.
 
 .. code-block:: python
 
-    from b3j0f.conf import Configurable
+  from b3j0f.conf import Configurable
 
-    # instantiate a business class
-    @Configurable(paths='myobject.conf')
-    def myfunc(myattr, six, twelve):
-        return myattr, six, twelve
+  # instantiate a business class
+  @Configurable(paths='myobject.conf')
+  def myfunc(myattr, six, twelve):
+      return myattr, six, twelve
 
-    myattr, six, twelve = myfunc(twelve=46)
+  myattr, six, twelve = myfunc(twelve=46)
 
-    # assert attributes
-    assert myobject.myattr == 'myvalue'
-    assert myobject.six == 6
-    assert myobject.twelve == 46
+  # assert attributes
+  assert myobject.myattr == 'myvalue'
+  assert myobject.six == 6
+  assert myobject.twelve == 46
 
-Configure several objects with one configurable
-###############################################
-
-.. code-block:: python
-
-    from b3j0f.conf import getconfigurables
-
-    class Test(object):
-        pass
-
-    toconfigure = list(Test() for _ in range(5))
-
-    configurable = getconfigurables(myobject)[0]
-    configurable.applyconfiguration(toconfigure=toconfigure)
-
-    for item in toconfigure:
-        assert item.six == 6
-
-Reconfigure a configurable object
-#################################
+Class configuration
+###################
 
 .. code-block:: python
 
-    from b3j0f.conf import applyconfiguration
+  from b3j0f.conf import category
+  from b3j0f.conf import Configurable
 
-    myobject.six = 7
+  # class configuration
+  @Configurable(conf=category('land', Parameter('country', value='fr')))
+  class World(object):
+      pass
 
-    applyconfiguration(myobject)
+  world = World()
+  assert world.country == 'fr'
 
-    assert myobject.six == 6
+One configuration with several objects
+######################################
+
+.. code-block:: python
+
+  land = Configurable.get_annotations(world)[0]  # class method for retrieving Configurables
+
+  @land
+  class World2(object):
+      pass
+
+  assert World2().country == 'fr'
+
+  class World3(object):
+      pass
+
+  assert land(World3()).country == 'fr'
+
+  world3s = (World() for _ in range(5))
+
+  land.configure(targets=world3s)
+
+Update object configuration
+###########################
+
+.. code-block:: python
+
+  from b3j0f.conf applyconfiguration
+
+  land.conf['land']['country'].value = 'en'
+
+  applyconfiguration(world)
+
+  assert world.country == 'en'
+
+Configure object constructor
+############################
+
+.. code-block:: python
+
+  land.autoconf = False  # disable autoconf
+
+  @land
+  class World4(object):
+      def __init__(self, country=None):
+          self.safecountry = country
+
+  world4 = World4()
+
+  assert not hasattr(world4, 'country')  # disabled auto conf side effect
+  assert world4.safecountry = 'en'
+
+  land.applyconfiguration()  # configure all land targets
+
+  assert world4.country == 'en'
+
+Configure function parameters
+#############################
+
+.. code-block:: python
+
+  @land
+  def getcountry(country=None):
+      print(country)
+      return country
+
+  assert getcountry() == 'en'
+
+  land['land']['country'] = 'fr'
+
+  assert getcountry() == 'fr'
 
 Perspectives
 ------------

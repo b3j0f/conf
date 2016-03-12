@@ -29,11 +29,11 @@
 __all__ = [
     '__version__',
     'Configuration', 'Category', 'Parameter',
-    'Configurable',
+    'Configurable', 'applyconfiguration'
     'ConfDriver'
 ]
 
 from .version import __version__
-from .configurable import Configurable
+from .configurable import Configurable, applyconfiguration
 from .model import Configuration, Category, Parameter
 from .driver import ConfDriver
