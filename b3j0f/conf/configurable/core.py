@@ -288,15 +288,11 @@ class Configurable(PrivateInterceptor):
 
         for param in params:
 
-            if argspec is None:
-                if not PY2:
-                    args.append(param.value)
+            pname = param.name
 
-            elif (
-                    callargs.get(param.name) is None
-                    and param.name in argspec.args
-            ):
-                kwargs[param.name] = param.value
+            if argspec and callargs.get(pname) is None and pname in argspec.args:
+
+                kwargs[pname] = param.value
 
         return args, kwargs
 
@@ -646,10 +642,15 @@ class Configurable(PrivateInterceptor):
                     args, kwargs = self.getcallparams(
                         conf=configuration(extendedcat), target=value
                     )
-                    value = value(*args, **kwargs)
+                    try:
+                        value = value(*args, **kwargs)
 
-                    if len(subparams) < (len(args) + len(kwargs)):
-                        subparams = False
+                    except TypeError:
+                        value = value()
+
+                    else:
+                        if len(subparams) < (len(args) + len(kwargs)):
+                            subparams = False
 
                 if subparams:
                     applyconfiguration(targets=[value], conf=subconf)
