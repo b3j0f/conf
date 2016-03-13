@@ -36,7 +36,7 @@ from inspect import getargspec, isclass, isroutine
 from traceback import format_exc
 
 from b3j0f.utils.path import lookup
-from b3j0f.utils.version import getcallargs, PY26
+from b3j0f.utils.version import getcallargs, PY2
 from b3j0f.annotation import PrivateInterceptor, Annotation
 
 from ..model.conf import Configuration, configuration
@@ -289,7 +289,7 @@ class Configurable(PrivateInterceptor):
         for param in params:
 
             if argspec is None:
-                if not PY26:
+                if not PY2:
                     args.append(param.value)
 
             elif (

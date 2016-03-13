@@ -46,6 +46,8 @@ from ..model.cat import Category
 
 from sys import exc_info
 
+from traceback import format_exc
+
 from six import reraise
 
 
@@ -94,13 +96,10 @@ class ConfDriver(object):
         try:
             result = self._pathresource(rscpath=rscpath)
 
-        except:
-
+        except Exception as ex:
             if logger is not None:
-                _, ex, traceback = exc_info()
-
                 msg = 'Error while getting resource from {0}.'.format(rscpath)
-                full_msg = '{0} {1}: {2}'.format(msg, ex, traceback)
+                full_msg = '{0} {1}: {2}'.format(msg, ex, format_exc())
                 logger.error(full_msg)
 
         return result
@@ -158,12 +157,10 @@ class ConfDriver(object):
         try:
             self._setconf(conf=conf, resource=resource, rscpath=rscpath)
 
-        except Exception:
+        except Exception as ex:
             if logger is not None:
-                _, ex, traceback = exc_info()
                 msg = 'Error while setting conf to {0}.'.format(rscpath)
-                full_msg = '{0} {1}: {2}'.format(msg, ex, traceback)
-
+                full_msg = '{0} {1}: {2}'.format(msg, ex, format_exc())
                 logger.error(full_msg)
                 reraise(self.Error, self.Error(msg))
 

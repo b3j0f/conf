@@ -30,7 +30,7 @@ from __future__ import absolute_import
 
 __all__ = ['XMLConfDriver']
 
-from b3j0f.utils.version import PY26
+from b3j0f.utils.version import PY2
 
 from xml.etree.ElementTree import fromstring, Element, ElementTree
 
@@ -71,7 +71,7 @@ class XMLConfDriver(ConfDriver):
 
         result = []
 
-        if PY26:
+        if PY2:
             ecats = resource.findall(XMLConfDriver.CATEGORY)
 
             ecat = None
@@ -109,7 +109,7 @@ class XMLConfDriver(ConfDriver):
 
             ecat = None
 
-            if PY26:
+            if PY2:
                 ecats = resource.findall(cquery)
                 for ecat in ecats:
                     if ecat.get('name') == 'cat.name':
@@ -132,7 +132,7 @@ class XMLConfDriver(ConfDriver):
 
                 eparam = None
 
-                if PY26:
+                if PY2:
                     eparams = ecat.findall(pquery)
                     for eparam in eparams:
                         if eparam.get('name') == param.name:
