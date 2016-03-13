@@ -24,39 +24,63 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-"""JSON configuration file driver."""
+"""JSON configuration driver."""
 
 from __future__ import absolute_import
 
-__all__ = ['JSONFileConfDriver']
+__all__ = ['JSONConfDriver']
 
 try:
-    from json import load, dump
+    from json import loads, dumps
 
 except ImportError:
-    from simplejson import load, dump
+    from simplejson import loads, dumps
 
-from .base import FileConfDriver
-from ..json import JSONConfDriver
+from .base import ConfDriver
+from ..model.param import Parameter
 
 
-class JSONFileConfDriver(FileConfDriver, JSONConfDriver):
-    """Manage json resource configuration from json file."""
+class JSONConfDriver(ConfDriver):
+    """Manage json resource configuration."""
+
+    def rscpaths(self, path):
+
+        return [path]
+
+    def resource(self):
+
+        return {}
 
     def _pathresource(self, rscpath):
 
-        result = None
+        result = loads(rscpath)
 
-        with open(rscpath, 'r') as fpr:
+        return result
 
-            result = load(fpr)
+    def _cnames(self, resource):
+
+        return resource.keys()
+
+    def _params(self, resource, cname):
+
+        params = resource[cname]
+
+        result = [
+            Parameter(name=key, svalue=params[key]) for key in params
+        ]
 
         return result
 
     def _setconf(self, conf, resource, rscpath):
 
-        super(JSONFileConfDriver, self)._setconf(conf, resource, rscpath)
+        for category in conf.values():
 
-        with open(rscpath, 'w') as fpw:
+            cat = resource.setdefault(category.name, {})
 
-            dump(resource, fpw)
+            for parameter in category.values():
+
+                cat[parameter.name] = parameter.svalue
+
+        result = dumps(resource)
+
+        return result

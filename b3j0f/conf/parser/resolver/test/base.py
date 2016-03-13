@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # --------------------------------------------------------------------
@@ -24,39 +25,62 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-"""JSON configuration file driver."""
+"""expr resolver cls UTs."""
 
-from __future__ import absolute_import
+from unittest import main
 
-__all__ = ['JSONFileConfDriver']
+from b3j0f.utils.ut import UTCase
 
-try:
-    from json import load, dump
-
-except ImportError:
-    from simplejson import load, dump
-
-from .base import FileConfDriver
-from ..json import JSONConfDriver
+from ..base import ExprResolver
+from ..registry import resolve
 
 
-class JSONFileConfDriver(FileConfDriver, JSONConfDriver):
-    """Manage json resource configuration from json file."""
+class TestExprResolver(ExprResolver):
 
-    def _pathresource(self, rscpath):
+    __resolver__ = 'test'
 
-        result = None
+    def __call__(self, *args, **kwargs):
 
-        with open(rscpath, 'r') as fpr:
+        return '{0}{0}'.format(TestExprResolver.__resolver__)
 
-            result = load(fpr)
 
-        return result
+class ExprResolverTest(UTCase):
+    """Test ExprResolver."""
 
-    def _setconf(self, conf, resource, rscpath):
+    def setUp(self):
 
-        super(JSONFileConfDriver, self)._setconf(conf, resource, rscpath)
+        self.test = 'test'
 
-        with open(rscpath, 'w') as fpw:
+    def test__resolver__(self):
 
-            dump(resource, fpw)
+        class Test(ExprResolver):
+
+            __register__ = True
+
+            __resolver__ = self.test
+
+            def __call__(*args, **kwargs):
+
+                return self.test.upper()
+
+        result = resolve(expr='', name=self.test)
+
+        self.assertEqual(result, self.test.upper())
+
+    def test__name__(self):
+
+        class Test(ExprResolver):
+
+            __register__ = True
+
+            def __call__(*args, **kwargs):
+
+                return self.test.upper()
+
+        result = resolve(expr='', name=Test.__name__)
+
+        self.assertEqual(result, self.test.upper())
+
+
+if __name__ == '__main__':
+    main()

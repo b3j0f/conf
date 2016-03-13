@@ -26,8 +26,6 @@
 
 """Configuration definition objects."""
 
-from __future__ import absolute_import
-
 __all__ = ['ModelElement', 'CompositeModelElement']
 
 from b3j0f.utils.version import OrderedDict
@@ -37,7 +35,10 @@ class ModelElement(object):
     """Base configuration elementParameter.
 
     Use a name and a provide a python value in ordr to ease serialization.
-    """
+
+    A model element uses a local flag in order to indicates if it has been
+    created with the upper composite model element or if it has been added after
+    updating."""
 
     class Error(Exception):
         """Handle ModelElement errors."""
@@ -93,83 +94,94 @@ class ModelElement(object):
         for __slot__ in self.__slots__:
 
             if __slot__.startswith('_'):
-                continue
+                if hasattr(self, __slot__):
+                    __slot__ = __slot__[1:]
+
+                else:
+                    continue
 
             slotattr = getattr(self, __slot__)
-            slotsrepr = '{0}{1}, '.format(slotsrepr, slotattr)
+            slotsrepr = '{0}{1}={2}, '.format(slotsrepr, __slot__, slotattr)
 
-        else:
-            if slotsrepr:
-                slotsrepr = slotsrepr[:-2]
+        if slotsrepr:
+            slotsrepr = slotsrepr[:-2]
 
-        result = '{0}({1})'.format(type(self).__name__, slotsrepr)
+        result = '{0}[{1}]'.format(type(self).__name__, slotsrepr)
 
         return result
 
+    def update(self, other, copy=True, cleaned=False, *args, **kwargs):
+        """Update this element related to other element.
 
-class CompositeModelElement(ModelElement):
+        :param other: same type than this.
+        :param bool copy: copy other before update attributes.
+        :param bool cleaned: do a cleaned copy.
+        :param tuple args: copy args.
+        :param dict kwargs: copy kwargs.
+        :return: this"""
+
+        if other:  # dirty hack for python2.6
+
+            if isinstance(other, self.__class__):
+
+                if copy:
+                    other = other.copy(cleaned=cleaned, *args, **kwargs)
+
+                for slot in self.__slots__:
+                    oattr = getattr(other, slot)
+
+                    if oattr is not None:
+                        setattr(self, slot, oattr)
+
+            else:
+                raise TypeError(
+                    'Wrong element to update with {0}: {1}'.format(self, other)
+                )
+
+        return self
+
+
+class CompositeModelElement(ModelElement, OrderedDict):
     """Model element composed of model elements."""
 
     __contenttype__ = ModelElement  #: content type.
 
-    __slots__ = ('_content', ) + ModelElement.__slots__
+    __slots__ = ModelElement.__slots__
 
-    def __init__(self, *content):
+    def __init__(self, melts=None):
+        """
+        :param tuple melts: model elements to add.
+        """
 
-        super(CompositeModelElement, self).__init__()
+        super(CompositeModelElement, self).__init__({})
 
-        # init protected attributes
-        self._content = OrderedDict()
+        if melts is not None:
+            for melt in melts:
+                self[melt.name] = melt
 
-        self.content = content
+    def __deepcopy__(self, _):
 
-    def __iter__(self):
-
-        return iter(self._content.values())
-
-    def __getitem__(self, key):
-
-        if isinstance(key, ModelElement):
-            key = key.name
-
-        return self._content[key]
-
-    def __setitem__(self, key, value):
-
-        if isinstance(key, ModelElement):
-            key = key.name
-
-        self._content[key] = value
-
-    def __delitem__(self, key):
-
-        if isinstance(key, ModelElement):
-            key = key.name
-
-        del self._content[key]
+        return self.copy()
 
     def __getattr__(self, key):
-
+        """Try to delegate key attribute to content name."""
         result = None
 
         if key in self.__slots__:
             result = super(CompositeModelElement, self).__getattribute__(key)
 
         else:
-            result = self._content[key]
+            try:
+                result = self[key]
+
+            except KeyError:
+                raise AttributeError(
+                    '\'{0}\' object has no attribute \'{1}\''.format(
+                        self.__class__, key
+                    )
+                )
 
         return result
-
-    def __contains__(self, key):
-
-        if isinstance(key, ModelElement):
-            key = key.name
-
-        return key in self._content
-
-    def __len__(self):
-
-        return len(self._content)
 
     def __i(self, other, func):
         """Process input other with input func.
@@ -180,12 +192,12 @@ class CompositeModelElement(ModelElement):
         :raise: TypeError if other is not a ModelElement(s)."""
 
         if isinstance(other, type(self)):
-            other = tuple(other.content)
+            other = tuple(other)
 
         elif isinstance(other, self.__contenttype__):
             other = (other, )
 
-        for melt in other:
+        for melt in list(other):
             if not isinstance(melt, self.__contenttype__):
                 raise TypeError('Wrong element {0}'.format(melt))
 
@@ -202,8 +214,7 @@ class CompositeModelElement(ModelElement):
         :raise: TypeError if other is not a ModelElement(s)."""
 
         return self.__i(
-            other=other,
-            func=lambda melt: self._content.__setitem__(melt.name, melt)
+            other=other, func=lambda melt: self.__setitem__(melt.name, melt)
         )
 
     def __isub__(self, other):
@@ -213,10 +224,7 @@ class CompositeModelElement(ModelElement):
         :return: self.
         :raise: TypeError if other is not a ModelElement(s)."""
 
-        return self.__i(
-            other=other,
-            func=lambda melt: self._content.pop(melt.name)
-        )
+        return self.__i(other=other, func=lambda melt: self.pop(melt.name))
 
     def __ixor__(self, other):
         """Put other element(s) which are not registered in this.
@@ -228,109 +236,92 @@ class CompositeModelElement(ModelElement):
         return self.__i(
             other=other,
             func=lambda melt:
-            melt.name not in self and self._content.__setitem__(
-                melt.name, melt
-            )
+            melt.name not in self and self.__setitem__(melt.name, melt)
         )
 
     def __repr__(self):
 
         result = super(CompositeModelElement, self).__repr__()
 
-        result = '{0}[{1}]'.format(result, self._content)
-
-        return result
-
-    def names(self):
-        """Get content names."""
-
-        return tuple(self._content.keys())
-
-    @property
-    def content(self):
-        """Get Content.
-
-        :rtype: tuple
-        """
-
-        return tuple(self._content.values())
-
-    @content.setter
-    def content(self, value):
-        """Change of content.
-
-        :param ModelElement(s) value: new content to use.
-        """
-
-        self._content.clear()
-
-        self += value
-
-    def put(self, value):
-        """Put a content value and return the previous one if exist.
-
-        :param ModelElement value: model element to put in this.
-        :return: previous model element registered at the same name.
-        :rtype: ModelElement
-        """
-
-        result = self.get(value.name)
-
-        self += value
+        result += OrderedDict.__repr__(self)[len(self.__class__.__name__) + 2: -2]
 
         return result
 
     def clean(self, *args, **kwargs):
 
-        for content in self._content.values():
+        for content in list(self.values()):
 
             content.clean(*args, **kwargs)
 
     def copy(self, cleaned=False, *args, **kwargs):
 
-        result = super(CompositeModelElement, self).copy(*args, **kwargs)
+        for slot in self.__slots__:
+            if slot not in kwargs:
+                attr = getattr(self, slot)
+                kwargs[slot] = attr
 
-        for content in self._content.values():
+        melts = list(melt.copy(cleaned=cleaned) for melt in self.values())
 
-            result += content.copy(cleaned=cleaned)
+        result = super(CompositeModelElement, self).copy(melts=melts, *args, **kwargs)
 
         return result
 
-    def pop(self, name):
-        """Remove an element by name and return it.
+    def update(self, other, copy=True, cleaned=False, *args, **kwargs):
+        """Update this composite model element with other element content.
 
-        :param str name: corresponding element name to remove.
-        :return: corresponding element name.
-        :rtype: ModelElement
-
-        :raises: KeyError if name is not registered in this."""
-
-        return self._content.pop(name)
-
-    def get(self, key, default=None):
-        """Get a content value by its name.
-
-        :param str key: content name.
-        :param ModelElement default: default value if key is not registered.
-        :return: related content model element.
-        :rtype: ModelElement
+        :param other: element to update with this. Must be the same type of this
+            or this __contenttype__.
+        :param bool copy: copy other before updating.
+        :param bool cleaned: in addition to the copy request, do a cleaned copy.
         """
 
-        return self._content.get(key, default)
+        super(CompositeModelElement, self).update(
+            other, copy=copy, cleaned=cleaned, *args, **kwargs
+        )
 
-    def setdefault(self, key, value):
-        """Register a content value with specific name if key not already used.
+        if other:  # dirty hack for python2.6
+            contents = []
 
-        :param str key: content name.
-        :param ModelElement value: model element to register.
-        :return: existing model element or input value if no modelelt has
-            been registered with key.
-        :rtype: ModelElement
-        """
+            if isinstance(other, self.__class__):
+                contents = list(other.values())
 
-        return self._content.setdefault(key, value)
+            elif isinstance(other, self.__contenttype__):
+                contents = [other]
 
-    def clear(self):
-        """Clear this composite model element from this content."""
+            else:
+                raise TypeError(
+                    'Wrong element to update with {0}: {1}'.format(self, other)
+                )
 
-        self._content.clear()
+            for content in contents:
+
+                selfcontent = self.get(content.name)
+
+                if selfcontent is None:
+
+                    if copy:
+                        content = content.copy(cleaned=cleaned, local=False)
+                    self[content.name] = content
+
+                else:
+                    selfcontent.update(
+                        content, copy=copy, cleaned=cleaned, *args, **kwargs
+                    )
+
+    @property
+    def params(self):
+        """Get set of parameters by names.
+
+        :rtype: dict"""
+
+        result = {}
+
+        for content in list(self.values()):
+
+            if isinstance(content, CompositeModelElement):
+                result.update(content.params)
+
+            else:
+                result[content.name] = content
+
+        return result

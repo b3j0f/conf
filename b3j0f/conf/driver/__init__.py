@@ -26,6 +26,8 @@
 
 """Conf driver package with the ConfDriver definition."""
 
-__all__ = ['ConfDriver']
+__all__ = ['ConfDriver', 'JSONConfDriver', 'XMLConfDriver']
 
 from .base import ConfDriver
+from .json import JSONConfDriver
+from .xml import XMLConfDriver

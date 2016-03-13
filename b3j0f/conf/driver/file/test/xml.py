@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # --------------------------------------------------------------------
@@ -24,39 +25,20 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-"""JSON configuration file driver."""
+"""XML ConfDriver UTs."""
 
-from __future__ import absolute_import
+from unittest import main
 
-__all__ = ['JSONFileConfDriver']
+from .base import FileConfDriverTest
 
-try:
-    from json import load, dump
-
-except ImportError:
-    from simplejson import load, dump
-
-from .base import FileConfDriver
-from ..json import JSONConfDriver
+from ..xml import XMLFileConfDriver
 
 
-class JSONFileConfDriver(FileConfDriver, JSONConfDriver):
-    """Manage json resource configuration from json file."""
+class XMLConfDriverTest(FileConfDriverTest):
+    """Test XMLConfDriver."""
 
-    def _pathresource(self, rscpath):
+    __driverclass__ = XMLFileConfDriver
 
-        result = None
 
-        with open(rscpath, 'r') as fpr:
-
-            result = load(fpr)
-
-        return result
-
-    def _setconf(self, conf, resource, rscpath):
-
-        super(JSONFileConfDriver, self)._setconf(conf, resource, rscpath)
-
-        with open(rscpath, 'w') as fpw:
-
-            dump(resource, fpw)
+if __name__ == '__main__':
+    main()

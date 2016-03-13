@@ -3,7 +3,7 @@
 # --------------------------------------------------------------------
 # The MIT License (MIT)
 #
-# Copyright (c) 2014 Jonathan Labéjof <jonathan.labejof@gmail.com>
+# Copyright (c) 2015 Jonathan Labéjof <jonathan.labejof@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,39 +24,37 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-"""JSON configuration file driver."""
+"""core resolver module.
 
-from __future__ import absolute_import
+Contains signature of the resolver function and and default parameter values."""
 
-__all__ = ['JSONFileConfDriver']
+__all__ = [
+    'DEFAULT_BESTEFFORT', 'DEFAULT_SAFE', 'DEFAULT_TOSTR', 'DEFAULT_SCOPE',
+    'resolver'
+]
 
-try:
-    from json import load, dump
+DEFAULT_BESTEFFORT = True  #: default best effort execution context flag.
+DEFAULT_SAFE = True  #: default safe execuction context flag.
+DEFAULT_TOSTR = False  #: default conversion to str flag.
+DEFAULT_SCOPE = None  #: default scope execution context.
 
-except ImportError:
-    from simplejson import load, dump
+def resolver(
+        expr, safe=DEFAULT_SAFE, tostr=DEFAULT_TOSTR, scope=DEFAULT_SCOPE,
+        besteffort=DEFAULT_BESTEFFORT
+):
+    """Resolve input expression.
 
-from .base import FileConfDriver
-from ..json import JSONConfDriver
+    This function is given such as template resolution function. For wrapping
+    test for example.
+
+    :param str expr: configuration expression to resolve.
+    :param bool safe: if True (default), run safely execution context.
+    :param bool tostr: format the result.
+    :param dict scope: execution scope (contains references to expression
+        objects).
+    :param bool besteffort: if True (default), try to resolve unknown variable
+        name with execution runtime.
+    :return: resolved expression."""
 
 
-class JSONFileConfDriver(FileConfDriver, JSONConfDriver):
-    """Manage json resource configuration from json file."""
-
-    def _pathresource(self, rscpath):
-
-        result = None
-
-        with open(rscpath, 'r') as fpr:
-
-            result = load(fpr)
-
-        return result
-
-    def _setconf(self, conf, resource, rscpath):
-
-        super(JSONFileConfDriver, self)._setconf(conf, resource, rscpath)
-
-        with open(rscpath, 'w') as fpw:
-
-            dump(resource, fpw)
+    raise NotImplementedError()

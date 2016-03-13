@@ -30,16 +30,14 @@ from unittest import main
 
 from b3j0f.utils.ut import UTCase
 
-from ..core import Configurable, getconfigurables, applyconfiguration
-from ...model.conf import Configuration
-from ...model.cat import Category
+from ..core import Configurable, applyconfiguration
+from ...model.conf import configuration
+from ...model.cat import Category, category
 from ...model.param import Parameter
 
 from ...driver.test.base import TestConfDriver
 
 from tempfile import NamedTemporaryFile
-
-from os import remove
 
 
 class ConfigurableTest(UTCase):
@@ -53,17 +51,17 @@ class ConfigurableTest(UTCase):
 
         self.configurable = Configurable()
 
-        self.conf = Configuration(
-            Category(
+        self.conf = configuration(
+            category(
                 'A',
-                Parameter('a', value='a', vtype=str),
-                Parameter('_', value=2, vtype=int),
-                Parameter('error', vtype=float, svalue='error')
+                Parameter('a', value='a', ptype=str),
+                Parameter('_', value=2, ptype=int),
+                Parameter('error', ptype=float, svalue='error')
             ),
-            Category(
+            category(
                 'B',
-                Parameter('a', value='b', vtype=str),
-                Parameter('b', value='b', vtype=str)
+                Parameter('a', value='b', ptype=str),
+                Parameter('b', value='b', ptype=str)
             )
         )
 
@@ -78,22 +76,8 @@ class ConfigurableTest(UTCase):
 
         self.assertEqual(configurable.paths, self.paths)
 
-    def test_store(self):
-
-        configurable = Configurable()
-
-        self.assertEqual(configurable.store, Configurable.DEFAULT_STORE)
-
-        configurable = Configurable(store=not Configurable.DEFAULT_STORE)
-
-        self.assertEqual(configurable.store, not Configurable.DEFAULT_STORE)
-
-        configurable.store = Configurable.DEFAULT_STORE
-
-        self.assertEqual(configurable.store, Configurable.DEFAULT_STORE)
-
     def test_configure_to_reconfigure_param(self):
-        """Test to reconfigure an object with toconfigure parameter."""
+        """Test to reconfigure an object with targets parameter."""
 
         class ToConfigure(object):
             """Class to configure.
@@ -102,33 +86,31 @@ class ConfigurableTest(UTCase):
                 super(ToConfigure, self).__init__()
                 self.test = None
 
-        toconfigure = ToConfigure()
+        target = ToConfigure()
 
         param = 'test'
 
-        conf = Configuration(Category('TEST', Parameter(param, value=True)))
+        conf = configuration(category('TEST', Parameter(param, value=True)))
 
-        self.configurable.configure(conf=conf, toconfigure=toconfigure)
-        self.assertTrue(toconfigure.test)
+        self.configurable.configure(conf=conf, targets=[target])
+        self.assertTrue(target.test)
 
     def test_configure_without_inheritance(self):
         """Test to configure an object without inheritance."""
 
-        @Configurable(
-            conf=Category('TEST', Parameter('test', value=True))
-        )
+        @Configurable(conf=category('TEST', Parameter('test', value=True)))
         class ToConfigure(object):
             """Class to configure."""
 
-            def __init__(self):
+            def __init__(self, test=None):
 
                 super(ToConfigure, self).__init__()
 
                 self.test = None
 
-        toconfigure = ToConfigure()
+        targets = ToConfigure()
 
-        self.assertTrue(toconfigure.test)
+        self.assertTrue(targets.test)
 
     def test_parser_inheritance(self):
 
@@ -151,22 +133,60 @@ class ConfigurableTest(UTCase):
             len(_configurable.conf)
         )
 
-    def test_inheritance(self):
-        """Test with inheritance between toconfigure objects."""
+    def test_class_callparams(self):
+        """Test to call params on a class."""
 
-        conf0 = Configuration(
-            Category(
+        @Configurable(conf=category('', Parameter('test', value=True)))
+        class Test(object):
+
+            def __init__(self, test=None):
+
+                super(Test, self).__init__()
+
+                self.testy = test
+
+        test = Test()
+
+        self.assertTrue(test.test)
+        self.assertTrue(test.testy)
+
+    def test_function_callparams(self):
+        """Test to call params on a function."""
+
+        @Configurable(conf=category('', Parameter('test', value=True)))
+        def twist(test=None):
+            return test
+
+        value = twist()
+
+        self.assertTrue(value)
+
+        value = twist(False)
+
+        self.assertFalse(value)
+
+        Configurable.get_annotations(twist)[0].conf['']['test'].value = 1
+
+        value = twist()
+
+        self.assertEqual(value, 1)
+
+    def test_inheritance(self):
+        """Test with inheritance between targets objects."""
+
+        conf0 = configuration(
+            category(
                 'test0',
                 Parameter('test0', value=0)
             ),
-            Category(
+            category(
                 'test1',
                 Parameter('test1', value=1)
             )
         )
 
-        conf1 = Configuration(
-            Category(
+        conf1 = configuration(
+            category(
                 'test1',
                 Parameter('test1', value=2)
             )
@@ -191,55 +211,110 @@ class ConfigurableTest(UTCase):
 
         configurable = Configurable()
 
-        configurables = getconfigurables(configurable)
+        configurables = Configurable.get_annotations(configurable)
 
         self.assertFalse(configurables)
 
-        configurable.toconfigure += [configurable]
+        configurable(configurable)
 
-        configurables = getconfigurables(configurable)
+        configurables = Configurable.get_annotations(configurable)
 
         self.assertEqual(configurables, [configurable])
 
     def test_applyconfiguration(self):
         """Test the function applyconfiguration."""
 
-        configurable = Configurable()
-        configurable.toconfigure += [configurable]
+        conf = configuration(category('', Parameter('test', value=True)))
 
-        store = configurable.store
+        @Configurable(conf=conf)
+        class Test(object):
+            pass
 
-        self.assertEqual(store, Configurable.DEFAULT_STORE)
+        test = Test()
 
-        configurable.store = not store
+        self.assertTrue(test.test)
 
-        self.assertEqual(configurable.store, not Configurable.DEFAULT_STORE)
+        test.test = False
 
-        applyconfiguration(toconfigure=configurable)
+        applyconfiguration(targets=[test])
 
-        self.assertEqual(configurable.store, Configurable.DEFAULT_STORE)
+        self.assertTrue(test.test)
+
+        class Test(object):
+            pass
+
+        test = Test()
+
+        self.assertFalse(hasattr(test, 'test'))
+
+        applyconfiguration(targets=[test], conf=conf)
+
+        self.assertTrue(test.test)
+
+    def test_annotation(self):
+        """Test to use a configurable instancec such as a decodator."""
+
+        configurable = Configurable(
+            conf=configuration(category('', Parameter('test', value=True)))
+        )
+
+        @configurable
+        class Test(object):
+            pass
+
+        test = Test()
+
+        self.assertTrue(test.test)
+
+        test.test = False
+
+        applyconfiguration(targets=[test])
+
+        self.assertTrue(test.test)
+
+    def test_object(self):
+        """Test to configure objects."""
+
+        configurable = Configurable(
+            conf=configuration(category('', Parameter('test', value=True)))
+        )
+
+        class Test(object):
+            pass
+
+        test = Test()
+
+        configurable(test)
+
+        self.assertTrue(test.test)
+
+        test.test = False
+
+        applyconfiguration(targets=[test])
+
+        self.assertTrue(test.test)
 
     def test_multiconf(self):
         """Test to get configuration from multi resources."""
 
         tcd0, tcd1 = TestConfDriver(), TestConfDriver()
 
-        tcd0.confbypath['test0'] = Configuration(
-            Category(
+        tcd0.confbypath['test0'] = configuration(
+            category(
                 'test',
                 Parameter('test0', value='0')
             )
         )
-        tcd0.confbypath['test1'] = Configuration(
-            Category(
+        tcd0.confbypath['test1'] = configuration(
+            category(
                 'test',
                 Parameter('test1', value='1')
             )
         )
-        tcd1.confbypath['test1'] = Configuration(
-            Category(
+        tcd1.confbypath['test1'] = configuration(
+            category(
                 'test',
-                Parameter('test2', value='=@://test0/test.test0 + @://test1/test.test1'),
+                Parameter('test2', svalue='=@test0/test.test0 + @test1/test.test1'),
                 Parameter('test3', value=3)
             )
         )
@@ -247,7 +322,7 @@ class ConfigurableTest(UTCase):
         configurable = Configurable(drivers=[tcd0, tcd1])
 
         configurable.applyconfiguration(
-            toconfigure=configurable, paths=['test0', 'test1']
+            targets=[configurable], paths=['test0', 'test1']
         )
 
         self.assertEqual(configurable.test0, '0')
@@ -258,26 +333,32 @@ class ConfigurableTest(UTCase):
     def test_safe(self):
         """Test to configurate a configurable in a safe context."""
 
-        conf = Configuration(
-            Category(
+        conf = configuration(
+            category(
                 'test',
                 Parameter('test', svalue='=open')
             )
         )
 
-        configurable = Configurable(conf=conf)
+        self.assertRaises(
+            Parameter.Error,
+            Configurable,
+            conf=conf
+        )
+
+        configurable = Configurable(conf=conf, autoconf=False)
 
         self.assertRaises(
             Parameter.Error,
             configurable.applyconfiguration,
-            toconfigure=configurable, paths='test'
+            targets=configurable, paths='test'
         )
 
     def test_unsafe(self):
         """Test to configurate a configurable in an unsafe context."""
 
-        conf = Configuration(
-            Category(
+        conf = configuration(
+            category(
                 'test',
                 Parameter('test', svalue='=int')
             )
@@ -285,11 +366,39 @@ class ConfigurableTest(UTCase):
 
         configurable = Configurable(conf=conf, safe=False)
 
-        configurable.applyconfiguration(
-            toconfigure=configurable, paths='test'
-        )
+        configurable.applyconfiguration(targets=[configurable], paths='test')
 
         self.assertIs(configurable.test, int)
+
+    def test_subconf(self):
+        """Test sub configuration."""
+
+        class Test(object):
+            pass
+
+        class Test2(object):
+            def __init__(self, a=None):
+                self.a = a
+
+        conf = configuration(
+            category(
+                'test',
+                Parameter('test', value=Test),
+                Parameter('test2', value=Test2)
+            ),
+            category(':test', Parameter('a', value=Test)),
+            category(':test2', Parameter('a', value=Test2)),
+            category('test3', Parameter('test3', value=Test())),
+            category(':test3', Parameter('a', svalue='=@test3'))
+        )
+
+        test = Test()
+
+        applyconfiguration(conf=conf, targets=[test])
+
+        self.assertIs(test.test.a, Test)
+        self.assertIs(test.test2.a, Test2)
+        self.assertIs(test.test3.a, test.test3)
 
 
 if __name__ == '__main__':

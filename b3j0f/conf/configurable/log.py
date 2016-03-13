@@ -103,7 +103,7 @@ class Logger(Configurable):
     DEFAULT_LOG_LVL = INFO  #: default log_lvl value.
 
     def __init__(
-            self, logger=None,
+            self,
             log_lvl=DEFAULT_LOG_LVL, log_name=None, log_path=DEFAULT_LOG_PATH,
             log_handler=_filehandler, log_info_format=INFO_FORMAT,
             log_debug_format=DEBUG_FORMAT, log_warning_format=WARNING_FORMAT,
@@ -126,8 +126,6 @@ class Logger(Configurable):
 
         super(Logger, self).__init__(*args, **kwargs)
 
-        self.logger = self if logger is None else logger  # self logger is self
-
         # init protected attributes
         self._log_lvl = log_lvl
         self._log_path = log_path
@@ -139,8 +137,8 @@ class Logger(Configurable):
         self._log_error_format = log_error_format
         self._log_critical_format = log_critical_format
 
-        self._logger = self.newlogger()
-
+        if self.logger is None:
+            self.logger = self.newlogger()
 
     def newlogger(self):
         """Get a new logger related to self properties."""
@@ -185,20 +183,23 @@ class Logger(Configurable):
 
         return result
 
-    def clsconf(self, *args, **kwargs):
+    @classmethod
+    def clsconf(cls):
 
-        result = super(Logger, self).clsconf(*args, **kwargs)
+        result = Configurable.clsconf()
 
         result += Category(
-            Logger.LOG,
-            Parameter(name=Logger.LOG_NAME),
-            Parameter(name=Logger.LOG_PATH),
-            Parameter(name=Logger.LOG_LVL),
-            Parameter(name=Logger.LOG_DEBUG_FORMAT),
-            Parameter(name=Logger.LOG_INFO_FORMAT),
-            Parameter(name=Logger.LOG_WARNING_FORMAT),
-            Parameter(name=Logger.LOG_ERROR_FORMAT),
-            Parameter(name=Logger.LOG_CRITICAL_FORMAT)
+            name=Logger.LOG,
+            melts=[
+                Parameter(name=Logger.LOG_NAME),
+                Parameter(name=Logger.LOG_PATH),
+                Parameter(name=Logger.LOG_LVL),
+                Parameter(name=Logger.LOG_DEBUG_FORMAT),
+                Parameter(name=Logger.LOG_INFO_FORMAT),
+                Parameter(name=Logger.LOG_WARNING_FORMAT),
+                Parameter(name=Logger.LOG_ERROR_FORMAT),
+                Parameter(name=Logger.LOG_CRITICAL_FORMAT)
+            ]
         )
 
         return result
@@ -222,29 +223,4 @@ class Logger(Configurable):
 
         self._log_lvl = value
 
-        self._logger.setLevel(self._log_lvl)
-
-# set logger to arguments of Logger methods
-for name, member in getmembers(Logger, isroutine):
-
-    try:
-        argspec = getargspec(member)
-
-    except TypeError:
-        pass
-
-    else:
-        if name != '__init__' and 'logger' in argspec.args:
-
-            @wraps(member)
-            def newmethod(self, logger=None, _name=name, *args, **kwargs):
-                """new method wrapper which bind Logger logger to params."""
-
-                if logger is None:
-                    logger = self.logger
-
-                return getattr(super(Logger, self), _name)(
-                    logger=logger, *args, **kwargs
-                )
-
-            setattr(Logger, name, newmethod)
+        self.logger.setLevel(self._log_lvl)

@@ -25,6 +25,6 @@
 # --------------------------------------------------------------------
 
 
-__all__ = ['Configurable']
+__all__ = ['Configurable', 'applyconfiguration']
 
-from .core import Configurable
+from .core import Configurable, applyconfiguration

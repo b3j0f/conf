@@ -24,9 +24,9 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-__all__ = ['FileConfDriver', 'INIConfDriver', 'JSONConfDriver']
+__all__ = ['FileConfDriver', 'INIFileConfDriver', 'JSONFileConfDriver']
 
 
 from .base import FileConfDriver
-from .ini import INIConfDriver
-from .json import JSONConfDriver
+from .ini import INIFileConfDriver
+from .json import JSONFileConfDriver

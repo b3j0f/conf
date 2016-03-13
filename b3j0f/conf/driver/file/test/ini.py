@@ -31,13 +31,13 @@ from unittest import main
 
 from .base import FileConfDriverTest
 
-from ..ini import INIConfDriver
+from ..ini import INIFileConfDriver
 
 
 class INIConfDriverTest(FileConfDriverTest):
-    """Test the INIConfDriver."""
+    """Test the INIFileConfDriver."""
 
-    __driverclass__ = INIConfDriver
+    __driverclass__ = INIFileConfDriver
 
 
 if __name__ == '__main__':

@@ -27,6 +27,8 @@
 
 """model.param UTs."""
 
+from __future__ import absolute_import
+
 from unittest import main
 
 from six import string_types
@@ -34,7 +36,7 @@ from six import string_types
 from b3j0f.utils.ut import UTCase
 
 from ..param import Parameter, PType
-from ..parser import ParserError
+from parser import ParserError
 
 
 class PTypeTest(UTCase):
@@ -42,7 +44,7 @@ class PTypeTest(UTCase):
 
     def setUp(self):
 
-        self.ptype = PType(_type=Parameter)
+        self.ptype = PType(ptype=Parameter)
 
     def test_isinstance(self):
         """Test if isinstance."""
@@ -254,10 +256,10 @@ class ParameterTest(UTCase):
 
         self.assertEqual(value, 1)
 
-    def test_value_error_vtype(self):
+    def test_value_error_ptype(self):
         """Test to set value with wrong type."""
 
-        self.param.vtype = int
+        self.param.ptype = int
 
         self.assertRaises(
             TypeError, lambda x: setattr(self.param, 'value', x), '3'
@@ -275,7 +277,7 @@ class ParameterTest(UTCase):
         param = Parameter(
             name='test',
             local=not Parameter.DEFAULT_LOCAL,
-            vtype=int,
+            ptype=int,
             conf=1,
             value=1,
             svalue='=1'
@@ -285,7 +287,7 @@ class ParameterTest(UTCase):
 
         self.assertEqual(param.name, cparam.name)
         self.assertEqual(param.local, cparam.local)
-        self.assertEqual(param.vtype, cparam.vtype)
+        self.assertEqual(param.ptype, cparam.ptype)
         self.assertEqual(param.conf, cparam.conf)
         self.assertEqual(param.value, cparam.value)
         self.assertEqual(param.svalue, cparam.svalue)
@@ -296,7 +298,7 @@ class ParameterTest(UTCase):
         param = Parameter(
             name='test',
             local=not Parameter.DEFAULT_LOCAL,
-            vtype=int,
+            ptype=int,
             conf=1,
             value=1,
             svalue='=1'
@@ -306,7 +308,7 @@ class ParameterTest(UTCase):
 
         self.assertEqual(param.name, cparam.name)
         self.assertEqual(param.local, cparam.local)
-        self.assertEqual(param.vtype, cparam.vtype)
+        self.assertEqual(param.ptype, cparam.ptype)
         self.assertEqual(param.conf, cparam.conf)
         self.assertIsNone(cparam.value)
         self.assertIsNone(cparam.svalue)

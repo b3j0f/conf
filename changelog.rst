@@ -1,11 +1,27 @@
 ChangeLog
 =========
 
-0.2.4 (2016/02/22)
+0.3.0 (2016/03/12)
 ------------------
 
-- fix missing requirements.
-- remove dependency to future.
+- Huge changes...
+- a Configurable inherits from an b3j0f.annotation.Annotation
+- a configurable can inject configuration in function parameters.
+- support xml files.
+- add logger in Configurable.
+- simplify the Logger configurable.
+- support sub configuration.
+
+0.2.5 (2016/02/20)
+------------------
+
+- fix installation via easy-install in adding the etc folder in the project.
+
+0.2.4 (2016/01/11)
+------------------
+
+- add confpath parameter in order to import configurable configuration from a file.
+- add ui package.
 
 0.2.3 (2015/12/20)
 ------------------
@@ -22,7 +38,7 @@ ChangeLog
 - remove decorator module.
 - add foreigns attributes in Configurable which allows to add not specified parameters given by conf resources.
 - add autoconf attribute in Configurable, getconfigurables and applyconfiguration functions.
-- rename get_conf, set_conf, to_configure and apply_configuration to getconf, setconf, toconfigure and applyconfiguration.
+- rename get_conf, set_conf, to_configure and apply_configuration to getconf, setconf, targets and applyconfiguration.
 - add Configurable.safe attribute in order to execute configuration in an unsafe context if necessary.
 - add the configurable Logger useful to ease management of complex logging needs.
 
@@ -59,7 +75,7 @@ ChangeLog
 0.1.7 (2015/07/22)
 ------------------
 
-- fix bug about toconfigure parameter.
+- fix bug about targets parameter.
 - update README in fixing the example.
 
 0.1.6 (2015/06/13)

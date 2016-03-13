@@ -3,7 +3,7 @@
 # --------------------------------------------------------------------
 # The MIT License (MIT)
 #
-# Copyright (c) 2014 Jonathan Labéjof <jonathan.labejof@gmail.com>
+# Copyright (c) 2015 Jonathan Labéjof <jonathan.labejof@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,39 +24,49 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-"""JSON configuration file driver."""
+"""Javascript expression resolver."""
 
-from __future__ import absolute_import
+from __future__ import print_function
 
-__all__ = ['JSONFileConfDriver']
+__all__ = ['resolvejs']
+
+from ..registry import register
+
+from ..core import (
+    DEFAULT_BESTEFFORT, DEFAULT_SAFE, DEFAULT_TOSTR, DEFAULT_SCOPE
+)
 
 try:
-    from json import load, dump
+    from PyV8 import JSContext
 
 except ImportError:
-    from simplejson import load, dump
 
-from .base import FileConfDriver
-from ..json import JSONConfDriver
+    from sys import stderr
+    print(
+        'Impossible to load the javascript resolver. Install the PyV8 before.',
+        file=stderr
+    )
+    def resolvejs(**_):
+        """Default resolvejs if PyV8 is not installed."""
+        pass
 
+else:
+    CTXT = JSContext()
 
-class JSONFileConfDriver(FileConfDriver, JSONConfDriver):
-    """Manage json resource configuration from json file."""
+    @register('js')
+    @register('pyv8')
+    def resolvejs(
+            expr, tostr=DEFAULT_TOSTR, scope=DEFAULT_SCOPE, safe=DEFAULT_SAFE,
+            besteffort=DEFAULT_BESTEFFORT
+    ):
+        """Javascript resolver."""
 
-    def _pathresource(self, rscpath):
+        _ctxt = CTXT if scope is None else JSContext(scope)
 
-        result = None
+        if tostr:
+            expr = '({0}).string'.format(expr)
 
-        with open(rscpath, 'r') as fpr:
-
-            result = load(fpr)
+        result = _ctxt.eval(expr)
 
         return result
 
-    def _setconf(self, conf, resource, rscpath):
-
-        super(JSONFileConfDriver, self)._setconf(conf, resource, rscpath)
-
-        with open(rscpath, 'w') as fpw:
-
-            dump(resource, fpw)

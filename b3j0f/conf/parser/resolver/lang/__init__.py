@@ -24,39 +24,7 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-"""JSON configuration file driver."""
+__all__ = ['resolvejs', 'resolvepy']
 
-from __future__ import absolute_import
-
-__all__ = ['JSONFileConfDriver']
-
-try:
-    from json import load, dump
-
-except ImportError:
-    from simplejson import load, dump
-
-from .base import FileConfDriver
-from ..json import JSONConfDriver
-
-
-class JSONFileConfDriver(FileConfDriver, JSONConfDriver):
-    """Manage json resource configuration from json file."""
-
-    def _pathresource(self, rscpath):
-
-        result = None
-
-        with open(rscpath, 'r') as fpr:
-
-            result = load(fpr)
-
-        return result
-
-    def _setconf(self, conf, resource, rscpath):
-
-        super(JSONFileConfDriver, self)._setconf(conf, resource, rscpath)
-
-        with open(rscpath, 'w') as fpw:
-
-            dump(resource, fpw)
+from .js import resolvejs
+from .py import resolvepy
