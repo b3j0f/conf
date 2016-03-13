@@ -371,6 +371,7 @@ class ConfigurableTest(UTCase):
         self.assertIs(configurable.test, int)
 
     def test_subconf(self):
+        """Test sub configuration."""
 
         class Test(object):
             pass
@@ -380,7 +381,8 @@ class ConfigurableTest(UTCase):
                 self.a = a
 
         conf = configuration(
-            category('test',
+            category(
+                'test',
                 Parameter('test', value=Test),
                 Parameter('test2', value=Test2)
             ),
@@ -391,6 +393,7 @@ class ConfigurableTest(UTCase):
         )
 
         test = Test()
+
         applyconfiguration(conf=conf, targets=[test])
 
         self.assertIs(test.test.a, Test)

@@ -33,8 +33,10 @@ from six.moves import reload_module
 
 from inspect import getargspec, isclass, isroutine
 
+from traceback import format_exc
+
 from b3j0f.utils.path import lookup
-from b3j0f.utils.version import getcallargs
+from b3j0f.utils.version import getcallargs, PY26
 from b3j0f.annotation import PrivateInterceptor, Annotation
 
 from ..model.conf import Configuration, configuration
@@ -268,7 +270,7 @@ class Configurable(PrivateInterceptor):
         try:
             argspec = getargspec(target)
 
-        except TypeError:
+        except TypeError as tex:
             argspec = None
             callargs = {}
 
@@ -287,8 +289,8 @@ class Configurable(PrivateInterceptor):
         for param in params:
 
             if argspec is None:
-
-                args.append(param.value)
+                if not PY26:
+                    args.append(param.value)
 
             elif (
                     callargs.get(param.name) is None
@@ -579,12 +581,11 @@ class Configurable(PrivateInterceptor):
                     conf=conf, logger=logger, target=target
                 )
 
-            except Exception as ex:
-                print(ex)
+            except Exception:
                 if logger is not None:
                     logger.error(
                         'Error {0} raised while configuring {1}/{2}'.format(
-                            ex, self, targets
+                            format_exc(), self, targets
                         )
                     )
 
@@ -645,9 +646,9 @@ class Configurable(PrivateInterceptor):
                     args, kwargs = self.getcallparams(
                         conf=configuration(extendedcat), target=value
                     )
-
                     value = value(*args, **kwargs)
-                    if len(subparams) < len(args) + len(kwargs):
+
+                    if len(subparams) < (len(args) + len(kwargs)):
                         subparams = False
 
                 if subparams:

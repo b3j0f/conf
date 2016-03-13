@@ -120,21 +120,23 @@ class ModelElement(object):
         :param dict kwargs: copy kwargs.
         :return: this"""
 
-        if isinstance(other, self.__class__):
+        if other:  # dirty hack for python2.6
 
-            if copy:
-                other = other.copy(cleaned=cleaned, *args, **kwargs)
+            if isinstance(other, self.__class__):
 
-            for slot in self.__slots__:
-                oattr = getattr(other, slot)
+                if copy:
+                    other = other.copy(cleaned=cleaned, *args, **kwargs)
 
-                if oattr is not None:
-                    setattr(self, slot, oattr)
+                for slot in self.__slots__:
+                    oattr = getattr(other, slot)
 
-        else:
-            raise TypeError(
-                'Wrong element to update with {0}: {1}'.format(self, other)
-            )
+                    if oattr is not None:
+                        setattr(self, slot, oattr)
+
+            else:
+                raise TypeError(
+                    'Wrong element to update with {0}: {1}'.format(self, other)
+                )
 
         return self
 
@@ -151,7 +153,7 @@ class CompositeModelElement(ModelElement, OrderedDict):
         :param tuple melts: model elements to add.
         """
 
-        super(CompositeModelElement, self).__init__()
+        super(CompositeModelElement, self).__init__({})
 
         if melts is not None:
             for melt in melts:
@@ -195,7 +197,7 @@ class CompositeModelElement(ModelElement, OrderedDict):
         elif isinstance(other, self.__contenttype__):
             other = (other, )
 
-        for melt in other:
+        for melt in list(other):
             if not isinstance(melt, self.__contenttype__):
                 raise TypeError('Wrong element {0}'.format(melt))
 
@@ -277,33 +279,34 @@ class CompositeModelElement(ModelElement, OrderedDict):
             other, copy=copy, cleaned=cleaned, *args, **kwargs
         )
 
-        contents = []
+        if other:  # dirty hack for python2.6
+            contents = []
 
-        if isinstance(other, self.__class__):
-            contents = list(other.values())
+            if isinstance(other, self.__class__):
+                contents = list(other.values())
 
-        elif isinstance(other, self.__contenttype__):
-            contents = [other]
-
-        else:
-            raise TypeError(
-                'Wrong element to update with {0}: {0}'.format(self, other)
-            )
-
-        for content in contents:
-
-            selfcontent = self.get(content.name)
-
-            if selfcontent is None:
-
-                if copy:
-                    content = content.copy(cleaned=cleaned, local=False)
-                self[content.name] = content
+            elif isinstance(other, self.__contenttype__):
+                contents = [other]
 
             else:
-                selfcontent.update(
-                    content, copy=copy, cleaned=cleaned, *args, **kwargs
+                raise TypeError(
+                    'Wrong element to update with {0}: {1}'.format(self, other)
                 )
+
+            for content in contents:
+
+                selfcontent = self.get(content.name)
+
+                if selfcontent is None:
+
+                    if copy:
+                        content = content.copy(cleaned=cleaned, local=False)
+                    self[content.name] = content
+
+                else:
+                    selfcontent.update(
+                        content, copy=copy, cleaned=cleaned, *args, **kwargs
+                    )
 
     @property
     def params(self):

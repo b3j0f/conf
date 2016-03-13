@@ -158,8 +158,7 @@ class ConfDriver(object):
         try:
             self._setconf(conf=conf, resource=resource, rscpath=rscpath)
 
-        except:
-
+        except Exception:
             if logger is not None:
                 _, ex, traceback = exc_info()
                 msg = 'Error while setting conf to {0}.'.format(rscpath)

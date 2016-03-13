@@ -258,9 +258,7 @@ def _exprparser(
 
     scope.update({
         'configurable': configurable,
-        'conf': conf,
-        'true': True,
-        'false': False
+        'conf': conf
     })
 
     expr = REGEX_EXPR_R.sub(

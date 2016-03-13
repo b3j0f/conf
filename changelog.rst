@@ -10,6 +10,7 @@ ChangeLog
 - support xml files.
 - add logger in Configurable.
 - simplify the Logger configurable.
+- support sub configuration.
 
 0.2.5 (2016/02/20)
 ------------------

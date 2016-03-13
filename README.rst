@@ -1,7 +1,7 @@
 Description
 -----------
 
-Python class/function configuration tools in reflective and distributed concerns.
+Python object configuration library in reflective and distributed concerns.
 
 .. image:: https://img.shields.io/pypi/l/b3j0f.conf.svg
    :target: https://pypi.python.org/pypi/b3j0f.conf/
@@ -62,17 +62,31 @@ pip install b3j0f.conf
 Features
 --------
 
-This library provides a set of class configuration tools in order to ease development of systems based on configuration resources such as files, DB documents, etc. in a reflexive, functional and distributed context.
+This library provides a set of object configuration tools in order to ease development of systems based on configuration resources such as files, DB documents, etc. in a reflexive, functional and distributed context.
 
-Configuration process is in 2 steps:
+Configuration processing is done is in 5 steps with only two mandatories:
 
-- inject configuration resources (file, DB documents, etc.) in a Configurable class (with specific drivers which allows the Configurable class to be agnostic from configuration languages such as ini, json, xml, etc.),
-- let the configurable class read properties from such configuration resources and apply values on a dedicated class or function which may be a associated to a business code. This last process can be done automatically or manually thanks to the the applyconfiguration method.
+1. optional : configuration model specification. You define which parameters you want to setup (default value, type, etc.).
+2. optional : configuration driver selection. You define the nature of configuration resources (xml, json, ini, etc.).
+3. mandatory : configuration resource edition. You define your configuration resources (files, DB documents, etc.).
+4. optional : bind a configurable to python object(s). You bind a configurable to objects to setup for a reflexive use.
+5. mandatory : apply configuration to a python object. You setup your python objects.
+
+In order to improve reflexive concerns, this library has been developed with very strong flexible features available at runtime.
+
+It is possible to custom every parts directly at runtime with high speed execution concerns.
+
+You can customize:
+
+- parsing functions.
+- drivers.
+- configuration process.
+- configuration meta-model.
 
 Configuration
 #############
 
-The sub-module b3j0f.conf.model provides Configuration class in order to inject configuration resources in a configurable class.
+The package b3j0f.conf.model provides Configuration class in order to inject configuration resources in a configurable class.
 
 Configuration resources respect two levels of configuration same as the ini configuration model. Both levels are respectively:
 
@@ -81,12 +95,12 @@ Configuration resources respect two levels of configuration same as the ini conf
 
 And all categories/parameters are embedded in a Configuration class.
 
-Configuration and Categories are like dictionaries where key values are inner element names. Therefore, Parameter names are unique per Categories, and Category/Parameter names are unique per Configuration.
+Configuration and Categories are ordered dictionaries where key values are inner element names. Therefore, Parameter names are unique per Categories, and Category/Parameter names are unique per Configuration.
 
 Parameter Overriding
 ####################
 
-In a dynamic and complex way, one Configurable class can be bound to several Categories and Parameters. The choice is predetermined by the class itself. That means that one Configurable class can use several configuration resources and all/some/none Categories/Parameters in those resources. In such a way, the order is important because it permits to keep only last parameter values when parameters have the same name.
+In a dynamic and flexible way, one Configurable class can be bound to several Categories and Parameters. The choice is predetermined by the class itself. That means that one Configurable class can use several configuration resources and all/some/none Categories/Parameters in those resources. In such a way, the order is important because it permits to keep only last parameter values when parameters have the same name.
 
 This overriding is respected by default with Configurable class inheritance. That means a sub class which adds a resource after its parent class resources indicates than all parameters in the final resources will override parameters in the parent class resources where names are the sames.
 
@@ -100,34 +114,55 @@ In this case, while reading a configuration from a resource, all configuration p
 Parser
 ~~~~~~
 
-The module b3j0f.conf.model.parser provides parsers used to deserialize parameter values.
+The package b3j0f.conf.parser provides parsers used to deserialize parameter values.
 
-Default parser is the expression parser.
+All parsers use special entries such as:
 
-Expression parser
-~~~~~~~~~~~~~~~~~
+- %(lang:)expr%: string value of a programming language expression. ``lang`` is the target language (default is python) and ``expr`` is the expression to evaluate. For example, ``%"testy"[:-1]%`` equals ``test``.
+- @((rpath/)cname.)[history]pname: reference to another parameter value (thanks to the idea from the pypi config_ project) where:
 
-The parser ``exprparser`` permits to write simple expressions using the python builtin functions except those able to do I/O operations like the ``open`` function.
+  - ``rpath``: optional resource path.
+  - ``cname``: optional category name.
+  - ``history``: optional parameter history in the arborescence from the (current) category. If not given, last parameter value is given.
+  - ``pname``: parameter name.
 
-Such expression is prefixed by the character `=`.
+  For example: ``@test`` designates the final value of the parameter ``test``. ``@myconf.json/test`` is the parameter ``test`` from the resource ``myconf.json``. ``@mycat...test`` is the parameter ``test`` defined two categories before the category ``mycat``.
 
-In such expression, you can call back other configuration parameter in using this format (thanks to the idea from the pypi config_ project) related to a Configuration model:
+If the parameter configuration value is of the format ``=(lang:)expr``, the result is an evaluation of ``expr`` in the given language ``lang``. For example, ``=2`` equals the integer 2. ``=sys.maxsize`` is the maxsize value from the sys module (thanks to the best effort property).
 
-- ``#{path}`` where ``path`` corresponds to a python object path. For example, `#sys.maxsize` designates the max size of the integer on the host machine (attribute ``maxsize`` of the module ``sys``).
-- ``@[{confpath}|][{cat}].{param}`` where ``confpath`` designates a configuration path, ``cat`` designates a configuration category name, and ``param`` designates related parameter value. If path and cat are omitted, param designates the final parameter value (last overidden value).
+Finally, here are reserved keywords in an evaluated expression:
+
+- ``conf``: current configuration.
+- ``configurable``: current configurable.
+
+.. note::
+
+  By default, ``besteffort`` and ``safe`` properties are enabled. They respectively permit to resolve absolute object path and avoid to call I/O functions. They can be changed in the resperive Configurable, like the expression execution scope value which contains by default both configuration and ``configurable`` noted above.
 
 Configurable
 ############
 
-A Configurable class is provided in the b3j0f.conf.configurable.core module. It permits to get parameters from a configuration resources.
+A Configurable class is provided in the b3j0f.conf.configurable.core module. It permits to get parameters from configuration resources and setup them to a python object or in a method/function parameters.
 
-It uses a Configuration model and drivers.
+It inherits from the ``b3j0f.annotation.Annotation`` class (`annotation`_). That means it can be used such as an annotation (decorator with annotation functions). For example, bound Configurables to an object ``o`` are retrieved like this: ``Configurable.get_annotations(o)``.
+
+In order to perform a configuration setup, it uses:
+
+- conf: configuration model.
+- drivers: configuration resource drivers.
+- scope: parsing execution scope.
+- besteffort: boolean flag which aims to resolve automatically absolute object path. True by default.
+- safe: boolean flag which aims to cancel calls to I/O functions. True by default.
+- logger: logger which will handle all warning/error messages. None by default.
+
+Annotated elements are bound and can all be (re)configured once in using the method applyconfiguration.
 
 Driver
 ######
 
-Drivers are the mean to parse configuration resources, such as files, etc. from a configuration model provided by a Configurable object.
-By default, conf drivers are able to parse json/ini files. Those last use a relative path given by the environment variable ``B3J0F_CONF_DIR`` or from directories (in this order) ``/etc``, ``/usr/local/etc``, ``~/etc``, ``~/.config``, ``~/config`` or current execution directory.
+Drivers are the mean to parse configuration resources, such as files, DB documents, etc. from a configuration model provided by a Configurable object.
+
+By default, conf drivers are able to parse json/ini/xml files. Those last use a relative path given by the environment variable ``B3J0F_CONF_DIR`` or from directories (in this order) ``/etc``, ``/usr/local/etc``, ``~/etc``, ``~/.config``, ``~/config`` and current execution directory.
 
 Example
 -------
@@ -135,7 +170,7 @@ Example
 Bind configuration files to an object
 #####################################
 
-Bind the configuration file ``~/etc/myobject.conf`` and ``~/.config/myobject.conf`` to a business class ``MyObject`` (the relative path ``~/etc`` can be change thanks to the environment variable ``B3J0F_CONF_DIR``).
+Bind the configuration file ``~/etc/myobject.conf`` and ``~/.config/myobject.conf`` to a business class ``MyObject`` (the relative path ``~/etc`` can be changed thanks to the environment variable ``B3J0F_CONF_DIR``).
 
 The configuration file contains a category named ``MYOBJECT`` containing the parameters:
 
@@ -187,7 +222,7 @@ The following code permits to load upper configuration to a python function.
 
   # instantiate a business class
   @Configurable(paths='myobject.conf')
-  def myfunc(myattr, six, twelve):
+  def myfunc(myattr=None, six=None, twelve=None):  # Only None values will be setted by the configuration
       return myattr, six, twelve
 
   myattr, six, twelve = myfunc(twelve=46)
@@ -220,33 +255,34 @@ One configuration with several objects
 
   land = Configurable.get_annotations(world)[0]  # class method for retrieving Configurables
 
-  @land
+  @land  # bind land to World2
   class World2(object):
       pass
+
+  world2 = World2()
 
   assert World2().country == 'fr'
 
   class World3(object):
       pass
 
-  assert land(World3()).country == 'fr'
+  world3 = World3()
+  land.applyconfiguration([world3])  # apply land on world3 without annotated it
 
-  world3s = (World() for _ in range(5))
+  assert world3.country == 'fr'
 
-  land.configure(targets=world3s)
+  world3s = (land(World3()) for _ in range(5))  # annotate a set of worlds
 
-Update object configuration
-###########################
+  land.conf['land']['country'] = 'en'  # change default country code
 
-.. code-block:: python
+  land.applyconfiguration()  # update all annotated objects
 
-  from b3j0f.conf applyconfiguration
+  for world3 in world3s:
+      assert world3.country == 'en'
 
-  land.conf['land']['country'].value = 'en'
+  assert world2.country == 'en'
 
-  applyconfiguration(world)
-
-  assert world.country == 'en'
+  assert world3.country == 'fr'  # check not annotated element has not changed
 
 Configure object constructor
 ############################
@@ -299,6 +335,7 @@ Configure embedded objects
       conf=(
           configuration(
               category('', Parameter('subtest', value=SubTest)),
+  # the prefix ':' refers to a sub configuration for the parameter named with the suffix after ':'
               category(':subtest', Parameter('test', value=True))
           )
       )
@@ -316,7 +353,7 @@ Perspectives
 
 - wait feedbacks during 6 months before passing it to a stable version.
 - Cython implementation.
-- add GUI.
+- add GUI in order to ease management of multi resources and categorized parameters.
 
 Donation
 --------
@@ -329,3 +366,4 @@ Donation
 .. _Documentation: http://b3j0fconf.readthedocs.org/en/master/
 .. _PyPI: https://pypi.python.org/pypi/b3j0f.conf/
 .. _config: https://pypi.python.org/pypi/config/
+.. _annotation: https://github.com/b3j0f/annotation

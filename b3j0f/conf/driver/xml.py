@@ -30,6 +30,8 @@ from __future__ import absolute_import
 
 __all__ = ['XMLConfDriver']
 
+from b3j0f.utils.version import PY26
+
 from xml.etree.ElementTree import fromstring, Element, ElementTree
 
 from .base import ConfDriver
@@ -60,22 +62,42 @@ class XMLConfDriver(ConfDriver):
     def _cnames(self, resource):
 
         result = list(
-            cat.get('name') for cat in resource.iter(XMLConfDriver.CATEGORY)
+            cat.get('name') for cat in resource.findall(XMLConfDriver.CATEGORY)
         )
 
         return result
 
     def _params(self, resource, cname):
 
-        query = '{0}[@name=\'{1}\']/{2}'.format(
-            XMLConfDriver.CATEGORY,
-            cname,
-            XMLConfDriver.PARAMETER
-        )
+        result = []
 
-        result = list(
-            Parameter(**param.attrib) for param in resource.findall(query)
-        )
+        if PY26:
+            ecats = resource.findall(XMLConfDriver.CATEGORY)
+
+            ecat = None
+
+            for ecat in ecats:
+                if ecat.get('name') == cname:
+                    break
+
+            else:
+                ecat = None
+
+            if ecat is not None:
+                eparams = ecat.findall(XMLConfDriver.PARAMETER)
+
+                result = list(Parameter(**eparam.attrib) for eparam in eparams)
+
+        else:
+            query = '{0}[@name=\'{1}\']/{2}'.format(
+                XMLConfDriver.CATEGORY,
+                cname,
+                XMLConfDriver.PARAMETER
+            )
+
+            result = list(
+                Parameter(**param.attrib) for param in resource.findall(query)
+            )
 
         return result
 
@@ -83,11 +105,22 @@ class XMLConfDriver(ConfDriver):
 
         for cat in conf.values():
 
-            cquery = '{0}[@name=\'{1}\']'.format(
-                XMLConfDriver.CATEGORY, cat.name
-            )
+            cquery = XMLConfDriver.CATEGORY
 
-            ecat = resource.find(cquery)
+            ecat = None
+
+            if PY26:
+                ecats = resource.findall(cquery)
+                for ecat in ecats:
+                    if ecat.get('name') == 'cat.name':
+                        break
+
+                else:
+                    ecat = None
+
+            else:
+                cquery += '[@name=\'{0}\']'.format(cat.name)
+                ecat = resource.find(cquery)
 
             if ecat is None:
                 ecat = Element(XMLConfDriver.CATEGORY, name=cat.name)
@@ -95,11 +128,23 @@ class XMLConfDriver(ConfDriver):
 
             for param in cat.values():
 
-                pquery = '{0}[@name=\'{1}\']'.format(
-                    XMLConfDriver.PARAMETER, param.name
-                )
+                pquery = XMLConfDriver.PARAMETER
 
-                eparam = ecat.find(pquery)
+                eparam = None
+
+                if PY26:
+                    eparams = ecat.findall(pquery)
+                    for eparam in eparams:
+                        if eparam.get('name') == param.name:
+                            break
+
+                    else:
+                        eparam = None
+
+                else:
+                    cquery += '[@name=\'{1}\']'.format(param.name)
+
+                    eparam = ecat.find(pquery)
 
                 if eparam is None:
                     eparam = Element(XMLConfDriver.PARAMETER, name=param.name)

@@ -73,5 +73,4 @@ class INIFileConfDriver(FileConfDriver):
                 resource.set(category.name, param.name, param.svalue)
 
         with open(rscpath, 'w') as fps:
-
             resource.write(fps)
