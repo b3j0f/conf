@@ -142,7 +142,7 @@ class XMLConfDriver(ConfDriver):
                         eparam = None
 
                 else:
-                    cquery += '[@name=\'{1}\']'.format(param.name)
+                    cquery += '[@name=\'{0}\']'.format(param.name)
 
                     eparam = ecat.find(pquery)
 
