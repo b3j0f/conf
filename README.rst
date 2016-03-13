@@ -277,8 +277,8 @@ One configuration with several objects
 
   land.applyconfiguration()  # update all annotated objects
 
-  for world3 in world3s:
-      assert world3.country == 'en'
+  for _world3 in world3s:
+      assert _world3.country == 'en'
 
   assert world2.country == 'en'
 
