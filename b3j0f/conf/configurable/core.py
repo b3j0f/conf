@@ -691,7 +691,7 @@ class Configurable(PrivateInterceptor):
 
         else:
             result = Annotation._bind_target(
-                self=self, target=target, *args, **kwargs
+                self, target=target, *args, **kwargs
             )
 
         return result
