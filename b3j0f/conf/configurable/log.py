@@ -39,10 +39,6 @@ from ..model.param import Parameter
 
 from .core import Configurable
 
-from inspect import getargspec, getmembers, isroutine
-
-from functools import wraps
-
 B3J0F_LOG_PATH = 'B3J0F_LOG_PATH'  #: log path environment variable.
 
 LOG_PATH = '.'  #: default log path.
@@ -61,7 +57,7 @@ def _filehandler(configurable):
     return FileHandler(path, mode='a+')
 
 
-def _updatelogger(self, kwargsvalue, name):
+def _updatelogger(self, *args, **kwargs):
     """Renew self logger."""
 
     self._logger = self.newlogger()

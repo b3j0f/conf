@@ -307,9 +307,9 @@ class Configurable(PrivateInterceptor):
         for pname in pnames:
 
             if argspec and pname in argspec.args and (
-                (exec_ctx is not None and pname in exec_ctx)
-                or
-                callargs.get(pname) is None
+                    (exec_ctx is not None and pname in exec_ctx)
+                    or
+                    callargs.get(pname) is None
             ):
 
                 kwargs[pname] = params[pname].value
@@ -638,7 +638,7 @@ class Configurable(PrivateInterceptor):
                 params += cparams.values()
 
         if callconf and callable(target):
-            conf = configuration(category(*params))
+            conf = configuration(category('', *params))
 
             args, kwargs = self.getcallparams(conf=conf, target=target)
 

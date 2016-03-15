@@ -44,8 +44,6 @@ __all__ = ['ConfDriver']
 from ..model.conf import Configuration
 from ..model.cat import Category
 
-from sys import exc_info
-
 from traceback import format_exc
 
 from six import reraise

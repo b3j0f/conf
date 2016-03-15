@@ -54,10 +54,10 @@ else:
     CTXT = JSContext()
 
     @register('js')
+    @register('javascript')
     @register('pyv8')
     def resolvejs(
-            expr, tostr=DEFAULT_TOSTR, scope=DEFAULT_SCOPE, safe=DEFAULT_SAFE,
-            besteffort=DEFAULT_BESTEFFORT
+            expr, tostr=DEFAULT_TOSTR, scope=DEFAULT_SCOPE, *args, **kwargs
     ):
         """Javascript resolver."""
 

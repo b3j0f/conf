@@ -64,6 +64,7 @@ def genrepl(scope):
 
 
 @register('py')
+@register('python')
 def resolvepy(
         expr,
         safe=DEFAULT_SAFE, tostr=DEFAULT_TOSTR, scope=DEFAULT_SCOPE,
