@@ -1,10 +1,16 @@
 ChangeLog
 =========
 
+0.3.1 (2016/03/16)
+------------------
+
+- add support for recursive configuration of sub objects.
+- simplify code.
+- add the attribute keepstate which ensure sub objects are not reinstantiate if they already exist.
+
 0.3.0 (2016/03/12)
 ------------------
 
-- Huge changes...
 - a Configurable inherits from an b3j0f.annotation.Annotation
 - a configurable can inject configuration in function parameters.
 - support xml files.

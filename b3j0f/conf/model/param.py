@@ -41,8 +41,6 @@ from re import compile as re_compile
 
 from collections import Iterable
 
-from copy import deepcopy
-
 from ..parser.resolver.core import (
     DEFAULT_SAFE, DEFAULT_BESTEFFORT, DEFAULT_SCOPE
 )

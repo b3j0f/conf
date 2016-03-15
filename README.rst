@@ -335,8 +335,9 @@ Configure embedded objects
       conf=(
           configuration(
               category('', Parameter('subtest', value=SubTest)),
-  # the prefix ':' refers to a sub configuration for the parameter named with the suffix after ':'
-              category(':subtest', Parameter('test', value=True))
+  # the prefix ':' refers (recursively) to a sub configuration for the parameter named with the suffix after ':'
+              category(':subtest', Parameter('subsubtest', value=SubTest)),
+              category(':subtset:subsubtest', Parameter('test', value=True))
           )
       )
   )
@@ -346,7 +347,34 @@ Configure embedded objects
   test = Test()
 
   assert isinstance(test.subtest, SubTest)
-  assert test.subtest.test
+  assert isinstance(test.subtest.subsubtest)
+  assert not hasattr(test.subtest, 'test')
+  assert test.subtest.subsubtest.test is True
+
+  # and you can still apply configuration
+  Configurable.get_annotations(test)[0].conf[':subtset:subsubtest']['test'] = False
+  applyconfiguration(targets=[test])
+
+  assert test.subtest.subsubtest.test is False
+
+Configure metaclasses
+#####################
+
+.. code-block:: python
+
+  from six import add_metaclass
+
+  @Configurable(conf=Parameter('test', value=True))
+  class MetaTest(type):
+      pass
+
+  @add_metaclass(MetaTest)
+  class Test(object):
+      pass
+
+  test = Test()
+
+  assert test.test is True
 
 Perspectives
 ------------

@@ -32,12 +32,14 @@ from b3j0f.utils.ut import UTCase
 
 from ..core import Configurable, applyconfiguration
 from ...model.conf import configuration
-from ...model.cat import Category, category
+from ...model.cat import category
 from ...model.param import Parameter
 
 from ...driver.test.base import TestConfDriver
 
 from tempfile import NamedTemporaryFile
+
+from six import add_metaclass
 
 
 class ConfigurableTest(UTCase):
@@ -67,12 +69,12 @@ class ConfigurableTest(UTCase):
 
     def test_configuration_files(self):
 
-        configurable = Configurable(inheritedconf=False)
-        configurable.paths = self.paths
+        configurable = Configurable(paths=self.paths)
 
         self.assertEqual(configurable.paths, self.paths)
 
-        configurable = Configurable(paths=self.paths, inheritedconf=False)
+        configurable = Configurable()
+        configurable.paths = self.paths
 
         self.assertEqual(configurable.paths, self.paths)
 
@@ -99,39 +101,41 @@ class ConfigurableTest(UTCase):
         """Test to configure an object without inheritance."""
 
         @Configurable(conf=category('TEST', Parameter('test', value=True)))
-        class ToConfigure(object):
+        class BaseTest(object):
+            """base Class to configure."""
+
+        class Test(BaseTest):
             """Class to configure."""
 
-            def __init__(self, test=None):
-
-                super(ToConfigure, self).__init__()
-
-                self.test = None
-
-        targets = ToConfigure()
+        targets = Test()
 
         self.assertTrue(targets.test)
 
     def test_parser_inheritance(self):
 
-        class _Configurable(Configurable):
+        @Configurable()
+        class BaseTest(object):
+            pass
 
-            def clsconf(self, *args, **kwargs):
+        @Configurable()
+        @Configurable()
+        class SubTest(BaseTest):
+            pass
 
-                result = super(_Configurable, self).clsconf(*args, **kwargs)
+        class Test(SubTest):
+            pass
 
-                result += Category('PLOP')
+        configurables = Configurable.get_annotations(BaseTest)
 
-                return result
+        self.assertEqual(len(configurables), 1)
 
-        configurable = Configurable()
+        configurables = Configurable.get_annotations(SubTest)
 
-        _configurable = _Configurable()
+        self.assertEqual(len(configurables), 3)
 
-        self.assertEqual(
-            len(configurable.conf) + 1,
-            len(_configurable.conf)
-        )
+        configurables = Configurable.get_annotations(Test)
+
+        self.assertEqual(len(configurables), 3)
 
     def test_class_callparams(self):
         """Test to call params on a class."""
@@ -149,6 +153,21 @@ class ConfigurableTest(UTCase):
 
         self.assertTrue(test.test)
         self.assertTrue(test.testy)
+
+    def test_metaclass(self):
+        """Test to configurate a metaclass."""
+
+        @Configurable(conf=Parameter('test', value=True))
+        class MetaTest(type):
+            pass
+
+        @add_metaclass(MetaTest)
+        class Test(object):
+            pass
+
+        test = Test()
+
+        self.assertTrue(test.test)
 
     def test_function_callparams(self):
         """Test to call params on a function."""
@@ -205,21 +224,6 @@ class ConfigurableTest(UTCase):
 
         self.assertEqual(Child().test0, 0)
         self.assertEqual(Child().test1, 2)
-
-    def test_getconfigurables(self):
-        """Test the getconfigurables function."""
-
-        configurable = Configurable()
-
-        configurables = Configurable.get_annotations(configurable)
-
-        self.assertFalse(configurables)
-
-        configurable(configurable)
-
-        configurables = Configurable.get_annotations(configurable)
-
-        self.assertEqual(configurables, [configurable])
 
     def test_applyconfiguration(self):
         """Test the function applyconfiguration."""
@@ -285,6 +289,7 @@ class ConfigurableTest(UTCase):
         test = Test()
 
         configurable(test)
+        configurable.applyconfiguration(targets=[test])
 
         self.assertTrue(test.test)
 
@@ -377,29 +382,63 @@ class ConfigurableTest(UTCase):
             pass
 
         class Test2(object):
-            def __init__(self, a=None):
-                self.a = a
+            def __init__(self, param=None):
+                self.param = param
 
         conf = configuration(
             category(
                 'test',
-                Parameter('test', value=Test),
-                Parameter('test2', value=Test2)
+                Parameter('subtest', value=Test),
+                Parameter('subtest2', value=Test2)
             ),
-            category(':test', Parameter('a', value=Test)),
-            category(':test2', Parameter('a', value=Test2)),
-            category('test3', Parameter('test3', value=Test())),
-            category(':test3', Parameter('a', svalue='=@test3'))
+            category(
+                ':subtest',
+                Parameter('param', svalue='=@subtest'),
+                Parameter('attr', value=True)
+            ),
+            category(
+                ':subtest:param',
+                Parameter('param', svalue='=@subtest'),
+                Parameter('attr', value=True)
+            )
         )
 
         test = Test()
 
         applyconfiguration(conf=conf, targets=[test])
 
-        self.assertIs(test.test.a, Test)
-        self.assertIs(test.test2.a, Test2)
-        self.assertIs(test.test3.a, test.test3)
+        self.assertIs(test.subtest2, Test2)
+        self.assertIsInstance(test.subtest, Test)
+        self.assertTrue(test.subtest.attr)
+        self.assertIsInstance(test.subtest.param, Test)
+        self.assertIs(test.subtest.param.param, Test)
+        self.assertTrue(test.subtest.param.attr)
 
+        oldsubtestparam = test.subtest.param
+
+        conf[':subtest:param']['attr'].value = False
+
+        applyconfiguration(conf=conf, targets=[test], keepstate=True)
+
+        self.assertIs(test.subtest2, Test2)
+        self.assertIsInstance(test.subtest, Test)
+        self.assertTrue(test.subtest.attr)
+        self.assertIsInstance(test.subtest.param, Test)
+        self.assertIs(test.subtest.param.param, Test)
+        self.assertFalse(test.subtest.param.attr)
+
+        self.assertIs(test.subtest.param, oldsubtestparam)
+
+        applyconfiguration(conf=conf, targets=[test], keepstate=False)
+
+        self.assertIs(test.subtest2, Test2)
+        self.assertIsInstance(test.subtest, Test)
+        self.assertTrue(test.subtest.attr)
+        self.assertIsInstance(test.subtest.param, Test)
+        self.assertIs(test.subtest.param.param, Test)
+        self.assertFalse(test.subtest.param.attr)
+
+        self.assertIsNot(test.subtest.param, oldsubtestparam)
 
 if __name__ == '__main__':
     main()
