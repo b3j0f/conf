@@ -1,6 +1,11 @@
 ChangeLog
 =========
 
+0.3.2 (2016/03/29)
+------------------
+
+- fix installation of the configuration files.
+
 0.3.1 (2016/03/16)
 ------------------
 

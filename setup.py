@@ -29,9 +29,11 @@
 
 from setuptools import setup, find_packages
 
-from os.path import abspath, dirname, join, expanduser
+from os.path import abspath, dirname, join
 
 from re import compile as re_compile, S as re_S
+
+from sys import prefix
 
 NAME = 'b3j0f.conf'  #: library name.
 
@@ -101,7 +103,7 @@ setup(
     keywords=KEYWORDS,
     data_files=[
         (
-            expanduser(join('~', '.config')),
+            join(prefix, '.config'),
             [
                 join('etc', 'b3j0fconf-configurable.conf'),
                 join('etc', 'b3j0fconf-log.conf')

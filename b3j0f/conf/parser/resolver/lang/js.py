@@ -32,9 +32,7 @@ __all__ = ['resolvejs']
 
 from ..registry import register
 
-from ..core import (
-    DEFAULT_BESTEFFORT, DEFAULT_SAFE, DEFAULT_TOSTR, DEFAULT_SCOPE
-)
+from ..core import DEFAULT_TOSTR, DEFAULT_SCOPE
 
 try:
     from PyV8 import JSContext

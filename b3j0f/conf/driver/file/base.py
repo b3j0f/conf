@@ -37,6 +37,9 @@ from os.path import exists, join, expanduser
 
 from ..base import ConfDriver
 
+from sys import prefix
+
+
 CONF_DIRS = []  #: all config directories
 
 
@@ -48,7 +51,13 @@ def _addconfig(config, *paths):
             config.append(path)
 
 
-_addconfig(CONF_DIRS, '/etc', '/usr/local/etc')  # add unix system conf
+# add unix system conf
+_addconfig(CONF_DIRS, '/etc', '/usr/local/etc')
+
+_addconfig(
+    CONF_DIRS,
+    join(prefix, '.config'), join(prefix, 'config'), join(prefix, 'etc')
+)
 
 # add XDG conf dirs
 _addconfig(CONF_DIRS, getenv('XDG_CONFIG_HOME'), getenv('XDG_CONFIG_DIRS'))
