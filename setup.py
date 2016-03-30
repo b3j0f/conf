@@ -29,8 +29,7 @@
 
 from setuptools import setup, find_packages
 
-from os import makedirs
-from os.path import abspath, dirname, join, exists
+from os.path import abspath, dirname, join
 
 from re import compile as re_compile, S as re_S
 
@@ -68,9 +67,6 @@ DESCRIPTION = 'python class configuration tools useful in python projects.'
 
 URL = 'https://github.com/{0}'.format(_namepath)
 
-if not exists(join(prefix, '.config')):
-    makedirs(join(prefix, '.config'))
-
 setup(
     name=NAME,
     version=VERSION,
@@ -81,6 +77,9 @@ setup(
     description=DESCRIPTION,
     long_description=DESC,
     include_package_data=True,
+    package_data={
+        'b3j0f.conf': ['data/*.conf']
+    },
     url=URL,
     license='MIT License',
     classifiers=[
@@ -104,14 +103,5 @@ setup(
         'Programming Language :: Python :: Implementation :: CPython'
     ],
     test_suite='b3j0f',
-    keywords=KEYWORDS,
-    data_files=[
-        (
-            join(prefix, '.config'),
-            [
-                join('etc', 'b3j0fconf-configurable.conf'),
-                join('etc', 'b3j0fconf-log.conf')
-            ]
-        )
-    ]
+    keywords=KEYWORDS
 )

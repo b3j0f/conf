@@ -33,7 +33,7 @@ directory given by the environment variable ``B3J0F_CONF_DIR``.
 """
 
 from os import environ, getenv
-from os.path import exists, join, expanduser
+from os.path import exists, join, expanduser, sep
 
 from ..base import ConfDriver
 
@@ -50,9 +50,11 @@ def _addconfig(config, *paths):
         if path is not None and exists(path):
             config.append(path)
 
+# add installation directory
+_addconfig(CONF_DIRS, join(sep, *(__file__.split(sep)[:-3] + ['data'])))
 
 # add unix system conf
-_addconfig(CONF_DIRS, '/etc', '/usr/local/etc')
+_addconfig(CONF_DIRS, join(sep, 'etc'), join(sep, 'usr', 'local', 'etc'))
 
 _addconfig(
     CONF_DIRS,
