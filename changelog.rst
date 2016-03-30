@@ -1,6 +1,12 @@
 ChangeLog
 =========
 
+0.3.4 (2016/03/30)
+------------------
+
+- simplify installation in using the package_data parameter in the setup.
+- move etc to b3j0f/conf/data.
+
 0.3.3 (2016/03/30)
 ------------------
 
