@@ -1,3 +1,2 @@
 include README.rst LICENSE requirements.txt changelog.rst
 graft etc
-prune docs

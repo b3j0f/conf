@@ -29,7 +29,8 @@
 
 from setuptools import setup, find_packages
 
-from os.path import abspath, dirname, join
+from os import makedirs
+from os.path import abspath, dirname, join, exists
 
 from re import compile as re_compile, S as re_S
 
@@ -66,6 +67,9 @@ with open(join(BASEPATH, 'requirements.txt')) as f:
 DESCRIPTION = 'python class configuration tools useful in python projects.'
 
 URL = 'https://github.com/{0}'.format(_namepath)
+
+if not exists(join(prefix, '.config')):
+    makedirs(join(prefix, '.config'))
 
 setup(
     name=NAME,
