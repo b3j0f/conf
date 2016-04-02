@@ -29,11 +29,15 @@
 __all__ = [
     '__version__',
     'Configuration', 'Category', 'Parameter', 'configuration', 'category',
+    'BOOL', 'ARRAY', 'PType',
     'Configurable', 'applyconfiguration',
     'ConfDriver'
 ]
 
 from .version import __version__
 from .configurable import Configurable, applyconfiguration
-from .model import Configuration, Category, Parameter, configuration, category
+from .model import (
+    Configuration, Category, Parameter, configuration, category, BOOL, ARRAY,
+    PType
+)
 from .driver import ConfDriver

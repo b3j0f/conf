@@ -35,7 +35,7 @@ from six import string_types
 
 from b3j0f.utils.ut import UTCase
 
-from ..param import Parameter, PType
+from ..param import Parameter, PType, BOOL, ARRAY
 from parser import ParserError
 
 
@@ -120,6 +120,40 @@ class PTypeTest(UTCase):
         """Test to instanciate with an error."""
 
         self.assertRaises(ParserError, self.ptype, {'': None})
+
+
+class BoolTest(UTCase):
+    """Test the bool class."""
+
+    def test(self):
+        """Test to auto convert a value from BOOL."""
+
+        param = Parameter('', svalue='false', ptype=BOOL)
+
+        self.assertFalse(param.value)
+
+        param.svalue = 'true'
+
+        self.assertTrue(param.value)
+
+
+class ArrayTest(UTCase):
+    """Test the array class"""
+
+    def test(self):
+        """Test to auto convert a value from ARRAY."""
+
+        param = Parameter('', svalue='', ptype=ARRAY)
+
+        self.assertEqual(param.value, [])
+
+        param = Parameter('', svalue='a', ptype=ARRAY)
+
+        self.assertEqual(param.value, ['a'])
+
+        param = Parameter('', svalue='a,b', ptype=ARRAY)
+
+        self.assertEqual(param.value, ['a', 'b'])
 
 
 class ParameterTest(UTCase):

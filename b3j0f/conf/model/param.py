@@ -28,7 +28,7 @@
 
 from __future__ import absolute_import
 
-__all__ = ['Parameter', 'PType']
+__all__ = ['Parameter', 'PType', 'BOOL', 'ARRAY']
 
 from .base import ModelElement
 from ..parser.core import parse, serialize
@@ -121,6 +121,9 @@ class Bool(PType):
         return svalue in ('true', 'True', '1')
 
 
+BOOL = Bool()
+
+
 class Array(PType):
     """Parameter type dedicated to array value."""
 
@@ -128,9 +131,34 @@ class Array(PType):
 
         super(Array, self).__init__(ptype=Iterable, *args, **kwargs)
 
+    def __instancecheck__(self, instance):
+        """Check instance such as this instance or self ptype instance."""
+
+        return (
+                super(Array, self).__instancecheck__(instance)
+                and not isinstance(instance, string_types)
+        )
+
+    def __subclasscheck__(self, subclass):
+        """Check subclass such as this subclass or self ptype subclass."""
+
+        return (
+                super(Array, self).__subclasscheck__(subclass)
+                and not issubclass(subclass, string_types)
+        )
+
     def __call__(self, svalue):
 
-        return list(item.trim() for item in svalue.split(','))
+        if svalue:
+            result = list(item.strip() for item in svalue.split(','))
+
+        else:
+            result = []
+
+        return result
+
+
+ARRAY = Array()
 
 
 class Parameter(ModelElement):
@@ -439,7 +467,7 @@ class Parameter(ModelElement):
             try:
                 result = self._value = self.resolve()
 
-            except Exception:
+            except Exception as e:
                 reraise(
                     Parameter.Error,
                     Parameter.Error('Call the method "resolve" first.')

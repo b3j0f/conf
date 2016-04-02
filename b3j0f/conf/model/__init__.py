@@ -7,4 +7,4 @@ __all__ = [
 
 from .conf import Configuration, configuration
 from .cat import Category, category
-from .param import Parameter
+from .param import Parameter, BOOL, ARRAY, PType
