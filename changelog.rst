@@ -1,6 +1,11 @@
 ChangeLog
 =========
 
+0.3.4 (2016/04/02)
+------------------
+
+- fix bug while intercepting a configured object instanciation without resource reading.
+
 0.3.4 (2016/03/30)
 ------------------
 

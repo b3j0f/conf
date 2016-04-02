@@ -228,7 +228,7 @@ class Configurable(PrivateInterceptor):
         if self.callparams:
 
             args, kwargs = self.getcallparams(
-                conf=self.conf, target=target, args=list(args), kwargs=kwargs,
+                conf=self.getconf(), target=target, args=list(args), kwargs=kwargs,
                 exec_ctx=joinpoint.exec_ctx.setdefault(self.exec_ctx, set())
             )
 
