@@ -204,10 +204,12 @@ class ParameterTest(UTCase):
 
         self.assertIsNone(self.param.svalue)
 
-        # check if parameter clean it protected attributes
+        # check if parameter clean its protected attributes
         self.param._value = 1
         self.param._error = 1
         self.param.svalue = ''
+
+        self.param.value = None
 
         self.assertIsNone(self.param._error)
         self.assertIsNone(self.param._value)
@@ -304,7 +306,7 @@ class ParameterTest(UTCase):
             svalue='=1'
         )
 
-        cparam = param.copy(cleaned=True)
+        cparam = param.copy(value=None, svalue=None)
 
         self.assertEqual(param.name, cparam.name)
         self.assertEqual(param.local, cparam.local)

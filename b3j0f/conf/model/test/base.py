@@ -42,40 +42,21 @@ class ModelElementTest(UTCase):
 
         __slots__ = ModelElement.__slots__ + ('name', 'cleaned', 'local')
 
-        def __init__(self, name=None, local=False, *args, **kwargs):
+        def __init__(
+                self, name=None, local=False, cleaned=False, *args, **kwargs
+        ):
 
             super(ModelElementTest.TestME, self).__init__(
                 *args, **kwargs
             )
 
-            self.cleaned = False
+            self.cleaned = cleaned
             self.name = name
             self.local = local
-
-        def clean(self, *args, **kwargs):
-
-            self.cleaned = True
-
-        def copy(self, *args, **kwargs):
-
-            result = super(ModelElementTest.TestME, self).copy(*args, **kwargs)
-
-            result.name = self.name
-
-            return result
 
     def setUp(self):
 
         self.me = ModelElementTest.TestME()
-
-    def test_clean(self):
-        """Test to clean a model element."""
-
-        self.assertFalse(self.me.cleaned)
-
-        self.me.clean()
-
-        self.assertTrue(self.me.cleaned)
 
     def test_copy(self):
         """Test to copy a model element."""
@@ -118,6 +99,17 @@ class ModelElementTest(UTCase):
 
         self.assertIsNone(copiedme.name)
         self.assertIsNotNone(self.me.name)
+
+    def test_update_inheritance(self):
+        """Test the method update with inheritance of properties."""
+
+        name = ModelElementTest.TestME(name=1, local=None)
+        local = ModelElementTest.TestME(local=2)
+
+        name.update(local)
+
+        self.assertEqual(name.name, 1)
+        self.assertEqual(name.local, 2)
 
 
 class CompositeModelElementTest(UTCase):
@@ -382,19 +374,6 @@ class CompositeModelElementTest(UTCase):
 
         self.assertEqual(names, keys)
 
-    def test_clean(self):
-        """Test the method clean."""
-
-        for elt in self.cme.values():
-
-            elt.cleaned = False
-
-        self.cme.clean()
-
-        for elt in self.cme.values():
-
-            self.assertTrue(elt.cleaned)
-
     def test_copy(self):
         """Test the method copy."""
 
@@ -406,15 +385,6 @@ class CompositeModelElementTest(UTCase):
 
             self.assertIsNot(selfmelt, melt)
             self.assertFalse(melt.cleaned)
-
-        ccme = self.cme.copy(cleaned=True)
-
-        for melt in ccme.values():
-
-            selfmelt = self.cme[melt.name]
-
-            self.assertIsNot(selfmelt, melt)
-            self.assertTrue(melt.cleaned)
 
     def test_pop(self):
         """Test to pop elements."""
@@ -456,14 +426,6 @@ class CompositeModelElementTest(UTCase):
 
             self.assertFalse(elt.cleaned)
 
-            del self.cme[elt.name]
-
-            self.cme.setdefault(melt.name, melt)
-
-            elt = self.cme[melt.name]
-
-            self.assertTrue(elt.cleaned)
-
     def test_clear(self):
         """Test the method clear."""
 
@@ -488,6 +450,31 @@ class CompositeModelElementTest(UTCase):
 
             else:
                 self.assertTrue(me.local)
+
+    def test_update_inheritance(self):
+        """Test the method update with inheritance of properties."""
+
+        name = ModelElementTest.TestME(
+            name='test', local=None, cleaned='cleaned'
+        )
+        local = ModelElementTest.TestME(
+            name='test', local='local', cleaned=None
+        )
+
+        cname = CompositeModelElementTest.TestCME(melts=[name])
+        clocal = CompositeModelElementTest.TestCME(melts=[local])
+
+        lcme = cname.copy()
+
+        lcme.update(clocal)
+
+        self.assertEqual(lcme['test'].local, 'local')
+        self.assertEqual(lcme['test'].cleaned, 'cleaned')
+
+        params = lcme.params
+
+        self.assertEqual(params['test'].local, 'local')
+        self.assertEqual(params['test'].cleaned, 'cleaned')
 
 if __name__ == '__main__':
     main()

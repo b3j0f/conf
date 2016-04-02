@@ -212,16 +212,18 @@ The following code permits to load upper configuration to a python object.
   # assert attributes
   assert myobject.myattr == 'myvalue'
   assert myobject.six == 6
+  assert isinstance(myobject.six, int)
   assert myobject.twelve == 12
+  assert isinstance(myobject.twelve, float)
 
 The following code permits to load upper configuration to a python function.
 
 .. code-block:: python
 
-  from b3j0f.conf import Configurable
+  from b3j0f.conf import Parameter
 
-  # instantiate a business class
-  @Configurable(paths='myobject.conf')
+  # instantiate a business class and ensure twelve is converted into an integer
+  @Configurable(paths='myobject.conf', conf=Parameter('twelve', ptype=int))
   def myfunc(myattr=None, six=None, twelve=None):  # Only None values will be setted by the configuration
       return myattr, six, twelve
 
@@ -231,6 +233,7 @@ The following code permits to load upper configuration to a python function.
   assert myobject.myattr == 'myvalue'
   assert myobject.six == 6
   assert myobject.twelve == 46
+  assert isinstance(myobject.twelve, int)
 
 Class configuration
 ###################

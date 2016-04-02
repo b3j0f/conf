@@ -45,22 +45,17 @@ class ModelElement(object):
 
     __slots__ = ()
 
-    def clean(self):
-        """Clean this model element."""
+    def copy(self, *args, **kwargs):
+        """Copy this model element and contained elements if they exist."""
 
-        raise NotImplementedError()
-
-    def copy(self, cleaned=False, *args, **kwargs):
-        """Copy this model element and contained elements if they exist.
-
-        :param bool cleaned: if True (default False) copy this element without
-            parameter values/svalues.
-        """
+        for slot in self.__slots__:
+            attr = getattr(self, slot)
+            if slot[0] == '_':  # convert protected attribute name to public
+                slot = slot[1:]
+            if slot not in kwargs:
+                kwargs[slot] = attr
 
         result = type(self)(*args, **kwargs)
-
-        if cleaned:
-            result.clean()
 
         return result
 
@@ -110,12 +105,11 @@ class ModelElement(object):
 
         return result
 
-    def update(self, other, copy=True, cleaned=False, *args, **kwargs):
+    def update(self, other, copy=True, *args, **kwargs):
         """Update this element related to other element.
 
         :param other: same type than this.
         :param bool copy: copy other before update attributes.
-        :param bool cleaned: do a cleaned copy.
         :param tuple args: copy args.
         :param dict kwargs: copy kwargs.
         :return: this"""
@@ -125,13 +119,12 @@ class ModelElement(object):
             if isinstance(other, self.__class__):
 
                 if copy:
-                    other = other.copy(cleaned=cleaned, *args, **kwargs)
+                    other = other.copy(*args, **kwargs)
 
-                for slot in self.__slots__:
-                    oattr = getattr(other, slot)
-
-                    if oattr is not None:
-                        setattr(self, slot, oattr)
+                for slot in other.__slots__:
+                    attr = getattr(other, slot)
+                    if attr is not None:
+                        setattr(self, slot, attr)
 
             else:
                 raise TypeError(
@@ -247,36 +240,26 @@ class CompositeModelElement(ModelElement, OrderedDict):
 
         return result
 
-    def clean(self, *args, **kwargs):
+    def copy(self, *args, **kwargs):
 
-        for content in list(self.values()):
+        melts = [melt.copy() for melt in self.values()]
 
-            content.clean(*args, **kwargs)
-
-    def copy(self, cleaned=False, *args, **kwargs):
-
-        for slot in self.__slots__:
-            if slot not in kwargs:
-                attr = getattr(self, slot)
-                kwargs[slot] = attr
-
-        melts = list(melt.copy(cleaned=cleaned) for melt in self.values())
-
-        result = super(CompositeModelElement, self).copy(melts=melts, *args, **kwargs)
+        result = super(CompositeModelElement, self).copy(
+            melts=melts, *args, **kwargs
+        )
 
         return result
 
-    def update(self, other, copy=True, cleaned=False, *args, **kwargs):
+    def update(self, other, copy=True, *args, **kwargs):
         """Update this composite model element with other element content.
 
         :param other: element to update with this. Must be the same type of this
             or this __contenttype__.
         :param bool copy: copy other before updating.
-        :param bool cleaned: in addition to the copy request, do a cleaned copy.
-        """
+        :return: self"""
 
         super(CompositeModelElement, self).update(
-            other, copy=copy, cleaned=cleaned, *args, **kwargs
+            other, copy=copy, *args, **kwargs
         )
 
         if other:  # dirty hack for python2.6
@@ -300,13 +283,13 @@ class CompositeModelElement(ModelElement, OrderedDict):
                 if selfcontent is None:
 
                     if copy:
-                        content = content.copy(cleaned=cleaned, local=False)
+                        content = content.copy(local=False)
                     self[content.name] = content
 
                 else:
-                    selfcontent.update(
-                        content, copy=copy, cleaned=cleaned, *args, **kwargs
-                    )
+                    selfcontent.update(content, copy=copy, *args, **kwargs)
+
+        return self
 
     @property
     def params(self):
@@ -319,9 +302,21 @@ class CompositeModelElement(ModelElement, OrderedDict):
         for content in list(self.values()):
 
             if isinstance(content, CompositeModelElement):
-                result.update(content.params)
+                cparams = content.params
+
+                for cpname in cparams:
+                    cparam = cparams[cpname]
+
+                    if cpname in result:
+                        result[cpname].update(cparam)
+
+                    else:
+                        result[cpname] = cparam.copy()
+
+            elif content.name in result:
+                result[content.name].update(content)
 
             else:
-                result[content.name] = content
+                result[content.name] = content.copy()
 
         return result

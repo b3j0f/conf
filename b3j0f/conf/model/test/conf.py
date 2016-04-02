@@ -31,8 +31,8 @@ from unittest import main
 
 from b3j0f.utils.ut import UTCase
 
-from ..conf import Configuration, configuration
-from ..cat import Category, category
+from ..conf import Configuration
+from ..cat import Category
 from ..param import Parameter
 
 
@@ -84,12 +84,12 @@ class ConfigurationTest(UTCase):
         errors = list(param for param in params.values() if param.error)
         self.assertEqual(len(errors), (self.count * (self.count + 1) // 8) + 1)
 
-    def test_pvalue(self):
-        """Test the method pvalue."""
+    def test_param(self):
+        """Test the method param."""
 
-        for cat in self.conf.values():
+        for count, cat in enumerate(self.conf.values()):
 
-            for param in cat.values():
+            for index, param in enumerate(cat.values()):
 
                 value = param.value
 
@@ -104,6 +104,34 @@ class ConfigurationTest(UTCase):
 
                 self.assertEqual(value, pvalue)
 
+    def test_param_history(self):
+
+        conf = Configuration(
+            melts=[
+                Category(name='a', melts=[Parameter(name='a', value=1)]),
+                Category(name='b', melts=[Parameter(name='a', value=2)]),
+                Category(name='c', melts=[Parameter(name='a', value=None)]),
+                Category(name='d', melts=[Parameter(name='a', value=3)]),
+                Category(name='e', melts=[Parameter(name='a', value=None)])
+            ]
+        )
+
+        self.assertEqual(conf.param('a').value, 3)
+        self.assertEqual(conf.param('a', history=0).value, 3)
+        self.assertEqual(conf.param('a', history=1).value, 3)
+        self.assertEqual(conf.param('a', history=2).value, 2)
+        self.assertEqual(conf.param('a', history=3).value, 2)
+        self.assertEqual(conf.param('a', history=4).value, 1)
+        self.assertEqual(conf.param('a', history=5).value, 1)
+        self.assertEqual(conf.param('a', history=6).value, 1)
+
+        self.assertEqual(conf.param('a', cname='d').value, 3)
+        self.assertEqual(conf.param('a', cname='d', history=0).value, 3)
+        self.assertEqual(conf.param('a', cname='d', history=1).value, 2)
+        self.assertEqual(conf.param('a', cname='d', history=2).value, 2)
+        self.assertEqual(conf.param('a', cname='d', history=3).value, 1)
+        self.assertEqual(conf.param('a', cname='d', history=4).value, 1)
+        self.assertEqual(conf.param('a', cname='d', history=5).value, 1)
 
 if __name__ == '__main__':
     main()

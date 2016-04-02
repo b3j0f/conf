@@ -4,6 +4,12 @@ ChangeLog
 0.3.6 (2016/04/02)
 ------------------
 
+- add support of inheritance in updating model elements and get params from configuration.
+- remove cleaned parameter in the methods ModelElement.copy and ModelElement.update.
+
+0.3.6 (2016/04/02)
+------------------
+
 - fix bug while updating parameter ptype (new None values did change old consistent values).
 
 0.3.5 (2016/04/02)

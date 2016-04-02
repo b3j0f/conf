@@ -113,18 +113,23 @@ class Configuration(CompositeModelElement):
 
                 categories.append(cat)
 
-                if cname in (None, cat.name):
-                    category = cat
+                if cname == cat.name:
+                    break
 
-                    if cname is not None:
-                        break
-
-        if category is None:
+        if cname is not None and (
+                not categories or categories[-1].name != cname
+        ):
             raise NameError('Category {0} does not exist.'.format(cname))
 
-        category = categories[- (history + 1)]
+        categories = categories[:max(1, len(categories) - history)]
 
-        result = category[pname]
+        for category in categories:
+            if pname in category:
+                if result is None:
+                    result = category[pname].copy()
+
+                else:
+                    result.update(category[pname])
 
         return result
 

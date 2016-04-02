@@ -169,13 +169,14 @@ class Parameter(ModelElement):
     DEFAULT_NAME = re_compile('.*')
     DEFAULT_PTYPE = None  #: default ptype.
     DEFAULT_LOCAL = True  #: default local value.
+    DEFAULT_ERROR = None  #: default error value
 
     def __init__(
             self, name=DEFAULT_NAME, value=None, ptype=DEFAULT_PTYPE,
             parser=parse, serializer=serialize, svalue=None,
             conf=None, configurable=None,
             local=DEFAULT_LOCAL, scope=DEFAULT_SCOPE, safe=DEFAULT_SAFE,
-            besteffort=DEFAULT_BESTEFFORT,
+            besteffort=DEFAULT_BESTEFFORT, error=None,
             *args, **kwargs
     ):
         """
@@ -207,7 +208,7 @@ class Parameter(ModelElement):
         # init protected attributes
         self._name = None
         self._value = value
-        self._error = None
+        self._error = error
         self._svalue = svalue
 
         # init public attributes
@@ -335,7 +336,8 @@ class Parameter(ModelElement):
         """
 
         if value is not None:  # if value is not None
-            self.clean()  # clean this parameter
+            self._value = None
+            self._error = None
 
         self._svalue = value  # set svalue
 
@@ -470,34 +472,3 @@ class Parameter(ModelElement):
             )
             self._error = error
             raise error
-
-    def copy(self, cleaned=False, *args, **kwargs):
-        """Get a copy of the parameter with specified name and new value if
-        cleaned.
-
-        :param str name: new parameter name.
-        :param bool cleaned: clean the value.
-        :return: new parameter.
-        """
-
-        props = (
-            'name', 'parser', 'local', 'ptype', 'conf', 'scope', 'besteffort',
-            'safe'
-        )
-        for prop in props:
-            kwargs.setdefault(prop, getattr(self, prop))
-
-        if not cleaned:  # add value and svalue if not cleaned
-            kwargs.setdefault('value', self._value)
-            kwargs.setdefault('svalue', self._svalue)
-
-        result = super(Parameter, self).copy(cleaned=cleaned, *args, **kwargs)
-
-        return result
-
-    def clean(self):
-        """Clean this param in removing values."""
-
-        self._value = None
-        self._svalue = None
-        self._error = None
