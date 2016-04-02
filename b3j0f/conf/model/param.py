@@ -135,16 +135,16 @@ class Array(PType):
         """Check instance such as this instance or self ptype instance."""
 
         return (
-                super(Array, self).__instancecheck__(instance)
-                and not isinstance(instance, string_types)
+            super(Array, self).__instancecheck__(instance)
+            and not isinstance(instance, string_types)
         )
 
     def __subclasscheck__(self, subclass):
         """Check subclass such as this subclass or self ptype subclass."""
 
         return (
-                super(Array, self).__subclasscheck__(subclass)
-                and not issubclass(subclass, string_types)
+            super(Array, self).__subclasscheck__(subclass)
+            and not issubclass(subclass, string_types)
         )
 
     def __call__(self, svalue):
