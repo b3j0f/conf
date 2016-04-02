@@ -112,6 +112,13 @@ class ModelElementTest(UTCase):
 
         self.assertTrue(self.me.cleaned)
 
+        copiedme.name = None
+
+        self.me.update(copiedme)
+
+        self.assertIsNone(copiedme.name)
+        self.assertIsNotNone(self.me.name)
+
 
 class CompositeModelElementTest(UTCase):
     """Test the CompositeModelElement."""

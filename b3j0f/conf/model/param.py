@@ -167,7 +167,7 @@ class Parameter(ModelElement):
     _PARAM_NAME_COMPILER_MATCHER = re_compile(PARAM_NAME_REGEX).match
 
     DEFAULT_NAME = re_compile('.*')
-    DEFAULT_PTYPE = object  #: default ptype.
+    DEFAULT_PTYPE = None  #: default ptype.
     DEFAULT_LOCAL = True  #: default local value.
 
     def __init__(
@@ -457,7 +457,7 @@ class Parameter(ModelElement):
         """
 
         if value is None or (
-                self.ptype is not None and isinstance(value, self.ptype)
+                self.ptype is None or isinstance(value, self.ptype)
         ):
             self._value = value
 
@@ -481,7 +481,8 @@ class Parameter(ModelElement):
         """
 
         props = (
-            'name', 'parser', 'local', 'ptype', 'conf', 'scope', 'besteffort'
+            'name', 'parser', 'local', 'ptype', 'conf', 'scope', 'besteffort',
+            'safe'
         )
         for prop in props:
             kwargs.setdefault(prop, getattr(self, prop))

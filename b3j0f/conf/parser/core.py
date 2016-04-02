@@ -209,12 +209,15 @@ def serialize(expr):
 
 
 def parse(
-        svalue, conf=None, configurable=None, ptype=object,
+        svalue, conf=None, configurable=None, ptype=None,
         scope=DEFAULT_SCOPE, safe=DEFAULT_SAFE, besteffort=DEFAULT_BESTEFFORT
 ):
     """Parser which delegates parsing to expression or format parser."""
 
     result = None
+
+    if ptype is None:
+        ptype = object
 
     compilation = REGEX_EXPR.match(svalue)
 
@@ -277,7 +280,7 @@ def _exprparser(
 
 
 def _strparser(
-        svalue, safe=DEFAULT_SAFE, ptype=str, scope=DEFAULT_SCOPE,
+        svalue, safe=DEFAULT_SAFE, ptype=None, scope=DEFAULT_SCOPE,
         configurable=None, conf=None, besteffort=DEFAULT_BESTEFFORT
 ):
 
@@ -287,6 +290,9 @@ def _strparser(
             conf=conf, besteffort=besteffort
         ), svalue
     )
+
+    if ptype is None:
+        ptype = str
 
     if not issubclass(ptype, string_types):
 

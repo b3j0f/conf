@@ -682,16 +682,27 @@ class Configurable(PrivateInterceptor):
 
         return result
 
-    def _bind_target(self, target, *args, **kwargs):
+    def _bind_target(self, target, ctx, *args, **kwargs):
 
         if callable(target):
-            result = super(Configurable, self)._bind_target(
-                target=target, *args, **kwargs
-            )
+
+            try:
+                result = super(Configurable, self)._bind_target(
+                    target=target, ctx=ctx, *args, **kwargs
+                )
+
+            except AttributeError:
+                self.remove_from(target=target, ctx=ctx)
+                def __init__(*args, **kwargs):
+                    return object.__init__(*args, **kwargs)
+                target.__init__ = __init__
+                result = super(Configurable, self)._bind_target(
+                    target=target, ctx=ctx, *args, **kwargs
+                )
 
         else:
             result = Annotation._bind_target(
-                self, target=target, *args, **kwargs
+                self, target=target, ctx=ctx, *args, **kwargs
             )
 
         return result
