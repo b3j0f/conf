@@ -349,5 +349,16 @@ class ParameterTest(UTCase):
         self.assertIsNone(cparam.value)
         self.assertIsNone(cparam.svalue)
 
+    def test_simple_conversion(self):
+        """Test simple conversion of parameter."""
+
+        param = Parameter('', svalue='=1.0', ptype=int)
+
+        self.assertIsInstance(param.value, int)
+
+        param = Parameter('', svalue='=1.0')
+
+        self.assertIsInstance(param.value, float)
+
 if __name__ == '__main__':
     main()

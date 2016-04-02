@@ -1,7 +1,13 @@
 ChangeLog
 =========
 
-0.3.6 (2016/04/02)
+0.3.8 (2016/04/02)
+------------------
+
+- add BOOL and ARRAY parameter type converters.
+- fix parameter conversion from ptype.
+
+0.3.7 (2016/04/02)
 ------------------
 
 - add support of inheritance in updating model elements and get params from configuration.
