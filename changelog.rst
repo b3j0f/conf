@@ -1,6 +1,12 @@
 ChangeLog
 =========
 
+0.3.9 (2016/04/03)
+------------------
+
+- improve the API in authorizing the use of Configuration, Category or Parameter when a configuration is requested.
+- fix a bug when calling the applyconfiguration function with inheritance requirements between the default conf and a new conf.
+
 0.3.8 (2016/04/02)
 ------------------
 

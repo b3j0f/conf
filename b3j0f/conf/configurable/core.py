@@ -157,7 +157,8 @@ class Configurable(PrivateInterceptor):
             *args, **kwargs
     ):
         """
-        :param Configuration conf: conf to use at instance level.
+        :param conf: conf to use at instance level.
+        :type conf: Configuration, Category or Parameter.
         :param Iterable paths: paths to parse.
         :param targets: object(s) to reconfigure. Such object may
             implement the methods configure applyconfiguration and configure.
@@ -227,8 +228,10 @@ class Configurable(PrivateInterceptor):
 
         if self.callparams:
 
+            conf = self.getconf()
+
             args, kwargs = self.getcallparams(
-                conf=self.getconf(), target=target, args=list(args), kwargs=kwargs,
+                conf=conf, target=target, args=list(args), kwargs=kwargs,
                 exec_ctx=joinpoint.exec_ctx.setdefault(self.exec_ctx, set())
             )
 
@@ -356,19 +359,31 @@ class Configurable(PrivateInterceptor):
         :type value: Category or Configuration
         """
 
-        if value is None:
-            value = Configuration()
-
-        elif isinstance(value, Category):
-            value = configuration(value)
-
-        elif isinstance(value, Parameter):
-            value = configuration(category('', value))
-
-        self._conf = value
+        self._conf = self._toconf(value)
 
         if self.autoconf:
             self.applyconfiguration()
+
+    def _toconf(self, conf):
+        """Convert input parameter to a Configuration.
+
+        :param conf: configuration to convert to a Configuration object.
+        :type conf: Configuration, Category or Parameter.
+
+        :rtype: Configuration"""
+
+        result = conf
+
+        if result is None:
+            result = Configuration()
+
+        elif isinstance(result, Category):
+            result = configuration(result)
+
+        elif isinstance(result, Parameter):
+            result = configuration(category('', result))
+
+        return result
 
     @property
     def paths(self):
@@ -408,7 +423,8 @@ class Configurable(PrivateInterceptor):
         4. fill input conf with resolved parameters.
         5. apply filled conf on targets.
 
-        :param Configuration conf: conf from where get conf.
+        :param conf: conf from where get conf.
+        :type conf: Configuration, Category or Parameter
         :param paths: conf files to parse. If paths is a str, it is
             automatically putted into a list.
         :type paths: list of str
@@ -442,6 +458,8 @@ class Configurable(PrivateInterceptor):
         if keepstate is None:
             keepstate = self.keepstate
 
+        conf = self._toconf(conf)
+
         # get conf from drivers and paths
         conf = self.getconf(
             conf=conf, paths=paths, logger=logger, drivers=drivers
@@ -465,7 +483,8 @@ class Configurable(PrivateInterceptor):
     def getconf(self, conf=None, paths=None, drivers=None, logger=None):
         """Get a configuration from paths.
 
-        :param Configuration conf: conf to update. Default this conf.
+        :param conf: conf to update. Default this conf.
+        :type conf: Configuration, Category or Parameter
         :param str(s) paths: list of conf files. Default this paths.
         :param Logger logger: logger to use for logging info/error messages.
         :param list drivers: ConfDriver to use. Default this drivers.
@@ -475,9 +494,16 @@ class Configurable(PrivateInterceptor):
 
         result = None
 
+        conf = self._toconf(conf)
+
         # start to initialize input params
         if conf is None:
-            conf = self.conf
+            conf = self.conf.copy()
+
+        else:
+            selfconf = self.conf.copy()
+            selfconf.update(conf)
+            conf = selfconf
 
         if paths is None:
             paths = self.paths
@@ -528,8 +554,8 @@ class Configurable(PrivateInterceptor):
 
         Specialization of this method is done in the _configure method.
 
-        :param Configuration conf: configuration model to configure. Default is
-            this conf.
+        :param conf: configuration model to configure. Default is this conf.
+        :type conf: Configuration, Category or Parameter
         :param Iterable targets: objects to configure. self targets by default.
         :param Logger logger: specific logger to use.
         :param bool callconf: if True (False by default), the configuration is
@@ -542,6 +568,8 @@ class Configurable(PrivateInterceptor):
         """
 
         result = []
+
+        conf = self._toconf(conf)
 
         if conf is None:
             conf = self.conf

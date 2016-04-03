@@ -440,5 +440,34 @@ class ConfigurableTest(UTCase):
 
         self.assertIsNot(test.subtest.param, oldsubtestparam)
 
+    def test_ptype(self):
+        """Test application of ptype."""
+
+        conf = configuration(
+            category('test', Parameter('test', ptype=int, svalue='9'))
+        )
+
+        @Configurable(conf=conf)
+        class Test(object):
+
+            def __init__(self, test=None, *args, **kwargs):
+
+                super(Test, self).__init__(*args, **kwargs)
+
+                self.testy = test
+
+        test = Test()
+
+        self.assertEqual(test.testy, 9)
+        self.assertEqual(test.test, 9)
+
+        conf = conf.copy()
+        conf['test']['test'].svalue = '10'
+        conf['test']['test'].ptype = None
+
+        applyconfiguration(targets=[test], conf=conf)
+
+        self.assertEqual(test.test, 10)
+
 if __name__ == '__main__':
     main()
