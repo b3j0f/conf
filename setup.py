@@ -63,7 +63,7 @@ DEPENDENCIES = []
 with open(join(BASEPATH, 'requirements.txt')) as f:
     DEPENDENCIES = list(line for line in f.readlines())
 
-DESCRIPTION = 'python class configuration tools useful in python projects.'
+DESCRIPTION = 'Python object configuration library in reflective and distributed concerns.'
 
 URL = 'https://github.com/{0}'.format(_namepath)
 
