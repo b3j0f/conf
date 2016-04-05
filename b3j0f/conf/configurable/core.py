@@ -57,8 +57,8 @@ class Configurable(PrivateInterceptor):
 
     Based on a configuration model and configuration drivers, it is able to:
 
-    - be used such as a decorator (see the b3j0f.annotation.Annotation). resources to configure are accessible from the
-        ``targets`` property.
+    - be used such as a decorator (see the b3j0f.annotation.Annotation).
+        resources to configure are accessible from the ``targets`` property.
     - inject configuration parameters at call time (for function/method calls).
     - preload required modules.
     - be used with several objects.
@@ -127,7 +127,8 @@ class Configurable(PrivateInterceptor):
     BESTEFFORT = 'besteffort'  #: best effort attribute name.
     MODULES = 'modules'  #: modules attribute name.
     CALLPARAMS = 'callparams'  #: call params attribute name.
-    KEEPSTATE = 'keepstate'  #: reconfiguration keepstate level.
+    KEEPSTATE = 'keepstate'  #: reconfiguration keepstate level attribute name.
+    DECOSUB = 'decosub'  #: decorate sub elment attribute name
 
     EXEC_CTX = '__CONFIGURABLE_EXEC_CTX' #: configurable execution context.
 
@@ -143,17 +144,21 @@ class Configurable(PrivateInterceptor):
     DEFAULT_SCOPE = DEFAULT_SCOPE  #: default value for scope.
     DEFAULT_BESTEFFORT = DEFAULT_BESTEFFORT  #: default value for besteffort.
     DEFAULT_KEEPSTATE = True  #: default keepstate value.
+    DEFAULT_PATHS = ()  #: default paths value.
+    DEFAULT_CONF = None  #: default conf value.
+    DEFAULT_TARGETS = set()  #: default targets value.
+    DEFAULT_DECOSUB = True  #: default decosub value.
 
     SUB_CONF_PREFIX = ':'  #: sub conf prefix.
 
     def __init__(
             self,
-            conf=None, paths=None, drivers=DEFAULT_DRIVERS,
-            foreigns=DEFAULT_FOREIGNS, autoconf=DEFAULT_AUTOCONF, targets=None,
-            keepstate=DEFAULT_KEEPSTATE,
+            conf=DEFAULT_CONF, paths=DEFAULT_PATHS, drivers=DEFAULT_DRIVERS,
+            foreigns=DEFAULT_FOREIGNS, autoconf=DEFAULT_AUTOCONF,
+            targets=DEFAULT_TARGETS, keepstate=DEFAULT_KEEPSTATE,
             safe=DEFAULT_SAFE, scope=DEFAULT_SCOPE,
             besteffort=DEFAULT_BESTEFFORT, modules=DEFAULT_MODULES,
-            callparams=DEFAULT_CALLPARAMS, logger=None,
+            callparams=DEFAULT_CALLPARAMS, decosub=DEFAULT_DECOSUB, logger=None,
             *args, **kwargs
     ):
         """
@@ -177,13 +182,12 @@ class Configurable(PrivateInterceptor):
             safe context to resolve python object. For example, if safe,
             builtins function such as `open` are not resolvable.
         :param dict scope: expression resolver scope.
-
         :param bool besteffort: expression resolver best effort flag.
         :param list modules: required modules.
         :param bool callparams: if True (default), use parameters in the
             configured callable function.
-        :param bool autoresolve: if True (default), call auto resolve on
-            retrieved configurations.
+        :param bool decosub: if True (default), decorate elements created by
+            decorated types.
         :param Logger logger: this logger."""
 
         super(Configurable, self).__init__(*args, **kwargs)
@@ -201,9 +205,9 @@ class Configurable(PrivateInterceptor):
 
         self.drivers = drivers
         self.foreigns = foreigns
-        self.targets = set() if targets is None else targets
+        self.targets = set() if targets is None else set(targets)
         self.keepstate = keepstate
-        self.conf = conf
+        self.conf = self._toconf(conf)
         self.paths = paths
         self.safe = safe
         self.scope = scope
@@ -211,14 +215,12 @@ class Configurable(PrivateInterceptor):
         self.modules = modules
         self.callparams = callparams
         self.logger = logger
+        self.decosub = decosub
 
         # generate an execution context name
         self.exec_ctx = '{0}{1}'.format(Configurable.EXEC_CTX, random())
 
         self.autoconf = autoconf  # end of dirty hack
-
-        if self.autoconf:
-            self.applyconfiguration()
 
     def _interception(self, joinpoint):
 
@@ -240,25 +242,43 @@ class Configurable(PrivateInterceptor):
 
         result = joinpoint.proceed()
 
+        # configure parameters not already given in the constructor.
         if self.autoconf:
-
-            targets = [result]
 
             cls = joinpoint.ctx if isclass(joinpoint.ctx) else target
 
-            if result is None:
+            target2conf = result
+
+            if target2conf is None:
 
                 if isclass(cls):
                     # if target is the method __init__
                     if target.__name__ == '__init__':
+
                         if 'self' in kwargs:
-                            targets = [kwargs['self']]
+                            target2conf = kwargs['self']
 
                         else:
-                            targets = [args[0]]
+                            target2conf = args[0]
 
-            if not isclass(cls) or isinstance(targets[0], cls):
-                self.applyconfiguration(targets=targets, callconf=False)
+            if not isclass(cls) or isinstance(target2conf, cls):
+
+                if self.callparams:  # remove params already given in jp params.
+
+                    params = conf.params
+
+                    for pname in joinpoint.kwargs:
+                        if pname in params:
+                            del params[pname]
+
+                    conf = self._toconf(list(params.values()))
+
+                target2conf = self._configure(
+                    target=target2conf, callconf=False, conf=conf
+                )
+
+                if self.decosub:
+                    self.targets.add(target2conf)
 
         return result
 
@@ -383,6 +403,9 @@ class Configurable(PrivateInterceptor):
         elif isinstance(result, Parameter):
             result = configuration(category('', result))
 
+        elif isinstance(result, list):
+            result = configuration(category('', *result))
+
         return result
 
     @property
@@ -458,8 +481,6 @@ class Configurable(PrivateInterceptor):
         if keepstate is None:
             keepstate = self.keepstate
 
-        conf = self._toconf(conf)
-
         # get conf from drivers and paths
         conf = self.getconf(
             conf=conf, paths=paths, logger=logger, drivers=drivers
@@ -520,22 +541,18 @@ class Configurable(PrivateInterceptor):
         # iterate on all paths
         for path in paths:
 
+            rscconf = None
+
             for driver in drivers:  # find the best driver
 
-                rscconf = driver.getconf(
-                    path=path, conf=conf, logger=logger
-                )
+                rscconf = driver.getconf(path=path, conf=conf, logger=logger)
 
                 if rscconf is None:
                     continue
 
-                if result is None:
-                    result = rscconf
+                conf.update(rscconf)
 
-                else:
-                    result.update(rscconf)
-
-            if result is None:
+            if rscconf is None:
                 # if no conf found, display a warning log message
                 if logger is not None:
                     logger.warning(
@@ -543,6 +560,8 @@ class Configurable(PrivateInterceptor):
                             drivers, path
                         )
                     )
+
+        result = conf
 
         return result
 
@@ -591,7 +610,7 @@ class Configurable(PrivateInterceptor):
                     keepstate=keepstate
                 )
 
-            except:
+            except Exception as e:
                 if logger is not None:
                     logger.error(
                         'Error {0} raised while configuring {1}/{2}'.format(
@@ -619,6 +638,7 @@ class Configurable(PrivateInterceptor):
         :param bool callconf: if True, use conf in target __call__ parameters.
         :param bool keepstate: if True recreate sub objects if they already
             exist.
+        :return: configured target.
         """
 
         result = target
@@ -666,7 +686,8 @@ class Configurable(PrivateInterceptor):
                 params += cparams.values()
 
         if callconf and callable(target):
-            conf = configuration(category('', *params))
+
+            conf = self._toconf(params)
 
             args, kwargs = self.getcallparams(conf=conf, target=target)
 
@@ -688,10 +709,11 @@ class Configurable(PrivateInterceptor):
 
                 subconf = configuration(*cats)
 
-                value = applyconfiguration(
+                targets = applyconfiguration(
                     targets=[value], conf=subconf, callconf=subcallconf,
                     keepstate=keepstate
-                )[0]
+                )
+                value = targets[0]
 
             if param.error:
                 continue
@@ -703,10 +725,10 @@ class Configurable(PrivateInterceptor):
                 except Exception:
                     if logger is not None:
                         logger.error(
-                           'Error while setting {0}({1}) on {2}: {3}'.format(
-                            pname, value, target, format_exc()
+                            'Error while setting {0}({1}) on {2}: {3}'.format(
+                                pname, value, target, format_exc()
+                            )
                         )
-                    )
 
         return result
 
@@ -762,7 +784,6 @@ def applyconfiguration(targets, conf=None, *args, **kwargs):
             configuredtargets = configurable.applyconfiguration(
                 targets=[target], conf=conf, *args, **kwargs
             )
-
             result += configuredtargets
 
     return result
@@ -772,12 +793,20 @@ _CONF = configuration(
     category(
         Configurable.CATEGORY,
         Parameter(
+            name=Configurable.CONF, ptype=Configuration,
+            value=Configurable.DEFAULT_CONF
+        ),
+        Parameter(
+            name=Configurable.TARGETS, ptype=set,
+            value=Configurable.DEFAULT_TARGETS
+        ),
+        Parameter(
             name=Configurable.DRIVERS, ptype=tuple,
             value=Configurable.DEFAULT_DRIVERS
         ),
         Parameter(
             name=Configurable.PATHS, ptype=tuple,
-            value=('b3j0fconf-configurable.conf', )
+            value=Configurable.DEFAULT_PATHS
         ),
         Parameter(
             name=Configurable.SCOPE, ptype=dict,
@@ -815,4 +844,6 @@ _CONF = configuration(
 )
 
 # apply the configurable on itself
-Configurable(conf=_CONF)(Configurable)
+Configurable(
+        conf=_CONF, paths=['b3j0fconf-configurable.conf'], #autoconf=False
+)(Configurable)

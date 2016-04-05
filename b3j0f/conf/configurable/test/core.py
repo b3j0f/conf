@@ -140,19 +140,24 @@ class ConfigurableTest(UTCase):
     def test_class_callparams(self):
         """Test to call params on a class."""
 
-        @Configurable(conf=category('', Parameter('test', value=True)))
+        @Configurable(
+            conf=[
+                Parameter('test0', value=True),
+                Parameter('test1', value=False)
+            ]
+        )
         class Test(object):
 
-            def __init__(self, test=None):
+            def __init__(self, test0=None):
 
                 super(Test, self).__init__()
 
-                self.testy = test
+                self.test0 = test0
 
         test = Test()
 
-        self.assertTrue(test.test)
-        self.assertTrue(test.testy)
+        self.assertTrue(test.test0)
+        self.assertFalse(test.test1)
 
     def test_metaclass(self):
         """Test to configurate a metaclass."""
@@ -345,12 +350,6 @@ class ConfigurableTest(UTCase):
             )
         )
 
-        self.assertRaises(
-            Parameter.Error,
-            Configurable,
-            conf=conf
-        )
-
         configurable = Configurable(conf=conf, autoconf=False)
 
         self.assertRaises(
@@ -443,11 +442,12 @@ class ConfigurableTest(UTCase):
     def test_ptype(self):
         """Test application of ptype."""
 
-        conf = configuration(
-            category('test', Parameter('test', ptype=int, svalue='9'))
+        @Configurable(
+            conf=[
+                Parameter('test', ptype=int, svalue='1'),
+                Parameter('ex', svalue='2', ptype=int)
+            ]
         )
-
-        @Configurable(conf=conf)
         class Test(object):
 
             def __init__(self, test=None, *args, **kwargs):
@@ -458,16 +458,31 @@ class ConfigurableTest(UTCase):
 
         test = Test()
 
-        self.assertEqual(test.testy, 9)
-        self.assertEqual(test.test, 9)
+        self.assertEqual(test.testy, 1)
+        self.assertFalse(hasattr(test, 'test'))
+        self.assertEqual(test.ex, 2)
 
-        conf = conf.copy()
-        conf['test']['test'].svalue = '10'
-        conf['test']['test'].ptype = None
+        applyconfiguration(
+            targets=[test], conf=[
+                Parameter('test', svalue='2'),
+                Parameter('ex', svalue='3')
+            ]
+        )
 
-        applyconfiguration(targets=[test], conf=conf)
+        self.assertEqual(test.testy, 1)
+        self.assertEqual(test.test, 2)
+        self.assertEqual(test.ex, 3)
 
-        self.assertEqual(test.test, 10)
+        Configurable.get_annotations(test)[0].applyconfiguration(
+            targets=[test], conf=[
+                Parameter('test', svalue='3'),
+                Parameter('ex', svalue='4', ptype=bool)
+            ]
+        )
+
+        self.assertEqual(test.testy, 1)
+        self.assertEqual(test.test, 3)
+        self.assertTrue(test.ex)
 
 if __name__ == '__main__':
     main()

@@ -114,10 +114,7 @@ class ConfDriver(object):
         :rtype: Configuration
         """
 
-        result = None
-
-        if conf is not None:
-            result = conf.copy()
+        result = conf
 
         pathconf = None
 
