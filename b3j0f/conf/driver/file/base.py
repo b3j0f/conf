@@ -33,7 +33,7 @@ directory given by the environment variable ``B3J0F_CONF_DIR``.
 """
 
 from os import environ, getenv
-from os.path import exists, join, expanduser, sep
+from os.path import exists, join, expanduser, sep, abspath
 
 from ..base import ConfDriver
 
@@ -100,5 +100,14 @@ class FileConfDriver(ConfDriver):
             join(conf_dir, path) for conf_dir in CONF_DIRS
             if exists(join(conf_dir, path))
         )
+
+        rel_path = expanduser(path)  # add relative path
+        if exists(rel_path):
+            result.append(rel_path)
+
+        else:
+            abs_path = abspath(path)  # add absolute path
+            if exists(abs_path):
+                result.append(abs_path)
 
         return result

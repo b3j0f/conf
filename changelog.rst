@@ -1,6 +1,12 @@
 ChangeLog
 =========
 
+0.3.11 (2016/04/05)
+-------------------
+
+- add user/absolute path in file driver.
+- avoid to set parameters when already given in constructor parameters.
+
 0.3.10 (2016/04/05)
 -------------------
 

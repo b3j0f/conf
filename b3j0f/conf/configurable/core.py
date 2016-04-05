@@ -267,11 +267,16 @@ class Configurable(PrivateInterceptor):
 
                     params = conf.params
 
-                    for pname in joinpoint.kwargs:
-                        if pname in params:
+                    kwargs = joinpoint.kwargs
+
+                    for pname in kwargs:
+                        if pname in params:# and kwargs[pname] is not None:
                             del params[pname]
 
                     conf = self._toconf(list(params.values()))
+
+                else:
+                    conf = self.getconf()
 
                 target2conf = self._configure(
                     target=target2conf, callconf=False, conf=conf
