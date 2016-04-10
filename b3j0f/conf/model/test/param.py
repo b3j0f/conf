@@ -148,14 +148,17 @@ class ArrayTest(UTCase):
         param = Parameter(svalue='', ptype=ptype)
 
         self.assertEqual(param.value, [])
+        self.assertIsInstance(param.value, ptype)
 
         param = Parameter(svalue='a', ptype=ptype)
 
         self.assertEqual(param.value, ['a'])
+        self.assertIsInstance(param.value, ptype)
 
         param = Parameter(svalue='a,b', ptype=ptype)
 
         self.assertEqual(param.value, ['a', 'b'])
+        self.assertIsInstance(param.value, ptype)
 
     def test_ptype(self):
         """Test to auto convert a value from an Array with a specific type."""
@@ -165,18 +168,28 @@ class ArrayTest(UTCase):
         param = Parameter(svalue='', ptype=ptype)
 
         self.assertEqual(param.value, [])
+        self.assertIsInstance(param.value, ptype)
 
         param = Parameter(svalue='1', ptype=ptype)
 
         self.assertEqual(param.value, [1])
+        self.assertIsInstance(param.value, ptype)
 
         param = Parameter(svalue='1,2', ptype=ptype)
 
         self.assertEqual(param.value, [1, 2])
+        self.assertIsInstance(param.value, ptype)
 
         param = Parameter(svalue='1,type', ptype=ptype)
 
         self.assertRaises(TypeError, getattr(param, 'value'))
+
+        ptype = Array(ptype=Parameter)
+
+        param = Parameter(
+            svalue='b3j0f.conf.model.param.Parameter', ptype=ptype
+        )
+        self.assertIsInstance(param.value, ptype)
 
 
 class ParameterTest(UTCase):
