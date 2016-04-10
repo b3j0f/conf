@@ -361,11 +361,18 @@ class Configurable(PrivateInterceptor):
 
         :param list value: new modules to use."""
 
-        self._modules = value
+        modules = []
 
         if value:
             for module in value:
-                reload_module(lookup(module))
+                if isinstance(module, string_types):
+                    module = lookup(module)
+
+                modules.append(module)
+
+                reload_module(module)
+
+        self._modules = modules
 
     @property
     def conf(self):

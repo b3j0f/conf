@@ -1,6 +1,11 @@
 ChangeLog
 =========
 
+0.3.12 (2016/04/10)
+-------------------
+
+- save Configurable modules such as a list of modules and not a list of string.
+
 0.3.11 (2016/04/05)
 -------------------
 
