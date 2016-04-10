@@ -220,12 +220,12 @@ The following code permits to load upper configuration to a python function.
 
 .. code-block:: python
 
-  from b3j0f.conf import Parameter, ARRAY
+  from b3j0f.conf import Parameter, Array
 
-  # instantiate a business class and ensure twelve is converted into an integer and a string with commas is converted into an array.
+  # instantiate a business class and ensure twelve is converted into an integer and a string with commas is converted into an array of integers.
   @Configurable(
     paths='myobject.conf',
-    conf=[Parameter('twelve', ptype=int), Parameter('local', svalue='a,b,c', ptype=ARRAY)
+    conf=[Parameter('twelve', ptype=int), Parameter('integers', svalue='1,2,3', ptype=Array(int))
   )
   def myfunc(myattr=None, six=None, twelve=None):  # Only None values will be setted by the configuration
       return myattr, six, twelve
@@ -237,7 +237,7 @@ The following code permits to load upper configuration to a python function.
   assert myobject.six == 6
   assert myobject.twelve == 46
   assert isinstance(myobject.twelve, int)
-  assert myobject.local == ['a', 'b', 'c']
+  assert myobject.integers == [1, 2, 3]
 
 Class configuration
 ###################

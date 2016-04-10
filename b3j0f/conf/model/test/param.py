@@ -35,7 +35,7 @@ from six import string_types
 
 from b3j0f.utils.ut import UTCase
 
-from ..param import Parameter, PType, BOOL, ARRAY
+from ..param import Parameter, PType, BOOL, ARRAY, Array
 from parser import ParserError
 
 
@@ -128,7 +128,7 @@ class BoolTest(UTCase):
     def test(self):
         """Test to auto convert a value from BOOL."""
 
-        param = Parameter('', svalue='false', ptype=BOOL)
+        param = Parameter(svalue='false', ptype=BOOL)
 
         self.assertFalse(param.value)
 
@@ -140,20 +140,43 @@ class BoolTest(UTCase):
 class ArrayTest(UTCase):
     """Test the array class"""
 
-    def test(self):
+    def test_ARRAY(self):
         """Test to auto convert a value from ARRAY."""
 
-        param = Parameter('', svalue='', ptype=ARRAY)
+        ptype = ARRAY
+
+        param = Parameter(svalue='', ptype=ptype)
 
         self.assertEqual(param.value, [])
 
-        param = Parameter('', svalue='a', ptype=ARRAY)
+        param = Parameter(svalue='a', ptype=ptype)
 
         self.assertEqual(param.value, ['a'])
 
-        param = Parameter('', svalue='a,b', ptype=ARRAY)
+        param = Parameter(svalue='a,b', ptype=ptype)
 
         self.assertEqual(param.value, ['a', 'b'])
+
+    def test_ptype(self):
+        """Test to auto convert a value from an Array with a specific type."""
+
+        ptype = Array(ptype=int)
+
+        param = Parameter(svalue='', ptype=ptype)
+
+        self.assertEqual(param.value, [])
+
+        param = Parameter(svalue='1', ptype=ptype)
+
+        self.assertEqual(param.value, [1])
+
+        param = Parameter(svalue='1,2', ptype=ptype)
+
+        self.assertEqual(param.value, [1, 2])
+
+        param = Parameter(svalue='1,type', ptype=ptype)
+
+        self.assertRaises(TypeError, getattr(param, 'value'))
 
 
 class ParameterTest(UTCase):

@@ -28,7 +28,7 @@
 
 from __future__ import absolute_import
 
-__all__ = ['Parameter', 'PType', 'BOOL', 'ARRAY']
+__all__ = ['Parameter', 'PType', 'BOOL', 'Array', 'ARRAY']
 
 from .base import ModelElement
 from ..parser.core import parse, serialize
@@ -40,6 +40,8 @@ from six import string_types, reraise
 from re import compile as re_compile
 
 from collections import Iterable
+
+from b3j0f.utils.path import lookup
 
 from ..parser.resolver.core import (
     DEFAULT_SAFE, DEFAULT_BESTEFFORT, DEFAULT_SCOPE
@@ -109,56 +111,90 @@ class PType(object):
         return result
 
 
-class Bool(PType):
+class _Bool(PType):
     """Parameter type dedicated to boolean values."""
 
     def __init__(self, *args, **kwargs):
 
-        super(Bool, self).__init__(ptype=bool, *args, **kwargs)
+        super(_Bool, self).__init__(ptype=bool, *args, **kwargs)
 
     def __call__(self, svalue):
 
         return svalue in ('true', 'True', '1')
 
 
-BOOL = Bool()
+BOOL = _Bool()
 
 
 class Array(PType):
-    """Parameter type dedicated to array value."""
+    """Parameter type dedicated to array value with item type.
 
-    def __init__(self, *args, **kwargs):
+    For example, in using the Array(int) permits to convert the entry "2,3,4" to
+    [2,3,4] where items are integers."""
 
-        super(Array, self).__init__(ptype=Iterable, *args, **kwargs)
+    def __init__(self, ptype=object, *args, **kwargs):
+
+        super(Array, self).__init__(ptype=ptype, *args, **kwargs)
 
     def __instancecheck__(self, instance):
         """Check instance such as this instance or self ptype instance."""
 
-        return (
-            super(Array, self).__instancecheck__(instance)
-            and not isinstance(instance, string_types)
+        result = isinstance(instance, Iterable) and not isinstance(
+            instance, string_types
         )
+
+        if result:
+            for item in instance:
+                result = isinstance(item, self.ptype)
+
+                if not result:
+                    break
+
+        return result
 
     def __subclasscheck__(self, subclass):
         """Check subclass such as this subclass or self ptype subclass."""
 
-        return (
-            super(Array, self).__subclasscheck__(subclass)
-            and not issubclass(subclass, string_types)
+        return issubclass(subclass, Iterable) and not issubclass(
+            subclass, string_types
         )
 
     def __call__(self, svalue):
 
-        if svalue:
-            result = list(item.strip() for item in svalue.split(','))
+        result = []
 
-        else:
-            result = []
+        if svalue:
+
+            for item in svalue.split(','):
+
+                item = item.strip()
+
+                if not isinstance(item, self.ptype):
+
+                    try:
+                        item = self.ptype(item)
+
+                    except (TypeError, ValueError):
+
+                        item = lookup(item)
+
+                        if issubclass(item, self.ptype):
+
+                            item = item()
+
+                if isinstance(item, self.ptype):
+
+                    result.append(item)
+
+                else:
+                    raise TypeError(
+                        'Wrong item type, {0} expected'.format(self.ptype)
+                    )
 
         return result
 
 
-ARRAY = Array()
+ARRAY = Array()  # default array
 
 
 class Parameter(ModelElement):

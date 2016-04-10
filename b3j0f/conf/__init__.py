@@ -29,7 +29,7 @@
 __all__ = [
     '__version__',
     'Configuration', 'Category', 'Parameter', 'configuration', 'category',
-    'BOOL', 'ARRAY', 'PType',
+    'BOOL', 'Array', 'ARRAY', 'PType',
     'Configurable', 'applyconfiguration',
     'ConfDriver'
 ]
@@ -37,7 +37,7 @@ __all__ = [
 from .version import __version__
 from .configurable import Configurable, applyconfiguration
 from .model import (
-    Configuration, Category, Parameter, configuration, category, BOOL, ARRAY,
-    PType
+    Configuration, Category, Parameter, configuration, category, BOOL,
+    Array, ARRAY, PType
 )
 from .driver import ConfDriver
