@@ -28,7 +28,7 @@
 
 __all__ = ['Configurable']
 
-from six import string_types
+from six import string_types, get_function_globals, exec_
 from six.moves import reload_module
 
 from inspect import getargspec, isclass
@@ -41,7 +41,8 @@ from b3j0f.annotation import PrivateInterceptor, Annotation
 
 from ..model.conf import Configuration, configuration
 from ..model.cat import Category, category
-from ..model.param import Parameter
+from ..model.param import Parameter, Array
+from ..driver.base import ConfDriver
 from ..driver.file.json import JSONFileConfDriver
 from ..driver.file.ini import INIFileConfDriver
 from ..driver.file.xml import XMLFileConfDriver
@@ -748,6 +749,85 @@ class Configurable(PrivateInterceptor):
 
         if callable(target):
 
+            cls = target if ctx is None else ctx
+
+            if isclass(cls):
+                func = getattr(cls, '__init__', getattr(cls, '__new__'))
+
+            else:
+                func = cls
+
+            func = getattr(func, '__func__', func)
+
+            try:
+                fargs, varargs, keywords, defaults = getargspec(func)
+
+            except TypeError:
+                pass
+
+            else:
+                finalargs = ''  # new constructor param names
+                callargs = ''  # new constructor param values
+
+                if defaults:  # enrich conf with default params
+                    len_defaults = len(defaults)
+                    defaultstartindex = len(fargs) - len_defaults
+
+                    conf = self.getconf()
+                    params = conf.params
+
+                    if '_default' not in conf:
+                        conf += Category(name='_default')
+
+                    for index, arg in enumerate(fargs):
+                        argoutput = arg
+
+                        if index >= defaultstartindex:
+                            val = defaults[index - defaultstartindex]
+
+                            if arg not in params:
+                                param = Parameter(name=arg)
+                                conf['_default'] += param
+
+                            else:
+                                param = params[arg]
+
+                            if param.value is None:
+                                param.value = val
+                                if val is not None:
+                                    param.ptype = type(val)
+
+                            argoutput += '=None'
+
+                        finalargs += '{0}, '.format(argoutput)
+                        callargs += '{0}={0}, '.format(arg)
+
+                if varargs:
+                    finalargs += '*{0}, '.format(varargs)
+                    callargs += '*{0}, '.format(varargs)
+
+                if keywords:
+                    finalargs += '**{0}'.format(keywords)
+                    callargs += '**{0}'.format(keywords)
+
+                if isclass(cls):
+
+                    func_name = '{0}{1}'.format(
+                        func.__name__, int(random() * 10**5)
+                    )
+                    func_globals = get_function_globals(func)
+                    func_globals[func_name] = func
+
+                    exec_ctx = {}
+
+                    exec_(
+                        'def {0}({1}): return {2}({3})'.format(
+                            func.__name__, finalargs, func_name, callargs
+                        ), func_globals, exec_ctx
+                    )
+
+                    setattr(cls, func.__name__, exec_ctx[func.__name__])
+
             try:
                 result = super(Configurable, self)._bind_target(
                     target=target, ctx=ctx, *args, **kwargs
@@ -755,12 +835,22 @@ class Configurable(PrivateInterceptor):
 
             except AttributeError:
                 self.remove_from(target=target, ctx=ctx)
-                def __init__(*args, **kwargs):
-                    return object.__init__(*args, **kwargs)
-                target.__init__ = __init__
-                result = super(Configurable, self)._bind_target(
-                    target=target, ctx=ctx, *args, **kwargs
-                )
+
+                if isclass(target):  # update the constuctor
+
+                    def __init__(*args, **kwargs):
+                        """wrapped init function."""
+
+                        return object.__init__(*args, **kwargs)
+
+                    setattr(target, '__init__', __init__)
+
+                    result = super(Configurable, self)._bind_target(
+                        target=target, ctx=ctx, *args, **kwargs
+                    )
+
+                else:
+                    raise
 
         else:
             result = Annotation._bind_target(
@@ -813,11 +903,11 @@ _CONF = configuration(
             value=Configurable.DEFAULT_TARGETS
         ),
         Parameter(
-            name=Configurable.DRIVERS, ptype=tuple,
+            name=Configurable.DRIVERS, ptype=Array(ConfDriver),
             value=Configurable.DEFAULT_DRIVERS
         ),
         Parameter(
-            name=Configurable.PATHS, ptype=tuple,
+            name=Configurable.PATHS, ptype=Array(str),
             value=Configurable.DEFAULT_PATHS
         ),
         Parameter(
@@ -837,7 +927,7 @@ _CONF = configuration(
             value=Configurable.DEFAULT_CALLPARAMS
         ),
         Parameter(
-            name=Configurable.MODULES, ptype=tuple,
+            name=Configurable.MODULES, ptype=Array(str),
             value=Configurable.DEFAULT_MODULES
         ),
         Parameter(
@@ -857,5 +947,5 @@ _CONF = configuration(
 
 # apply the configurable on itself
 Configurable(
-        conf=_CONF, paths=['b3j0fconf-configurable.conf'], #autoconf=False
+    conf=_CONF, paths=['b3j0fconf-configurable.conf'], #autoconf=False
 )(Configurable)

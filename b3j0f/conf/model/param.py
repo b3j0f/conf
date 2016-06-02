@@ -105,8 +105,11 @@ class PType(object):
             result = self.ptype(*args, **kwargs)
 
         except TypeError:
-            msg = 'Wrong value ({0}) with ({1}).'.format(svalue, self.ptype)
-            reraise(ParserError, ParserError(msg))
+            raise ParserError(
+                'Wrong parameters {0} {1} for {2}'.format(
+                    args, kwargs, self.ptype
+                )
+            )
 
         return result
 
@@ -530,8 +533,8 @@ class Parameter(ModelElement):
         else:
             # raise wrong type error
             error = TypeError(
-                'Wrong value type of ({0}). {1} expected.'.format(
-                    value, self.ptype
+                'Wrong value type of {0} ({1}). {2} expected.'.format(
+                    self.name, value, self.ptype
                 )
             )
             self._error = error

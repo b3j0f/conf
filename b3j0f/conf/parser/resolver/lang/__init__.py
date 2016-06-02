@@ -24,7 +24,6 @@
 # SOFTWARE.
 # --------------------------------------------------------------------
 
-__all__ = ['resolvejs', 'resolvepy']
+__all__ = ['resolvepy']
 
-from .js import resolvejs
 from .py import resolvepy

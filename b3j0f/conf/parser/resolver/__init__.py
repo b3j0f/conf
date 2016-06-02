@@ -1,10 +1,12 @@
+"""lang package"""
+
 __all__ = [
     'ExprResolver', 'ResolverRegistry', 'names', 'resolve', 'register',
-    'loadresolvers', 'defaultname', 'resolvejs', 'resolvepy'
+    'loadresolvers', 'defaultname', 'resolvepy'
 ]
 
 from .base import ExprResolver
 from .registry import (
     ResolverRegistry, names, resolve, register, loadresolvers, defaultname
 )
-from .lang import resolvejs, resolvepy
+from .lang import resolvepy

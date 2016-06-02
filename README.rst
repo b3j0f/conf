@@ -225,14 +225,18 @@ The following code permits to load upper configuration to a python function.
   # instantiate a business class and ensure twelve is converted into an integer and a string with commas is converted into an array of integers.
   @Configurable(
     paths='myobject.conf',
-    conf=[Parameter('twelve', ptype=int), Parameter('integers', svalue='1,2,3', ptype=Array(int))
+    conf=[
+      Parameter('default', value=len('default')),  # default value for the parameter default
+      Parameter('twelve', ptype=int),
+      Parameter('integers', svalue='1,2,3', ptype=Array(int))
   )
-  def myfunc(myattr=None, six=None, twelve=None):  # Only None values will be setted by the configuration
-      return myattr, six, twelve
+  def myfunc(myattr=None, six=None, twelve=None, default=None):  # Only None values will be setted by the configuration
+      return myattr, six, twelve, default
 
-  myattr, six, twelve = myfunc(twelve=46)
+  myattr, six, twelve, default = myfunc(twelve=46)
 
   # assert attributes
+  assert myobject.default == 7
   assert myobject.myattr == 'myvalue'
   assert myobject.six == 6
   assert myobject.twelve == 46

@@ -167,6 +167,9 @@ from .resolver.registry import resolve
 
 from parser import ParserError
 
+from json import loads
+
+
 #: _ref parameter.
 EVAL_REF = r'@((?P<path>([^@]|\\@)+)\/)?((?P<cname>\w+)\.)?(?P<history>\.*)(?P<pname>\w+)'
 
@@ -233,7 +236,6 @@ def parse(
         )
 
     else:
-
         result = _strparser(
             svalue=svalue, conf=conf, configurable=configurable,
             scope=_scope, safe=safe, besteffort=besteffort
@@ -298,6 +300,9 @@ def _strparser(
 
         if issubclass(ptype, bool):
             result = result in ('1', 'True', 'true')
+
+        elif issubclass(ptype, dict):
+            result = loads(result)
 
         elif issubclass(ptype, Iterable):
             if result:

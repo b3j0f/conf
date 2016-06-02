@@ -36,6 +36,8 @@ try:
 except ImportError:
     from simplejson import loads, dumps
 
+from six import string_types
+
 from .base import ConfDriver
 from ..model.param import Parameter
 
@@ -66,7 +68,10 @@ class JSONConfDriver(ConfDriver):
         params = resource[cname]
 
         result = [
-            Parameter(name=key, svalue=params[key]) for key in params
+            Parameter(name=key, svalue=params[key])
+                if isinstance(params[key], string_types) else
+                    Parameter(name=key, value=params[key])
+            for key in params
         ]
 
         return result
