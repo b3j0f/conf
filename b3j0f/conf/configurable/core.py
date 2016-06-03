@@ -815,8 +815,15 @@ class Configurable(PrivateInterceptor):
                     func_name = '{0}{1}'.format(
                         func.__name__, int(random() * 10**5)
                     )
-                    func_globals = get_function_globals(func)
-                    func_globals[func_name] = func
+
+                    try:
+                        func_globals = get_function_globals(func)
+
+                    except AttributeError:
+                        func_globals = {func_name: func}
+
+                    else:
+                        func_globals[func_name] = func
 
                     exec_ctx = {}
 
