@@ -1,6 +1,11 @@
 ChangeLog
 =========
 
+0.3.14 (2016/04/10)
+-------------------
+
+- Add support for default parameters automatically set in the configuration.
+
 0.3.13 (2016/04/10)
 -------------------
 
