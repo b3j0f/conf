@@ -52,6 +52,8 @@ from ..parser.resolver.core import (
 
 from random import random
 
+from types import ModuleType
+
 
 class Configurable(PrivateInterceptor):
     """Handle object configuration from configuration resources such as files.
@@ -127,9 +129,12 @@ class Configurable(PrivateInterceptor):
     SCOPE = 'scope'  #: scope attribute name.
     BESTEFFORT = 'besteffort'  #: best effort attribute name.
     MODULES = 'modules'  #: modules attribute name.
+    RELOAD = 'rel'  #: module reload flag.
     CALLPARAMS = 'callparams'  #: call params attribute name.
     KEEPSTATE = 'keepstate'  #: reconfiguration keepstate level attribute name.
     DECOSUB = 'decosub'  #: decorate sub elment attribute name
+
+    LOADED_MODULES = '_loadedmodules'  #: attribute for loaded modules.
 
     EXEC_CTX = '__CONFIGURABLE_EXEC_CTX' #: configurable execution context.
 
@@ -141,6 +146,7 @@ class Configurable(PrivateInterceptor):
     DEFAULT_AUTOCONF = True  #: default value for auto configuration.
     DEFAULT_CALLPARAMS = True  #: default value for callparams.
     DEFAULT_MODULES = None  #: default value for modules.
+    DEFAULT_RELOAD = False  #: default reload modules flag (false by default).
     DEFAULT_SAFE = DEFAULT_SAFE  #: default value for safe.
     DEFAULT_SCOPE = DEFAULT_SCOPE  #: default value for scope.
     DEFAULT_BESTEFFORT = DEFAULT_BESTEFFORT  #: default value for besteffort.
@@ -158,7 +164,8 @@ class Configurable(PrivateInterceptor):
             foreigns=DEFAULT_FOREIGNS, autoconf=DEFAULT_AUTOCONF,
             targets=DEFAULT_TARGETS, keepstate=DEFAULT_KEEPSTATE,
             safe=DEFAULT_SAFE, scope=DEFAULT_SCOPE,
-            besteffort=DEFAULT_BESTEFFORT, modules=DEFAULT_MODULES,
+            besteffort=DEFAULT_BESTEFFORT,
+            modules=DEFAULT_MODULES, rel=DEFAULT_RELOAD,
             callparams=DEFAULT_CALLPARAMS, decosub=DEFAULT_DECOSUB, logger=None,
             *args, **kwargs
     ):
@@ -185,6 +192,7 @@ class Configurable(PrivateInterceptor):
         :param dict scope: expression resolver scope.
         :param bool besteffort: expression resolver best effort flag.
         :param list modules: required modules.
+        :param bool rel: reload modules. Default is False.
         :param bool callparams: if True (default), use parameters in the
             configured callable function.
         :param bool decosub: if True (default), decorate elements created by
@@ -197,7 +205,8 @@ class Configurable(PrivateInterceptor):
         self._paths = None
         self._conf = None
         self._targets = set()
-        self._modules = []
+        self._modules = [] if modules is None else modules
+        self._loadedmodules = set()
 
         # init public attributes
 
@@ -213,10 +222,10 @@ class Configurable(PrivateInterceptor):
         self.safe = safe
         self.scope = scope
         self.besteffort = besteffort
-        self.modules = modules
         self.callparams = callparams
         self.logger = logger
         self.decosub = decosub
+        self.rel = rel
 
         # generate an execution context name
         self.exec_ctx = '{0}{1}'.format(Configurable.EXEC_CTX, random())
@@ -228,6 +237,9 @@ class Configurable(PrivateInterceptor):
         target = joinpoint.target
 
         args, kwargs = joinpoint.args, joinpoint.kwargs
+
+        if len(self.modules) != len(self._loadedmodules):
+            self.loadmodules()
 
         if self.callparams:
 
@@ -348,6 +360,49 @@ class Configurable(PrivateInterceptor):
 
         return args, kwargs
 
+    def loadmodules(self, modules=None, rel=None):
+        """ry to (re)load modules and return loaded modules.
+
+        :param modules: list of module (name) to load.
+        :param bool rel: flag for forcing reload of module. Default is this
+            rel flag (false by default).
+        :rtype: list
+        :return: loaded modules."""
+
+        result = []
+
+        if rel is None:
+            rel = self.rel
+
+        if modules is None:
+            modules = self._modules
+
+        for module in modules:
+
+            if isinstance(module, string_types):
+                name = module
+                module = lookup(name)
+
+            elif isinstance(module, ModuleType):
+                name = module.__name__
+
+            else:
+                raise TypeError(
+                    'wrong value {0} in {1}. List of str/module expected.'
+                    .format(
+                        module, modules
+                    )
+                )
+
+            if not rel and module in self._loadedmodules:
+                continue
+
+            reload_module(module)
+            result.append(module)
+            self._loadedmodules.add(module)
+
+        return result
+
     @property
     def modules(self):
         """Get this required modules."""
@@ -362,18 +417,12 @@ class Configurable(PrivateInterceptor):
 
         :param list value: new modules to use."""
 
-        modules = []
+        modules = [module.__name__ for module in self.loadmodules(value)]
 
-        if value:
-            for module in value:
-                if isinstance(module, string_types):
-                    module = lookup(module)
-
-                modules.append(module)
-
-                reload_module(module)
-
-        self._modules = modules
+        self._modules = [
+            module for module in self._modules + modules
+            if module not in self._modules
+        ]
 
     @property
     def conf(self):
@@ -449,7 +498,7 @@ class Configurable(PrivateInterceptor):
     def applyconfiguration(
             self, conf=None, paths=None, drivers=None, logger=None,
             targets=None, scope=None, safe=None, besteffort=None,
-            callconf=False, keepstate=None
+            callconf=False, keepstate=None, modules=None
     ):
         """Apply conf on a destination in those phases:
 
@@ -470,11 +519,15 @@ class Configurable(PrivateInterceptor):
             used in the callable target parameters while calling it.
         :param bool keepstate: if True (default), do not instanciate sub objects
             if they already exist.
+        :param list modules: modules to load before configure this configurable.
         :return: configured targets.
         :rtype: list
         """
 
         result = []
+
+        self.loadmodules(modules=modules)
+        modules = []
 
         if scope is None:
             scope = self.scope
@@ -496,25 +549,27 @@ class Configurable(PrivateInterceptor):
 
         # get conf from drivers and paths
         conf = self.getconf(
-            conf=conf, paths=paths, logger=logger, drivers=drivers
+            conf=conf, paths=paths, logger=logger, drivers=drivers,
+            modules=modules
         )
         if conf is not None:
             # resolve all values
             conf.resolve(
-                configurable=self,
-                scope=scope, safe=safe, besteffort=besteffort
+                configurable=self, scope=scope, safe=safe, besteffort=besteffort
             )
             # configure resolved configuration
             configured = self.configure(
                 conf=conf, targets=targets, callconf=callconf,
-                keepstate=keepstate
+                keepstate=keepstate, modules=modules
             )
 
             result += configured
 
         return result
 
-    def getconf(self, conf=None, paths=None, drivers=None, logger=None):
+    def getconf(
+            self, conf=None, paths=None, drivers=None, logger=None, modules=None
+    ):
         """Get a configuration from paths.
 
         :param conf: conf to update. Default this conf.
@@ -522,11 +577,15 @@ class Configurable(PrivateInterceptor):
         :param str(s) paths: list of conf files. Default this paths.
         :param Logger logger: logger to use for logging info/error messages.
         :param list drivers: ConfDriver to use. Default this drivers.
+        :param list modules: modules to reload before.
         :return: not resolved configuration.
         :rtype: Configuration
         """
 
         result = None
+
+        self.loadmodules(modules=modules)
+        modules = []
 
         conf = self._toconf(conf)
 
@@ -580,7 +639,7 @@ class Configurable(PrivateInterceptor):
 
     def configure(
             self, conf=None, targets=None, logger=None, callconf=False,
-            keepstate=None
+            keepstate=None, modules=None
     ):
         """Apply input conf on targets objects.
 
@@ -594,12 +653,16 @@ class Configurable(PrivateInterceptor):
             used in the callable target parameters while calling it.
         :param bool keepstate: if True (default), do not instanciate sub objects
             if they already exist.
+        :param list modules: modules to reload before.
         :return: configured targets.
         :rtype: list
         :raises: Parameter.Error for any raised exception.
         """
 
         result = []
+
+        self.loadmodules(modules=modules)
+        modules = []
 
         conf = self._toconf(conf)
 
@@ -620,10 +683,10 @@ class Configurable(PrivateInterceptor):
             try:
                 configured = self._configure(
                     conf=conf, logger=logger, target=target, callconf=callconf,
-                    keepstate=keepstate
+                    keepstate=keepstate, modules=modules
                 )
 
-            except Exception as e:
+            except Exception:
                 if logger is not None:
                     logger.error(
                         'Error {0} raised while configuring {1}/{2}'.format(
@@ -637,7 +700,8 @@ class Configurable(PrivateInterceptor):
         return result
 
     def _configure(
-            self, target, conf=None, logger=None, callconf=None, keepstate=None
+            self, target, conf=None, logger=None, callconf=None, keepstate=None,
+            modules=None
     ):
         """Configure this class with input conf only if auto_conf or
         configure is true.
@@ -651,10 +715,14 @@ class Configurable(PrivateInterceptor):
         :param bool callconf: if True, use conf in target __call__ parameters.
         :param bool keepstate: if True recreate sub objects if they already
             exist.
+        :param list modules: modules to reload before.
         :return: configured target.
         """
 
         result = target
+
+        self.loadmodules(modules=modules)
+        modules = []
 
         if conf is None:
             conf = self.conf
@@ -724,7 +792,7 @@ class Configurable(PrivateInterceptor):
 
                 targets = applyconfiguration(
                     targets=[value], conf=subconf, callconf=subcallconf,
-                    keepstate=keepstate
+                    keepstate=keepstate, modules=modules
                 )
                 value = targets[0]
 

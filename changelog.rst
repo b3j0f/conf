@@ -1,6 +1,13 @@
 ChangeLog
 =========
 
+0.3.16 (2016/06/05)
+------------------
+
+- fix reloading of modules.
+- add the parameter modules in all configurable methods in order to load modules before use it.
+- add the parameter rel for forcing configurable module reloading. Default is False.
+
 0.3.15 (2016/06/2)
 -------------------
 
