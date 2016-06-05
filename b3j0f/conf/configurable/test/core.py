@@ -67,6 +67,28 @@ class ConfigurableTest(UTCase):
             )
         )
 
+    def test_oldstyle(self):
+
+        @Configurable()
+        class TestA:
+            pass
+
+        TestA()
+
+        @Configurable()
+        class TestB:
+            def __init__(self):
+                pass
+
+        TestB()
+
+        @Configurable()
+        class TestC(TestA):
+            def __init__(self):
+                TestA.__init__(self)
+
+        TestC()
+
     def test_configuration_files(self):
 
         configurable = Configurable(paths=self.paths)
@@ -82,8 +104,8 @@ class ConfigurableTest(UTCase):
         """Test to reconfigure an object with targets parameter."""
 
         class ToConfigure(object):
-            """Class to configure.
-            """
+            """Class to configure."""
+
             def __init__(self):
                 super(ToConfigure, self).__init__()
                 self.test = None

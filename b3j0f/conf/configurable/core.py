@@ -31,7 +31,7 @@ __all__ = ['Configurable']
 from six import string_types, get_function_globals, exec_
 from six.moves import reload_module
 
-from inspect import getargspec, isclass
+from inspect import getargspec, isclass, isroutine, isfunction, ismethod
 
 from traceback import format_exc
 
@@ -339,7 +339,17 @@ class Configurable(PrivateInterceptor):
                 else:
                     raise
 
-                callargs = getcallargs(target, *args, **kwargs)
+                try:
+                    callargs = getcallargs(target, *args, **kwargs)
+
+                except TypeError as tex:
+                    if tex.args[0].endswith('\'{0}\''.format(argspec.args[0])):
+                        args = []
+
+                    else:
+                        raise
+
+                    callargs = getcallargs(target, *args, **kwargs)
 
                 args = []
 
@@ -820,7 +830,22 @@ class Configurable(PrivateInterceptor):
             cls = target if ctx is None else ctx
 
             if isclass(cls):
-                func = getattr(cls, '__init__', getattr(cls, '__new__'))
+                func = getattr(cls, '__init__', getattr(cls, '__new__', None))
+
+                if func is None or (
+                    isroutine(func) and not (isfunction(func) or ismethod(func))
+                ):
+
+                    if func is type.__init__:
+                        def __init__(self, *args, **kwargs):
+                            pass
+
+                    else:
+                        def __init__(self):
+                            pass
+
+                    cls.__init__ = __init__
+                    func = cls.__init__
 
             else:
                 func = cls
@@ -837,38 +862,37 @@ class Configurable(PrivateInterceptor):
                 finalargs = ''  # new constructor param names
                 callargs = ''  # new constructor param values
 
-                if defaults:  # enrich conf with default params
-                    len_defaults = len(defaults)
-                    defaultstartindex = len(fargs) - len_defaults
+                len_defaults = 0 if defaults is None else len(defaults)
+                defaultstartindex = len(fargs) - len_defaults
 
-                    conf = self.getconf()
-                    params = conf.params
+                conf = self.getconf()
+                params = conf.params
 
-                    if '_default' not in conf:
-                        conf += Category(name='_default')
+                if '_default' not in conf:
+                    conf += Category(name='_default')
 
-                    for index, arg in enumerate(fargs):
-                        argoutput = arg
+                for index, arg in enumerate(fargs):
+                    argoutput = arg
 
-                        if index >= defaultstartindex:
-                            val = defaults[index - defaultstartindex]
+                    if index >= defaultstartindex:
+                        val = defaults[index - defaultstartindex]
 
-                            if arg not in params:
-                                param = Parameter(name=arg)
-                                conf['_default'] += param
+                        if arg not in params:
+                            param = Parameter(name=arg)
+                            conf['_default'] += param
 
-                            else:
-                                param = params[arg]
+                        else:
+                            param = params[arg]
 
-                            if param.value is None:
-                                param.value = val
-                                if val is not None:
-                                    param.ptype = type(val)
+                        if param.value is None:
+                            param.value = val
+                            if val is not None:
+                                param.ptype = type(val)
 
-                            argoutput += '=None'
+                        argoutput += '=None'
 
-                        finalargs += '{0}, '.format(argoutput)
-                        callargs += '{0}={0}, '.format(arg)
+                    finalargs += '{0}, '.format(argoutput)
+                    callargs += '{0}={0}, '.format(arg)
 
                 if varargs:
                     finalargs += '*{0}, '.format(varargs)
