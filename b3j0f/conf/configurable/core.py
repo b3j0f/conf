@@ -153,7 +153,7 @@ class Configurable(PrivateInterceptor):
     DEFAULT_KEEPSTATE = True  #: default keepstate value.
     DEFAULT_PATHS = ()  #: default paths value.
     DEFAULT_CONF = None  #: default conf value.
-    DEFAULT_TARGETS = set()  #: default targets value.
+    DEFAULT_TARGETS = None  #: default targets value.
     DEFAULT_DECOSUB = True  #: default decosub value.
 
     SUB_CONF_PREFIX = ':'  #: sub conf prefix.
@@ -204,7 +204,7 @@ class Configurable(PrivateInterceptor):
         # init protected attributes
         self._paths = None
         self._conf = None
-        self._targets = set()
+        self._targets = []
         self._modules = [] if modules is None else modules
         self._loadedmodules = set()
 
@@ -215,7 +215,7 @@ class Configurable(PrivateInterceptor):
 
         self.drivers = drivers
         self.foreigns = foreigns
-        self.targets = set() if targets is None else set(targets)
+        self.targets = [] if targets is None else targets
         self.keepstate = keepstate
         self.conf = self._toconf(conf)
         self.paths = paths
@@ -296,7 +296,8 @@ class Configurable(PrivateInterceptor):
                 )
 
                 if self.decosub:
-                    self.targets.add(target2conf)
+                    if target2conf not in self.targets:
+                        self.targets.append(target2conf)
 
         return result
 
@@ -827,25 +828,14 @@ class Configurable(PrivateInterceptor):
 
         if callable(target):
 
+            result = super(Configurable, self)._bind_target(
+                target, ctx, *args, **kwargs
+            )
+
             cls = target if ctx is None else ctx
 
             if isclass(cls):
                 func = getattr(cls, '__init__', getattr(cls, '__new__', None))
-
-                if func is None or (
-                    isroutine(func) and not (isfunction(func) or ismethod(func))
-                ):
-
-                    if func is type.__init__:
-                        def __init__(self, *args, **kwargs):
-                            pass
-
-                    else:
-                        def __init__(self):
-                            pass
-
-                    cls.__init__ = __init__
-                    func = cls.__init__
 
             else:
                 func = cls
@@ -853,15 +843,12 @@ class Configurable(PrivateInterceptor):
             func = getattr(func, '__func__', func)
 
             try:
-                fargs, varargs, keywords, defaults = getargspec(func)
+                fargs, _, _, defaults = getargspec(func)
 
             except TypeError:
                 pass
 
             else:
-                finalargs = ''  # new constructor param names
-                callargs = ''  # new constructor param values
-
                 len_defaults = 0 if defaults is None else len(defaults)
                 defaultstartindex = len(fargs) - len_defaults
 
@@ -872,7 +859,6 @@ class Configurable(PrivateInterceptor):
                     conf += Category(name='_default')
 
                 for index, arg in enumerate(fargs):
-                    argoutput = arg
 
                     if index >= defaultstartindex:
                         val = defaults[index - defaultstartindex]
@@ -889,75 +875,10 @@ class Configurable(PrivateInterceptor):
                             if val is not None:
                                 param.ptype = type(val)
 
-                        argoutput += '=None'
-
-                    finalargs += '{0}, '.format(argoutput)
-                    callargs += '{0}={0}, '.format(arg)
-
-                if varargs:
-                    finalargs += '*{0}, '.format(varargs)
-                    callargs += '*{0}, '.format(varargs)
-
-                if keywords:
-                    finalargs += '**{0}'.format(keywords)
-                    callargs += '**{0}'.format(keywords)
-
-                if isclass(cls):
-
-                    func_name = '{0}{1}'.format(
-                        func.__name__, int(random() * 10**5)
-                    )
-
-                    try:
-                        func_globals = get_function_globals(func)
-
-                    except AttributeError:
-                        func_globals = {func_name: func}
-
-                    else:
-                        func_globals[func_name] = func
-
-                    exec_ctx = {}
-
-                    exec_(
-                        'def {0}({1}): return {2}({3})'.format(
-                            func.__name__, finalargs, func_name, callargs
-                        ), func_globals, exec_ctx
-                    )
-
-                    setattr(cls, func.__name__, exec_ctx[func.__name__])
-
-            try:
-                result = super(Configurable, self)._bind_target(
-                    target=target, ctx=ctx, *args, **kwargs
-                )
-
-            except AttributeError:
-                self.remove_from(target=target, ctx=ctx)
-
-                if isclass(target):  # update the constuctor
-
-                    def __init__(*args, **kwargs):
-                        """wrapped init function."""
-
-                        return object.__init__(*args, **kwargs)
-
-                    setattr(target, '__init__', __init__)
-
-                    result = super(Configurable, self)._bind_target(
-                        target=target, ctx=ctx, *args, **kwargs
-                    )
-
-                else:
-                    raise
-
         else:
-            result = Annotation._bind_target(
-                self, target=target, ctx=ctx, *args, **kwargs
-            )
+            result = Annotation._bind_target(self, target, ctx, *args, **kwargs)
 
         return result
-
 
 def applyconfiguration(targets, conf=None, *args, **kwargs):
     """Apply configuration on input targets.
@@ -998,7 +919,7 @@ _CONF = configuration(
             value=Configurable.DEFAULT_CONF
         ),
         Parameter(
-            name=Configurable.TARGETS, ptype=set,
+            name=Configurable.TARGETS, ptype=Array(),
             value=Configurable.DEFAULT_TARGETS
         ),
         Parameter(
