@@ -99,6 +99,7 @@ class Configuration(CompositeModelElement):
             equals 1 and cname is None, result is the value defined just before
             the last parameter value if exist. If cname is given, the result
             is the parameter value defined before the category cname.
+        :rtype: Parameter
         :raises: NameError if pname or cname do not exist."""
 
         result = None

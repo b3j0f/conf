@@ -278,7 +278,7 @@ class Parameter(ModelElement):
         self._error = error
         self._svalue = svalue
 
-        # init public attributes
+        # init public attribute
         self.parser = parser
         self.serializer = serializer
         self.ptype = ptype

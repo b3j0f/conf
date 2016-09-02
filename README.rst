@@ -397,8 +397,8 @@ Perspectives
 Donation
 --------
 
-.. image:: https://cdn.rawgit.com/gratipay/gratipay-badge/2.3.0/dist/gratipay.png
-   :target: https://gratipay.com/b3j0f/
+.. image:: https://liberapay.com/assets/widgets/donate.svg
+   :target: https://liberapay.com/b3j0f/donate
    :alt: I'm grateful for gifts, but don't have a specific funding goal.
 
 .. _Homepage: https://github.com/b3j0f/conf

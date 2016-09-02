@@ -122,7 +122,7 @@ class ConfDriver(object):
 
         for rscpath in rscpaths:
 
-            pathconf = self._getconf(rscpath=rscpath, logger=logger)
+            pathconf = self._getconf(rscpath=rscpath, logger=logger, conf=conf)
 
             if pathconf is not None:
 
@@ -159,7 +159,7 @@ class ConfDriver(object):
                 logger.error(full_msg)
                 reraise(self.Error, self.Error(msg))
 
-    def _getconf(self, rscpath, logger=None):
+    def _getconf(self, rscpath, logger=None, conf=None):
         """Get specific conf from one driver path.
 
         :param str rscpath: resource path.
@@ -182,6 +182,10 @@ class ConfDriver(object):
                 result += category
 
                 for param in self._params(resource=resource, cname=cname):
+
+                    if conf is not None:
+                        confparam = conf.param(pname=param.name)
+                        param.update(confparam)
 
                     category += param
 
