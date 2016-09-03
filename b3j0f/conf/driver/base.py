@@ -184,8 +184,16 @@ class ConfDriver(object):
                 for param in self._params(resource=resource, cname=cname):
 
                     if conf is not None:
-                        confparam = conf.param(pname=param.name)
-                        param.update(confparam)
+                        confparam = None
+
+                        if cname in conf and param.name in conf[cname]:
+                            confparam = conf[cname][param.name]
+
+                        else:
+                            confparam = conf.param(pname=param.name)
+
+                        if confparam is not None:
+                            param.update(confparam)
 
                     category += param
 
