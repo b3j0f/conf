@@ -151,6 +151,11 @@ class Array(PType):
                 result = isinstance(item, self.ptype)
 
                 if not result:
+                    raise ParserError(
+                        'Wrong item {0} ({1}) in {2}. {3} expected.'.format(
+                            item, type(item), instance, self.ptype
+                        )
+                    )
                     break
 
         return result

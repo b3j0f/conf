@@ -927,7 +927,7 @@ _CONF = configuration(
             value=Configurable.DEFAULT_DRIVERS
         ),
         Parameter(
-            name=Configurable.PATHS, ptype=Array(str),
+            name=Configurable.PATHS, ptype=Array(string_types),
             value=Configurable.DEFAULT_PATHS
         ),
         Parameter(
