@@ -193,8 +193,13 @@ class ConfDriver(object):
                             confparam = conf.param(pname=param.name)
 
                         if confparam is not None:
+                            svalue = param.svalue
 
                             param.update(confparam)
+
+                            if svalue is not None:
+                                param.svalue = svalue
+                                param.resolve()
 
                     category += param
 
