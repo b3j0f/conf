@@ -4,6 +4,11 @@ ChangeLog
 0.3.21 (2016/10/05)
 -------------------
 
+- fix default serialized value.
+
+0.3.21 (2016/10/05)
+-------------------
+
 - add an error message when using the Array object with a wrong item type.
 - fix default svalue/value for param.
 
